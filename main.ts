@@ -1,5 +1,12 @@
+interface Coord {
+    x: number;
+    y: number;
+}
 interface Block {
     collision: "ladder" | "solid" | "air";
+}
+interface Player {
+    position: Coord; //足元のブロックの座標
 }
 
 function generateMap() {
@@ -22,11 +29,11 @@ function generateRow(map: Block[][]): Block[][] {
     return [...map, row];
 }
 
+const blockSize = 30;
+
 function drawMap(context: CanvasRenderingContext2D, map: Block[][], offsetX: number, offsetY: number): void {
     map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
-
     function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
-        const blockSize = 30;
         if(block.collision === "solid") {
             context.fillStyle = 'black';
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
@@ -41,7 +48,10 @@ function drawMap(context: CanvasRenderingContext2D, map: Block[][], offsetX: num
         }
     }
 }
-
+function drawPlayer(context: CanvasRenderingContext2D, player:Player, offsetX: number, offsetY: number) {
+    context.fillStyle = 'yellow';
+    context.fillRect(offsetX + player.position.x * blockSize + 5, offsetY - (player.position.y + 1) * blockSize + 10, blockSize - 10, blockSize * 2 - 10);
+}
 
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -59,5 +69,7 @@ window.onload = () => {
         const y = ev.clientY - canvas.offsetTop;
     }, false);
 
-    drawMap(context, generateMap(), 0, 300);
+    let map = generateMap();
+    drawMap(context, map, 0, 300);
+    drawPlayer(context, {position:{x:0, y:0}}, 0, 300);
 }

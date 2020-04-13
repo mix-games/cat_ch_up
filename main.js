@@ -18,10 +18,10 @@ function generateRow(map) {
     }
     return [...map, row];
 }
+const blockSize = 30;
 function drawMap(context, map, offsetX, offsetY) {
     map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
     function drawBlock(context, block, x, y) {
-        const blockSize = 30;
         if (block.collision === "solid") {
             context.fillStyle = 'black';
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
@@ -35,6 +35,10 @@ function drawMap(context, map, offsetX, offsetY) {
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
         }
     }
+}
+function drawPlayer(context, player, offsetX, offsetY) {
+    context.fillStyle = 'yellow';
+    context.fillRect(offsetX + player.position.x * blockSize + 5, offsetY - (player.position.y + 1) * blockSize + 10, blockSize - 10, blockSize * 2 - 10);
 }
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -51,5 +55,7 @@ window.onload = () => {
         const x = ev.clientX - canvas.offsetLeft;
         const y = ev.clientY - canvas.offsetTop;
     }, false);
-    drawMap(context, generateMap(), 0, 300);
+    let map = generateMap();
+    drawMap(context, map, 0, 300);
+    drawPlayer(context, { position: { x: 0, y: 0 } }, 0, 300);
 };
