@@ -18,13 +18,13 @@ function generateMap() {
 //Y座標は下から数える
 function generateRow(map: Block[][]): Block[][] {
     const row: Block[] = [];
-    for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; y++) {
         if(Math.random() < 0.7)
-            row[y] = { collision: "air" };
+            row[x] = { collision: "air" };
         else if(Math.random() < 0.5)
-            row[y] = { collision: "solid" };
+            row[x] = { collision: "solid" };
         else
-            row[y] = { collision: "ladder" };
+            row[x] = { collision: "ladder" };
     }
     return [...map, row];
 }
@@ -32,7 +32,7 @@ function generateRow(map: Block[][]): Block[][] {
 const blockSize = 30;
 
 function drawMap(context: CanvasRenderingContext2D, map: Block[][], offsetX: number, offsetY: number): void {
-    map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
+    map.forEach((row, y) => row.forEach((block, x) => drawBlock(context, block, x, y)));
     function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
         if(block.collision === "solid") {
             context.fillStyle = 'black';

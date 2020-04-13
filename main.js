@@ -8,19 +8,19 @@ function generateMap() {
 //Y座標は下から数える
 function generateRow(map) {
     const row = [];
-    for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; y++) {
         if (Math.random() < 0.7)
-            row[y] = { collision: "air" };
+            row[x] = { collision: "air" };
         else if (Math.random() < 0.5)
-            row[y] = { collision: "solid" };
+            row[x] = { collision: "solid" };
         else
-            row[y] = { collision: "ladder" };
+            row[x] = { collision: "ladder" };
     }
     return [...map, row];
 }
 const blockSize = 30;
 function drawMap(context, map, offsetX, offsetY) {
-    map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
+    map.forEach((row, y) => row.forEach((block, x) => drawBlock(context, block, x, y)));
     function drawBlock(context, block, x, y) {
         if (block.collision === "solid") {
             context.fillStyle = 'black';
