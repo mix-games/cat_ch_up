@@ -1,19 +1,22 @@
 "use strict";
-//Y座標は下から数える
 function generateMap() {
-    const map = [];
-    for (let x = 0; x < 10; x++) {
-        map.push([]);
-        for (let y = 0; y < 10; y++) {
-            if (Math.random() < 0.7)
-                map[x][y] = { collision: "air" };
-            else if (Math.random() < 0.5)
-                map[x][y] = { collision: "solid" };
-            else
-                map[x][y] = { collision: "ladder" };
-        }
-    }
+    let map = [];
+    for (let i = 0; i < 10; i++)
+        map = generateRow(map);
     return map;
+}
+//Y座標は下から数える
+function generateRow(map) {
+    const row = [];
+    for (let y = 0; y < 10; y++) {
+        if (Math.random() < 0.7)
+            row[y] = { collision: "air" };
+        else if (Math.random() < 0.5)
+            row[y] = { collision: "solid" };
+        else
+            row[y] = { collision: "ladder" };
+    }
+    return [...map, row];
 }
 function drawMap(context, map, offsetX, offsetY) {
     map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
