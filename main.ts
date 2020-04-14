@@ -149,11 +149,16 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     while (field.terrain.length - 5 < player.position.y) generateRow(field);
 }
 
+interface Camera {
+    centerX: number;
+    centerY: number;
+}
 
 const blockSize = 30;
 
 function drawField(context: CanvasRenderingContext2D, field: Field, offsetX: number, offsetY: number): void {
     field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(context, block, x, y)));
+    
     function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
         if (block.texture === "ladder") {
             context.fillStyle = 'red';
@@ -174,6 +179,14 @@ function drawPlayer(context: CanvasRenderingContext2D, player:Player, offsetX: n
     context.fillRect(offsetX + player.position.x * blockSize + 5, offsetY - (player.position.y + 1) * blockSize + 10, blockSize - 10, blockSize * 2 - 10);
 }
 
+function updateCamera(camera: Camera, player: Player, field: Field): void {
+    const targetX = (player.position.x + 0.5) * blockSize;
+    const targetY = -(player.position.y + 0.5) * blockSize;
+
+    camera.centerX += (targetX - camera.centerX) * 0.2;
+    camera.centerY += (targetY - camera.centerY) * 0.2;
+}
+
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if　(canvas === null || !(canvas instanceof HTMLCanvasElement)){
@@ -186,8 +199,9 @@ window.onload = () => {
         return
     }
     
-    let field = initField();
-    let player = { position:{x:0, y:0}, isSmall:false };
+    const field: Field = initField();
+    const player: Player = { position:{x:0, y:0}, isSmall:false };
+    const camera: Camera = { centerX: 150, centerY: -150 };
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -215,11 +229,18 @@ window.onload = () => {
         console.log("canStand: " + canStand(player.position, field, false));
     }, false);
 
-    animationLoop(context);
+    animationLoop(context, canvas);
 
-    function animationLoop(context: CanvasRenderingContext2D) {
-        drawField(context, field, 0, 300);
-        drawPlayer(context, player, 0, 300);
-        requestAnimationFrame(() => animationLoop(context));
+    function animationLoop(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
+        //updateCamera(camera, player, field);
+        
+        const offsetX = canvas.width / 2 - camera.centerX;
+        const offsetY = canvas.height / 2 - camera.centerY;
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawField(context, field, offsetX, offsetY);
+        drawPlayer(context, player, offsetX, offsetY);
+        requestAnimationFrame(() => animationLoop(context, canvas));
     }
 }
