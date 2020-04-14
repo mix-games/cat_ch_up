@@ -2,8 +2,12 @@ interface Coord {
     x: number;
     y: number;
 }
+interface BlockWithoutTexture {
+    collision: "ladder" | "solid" | "air";
+}
 interface Block {
     collision: "ladder" | "solid" | "air";
+    texture: "ladder" | "condenser" | "plain"
 }
 interface Player {
     position: Coord; //足元のブロックの座標
@@ -20,15 +24,20 @@ function initField(): Field {
 
 //Y座標は下から数える
 function generateRow(field: Field): void {
-    const row: Block[] = [];
+    const protoRow: BlockWithoutTexture[] = [];
     for (let x = 0; x < 10; x++) {
         if(Math.random() < 0.7)
-            row[x] = { collision: "air" };
+            protoRow[x] = { collision: "air" };
         else if(Math.random() < 0.5)
-            row[x] = { collision: "solid" };
+            protoRow[x] = { collision: "solid" };
         else
-            row[x] = { collision: "ladder" };
+            protoRow[x] = { collision: "ladder" };
     }
+    const row = protoRow.map((bwt: BlockWithoutTexture): Block => {
+        if (bwt.collision === "ladder") return {collision: "ladder", texture: "ladder"}
+        else if (bwt.collision === "solid") return {collision: "solid", texture: "condenser"}
+        else return {collision: "air", texture: "plain"}
+    })
     field.terrain.push(row);
 }
 
@@ -37,15 +46,15 @@ const blockSize = 30;
 function drawField(context: CanvasRenderingContext2D, field: Field, offsetX: number, offsetY: number): void {
     field.terrain.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
     function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
-        if(block.collision === "solid") {
-            context.fillStyle = 'black';
-            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
-        }
-        if(block.collision === "ladder") {
+        if (block.texture === "ladder") {
             context.fillStyle = 'red';
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
         }
-        if(block.collision === "air") {
+        else if (block.texture === "condenser") {
+            context.fillStyle = 'black';
+            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
+        }
+        else /*if (block.texture === "plain")*/ {
             context.fillStyle = 'white';
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
         }

@@ -7,30 +7,38 @@ function initField() {
 }
 //Y座標は下から数える
 function generateRow(field) {
-    const row = [];
+    const protoRow = [];
     for (let x = 0; x < 10; x++) {
         if (Math.random() < 0.7)
-            row[x] = { collision: "air" };
+            protoRow[x] = { collision: "air" };
         else if (Math.random() < 0.5)
-            row[x] = { collision: "solid" };
+            protoRow[x] = { collision: "solid" };
         else
-            row[x] = { collision: "ladder" };
+            protoRow[x] = { collision: "ladder" };
     }
+    const row = protoRow.map((bwt) => {
+        if (bwt.collision === "ladder")
+            return { collision: "ladder", texture: "ladder" };
+        else if (bwt.collision === "solid")
+            return { collision: "solid", texture: "condenser" };
+        else
+            return { collision: "air", texture: "plain" };
+    });
     field.terrain.push(row);
 }
 const blockSize = 30;
 function drawField(context, field, offsetX, offsetY) {
     field.terrain.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
     function drawBlock(context, block, x, y) {
-        if (block.collision === "solid") {
-            context.fillStyle = 'black';
-            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
-        }
-        if (block.collision === "ladder") {
+        if (block.texture === "ladder") {
             context.fillStyle = 'red';
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
         }
-        if (block.collision === "air") {
+        else if (block.texture === "condenser") {
+            context.fillStyle = 'black';
+            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
+        }
+        else /*if (block.texture === "plain")*/ {
             context.fillStyle = 'white';
             context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
         }
