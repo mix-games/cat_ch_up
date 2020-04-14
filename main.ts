@@ -64,12 +64,21 @@ window.onload = () => {
         alert("context2d not found");
         return
     }
+    
+    let map = generateMap();
+    let player = {position:{x:0, y:0}};
+    
     canvas.addEventListener("click", (ev: MouseEvent) => {
-        const x = ev.clientX - canvas.offsetLeft;
-        const y = ev.clientY - canvas.offsetTop;
+        //const x = ev.clientX - canvas.offsetLeft;
+        //const y = ev.clientY - canvas.offsetTop;
+        player.position.x += 1;
     }, false);
 
-    let map = generateMap();
-    drawMap(context, map, 0, 300);
-    drawPlayer(context, {position:{x:0, y:0}}, 0, 300);
+    animationLoop(context);
+
+    function animationLoop(context: CanvasRenderingContext2D) {
+        drawMap(context, map, 0, 300);
+        drawPlayer(context, player, 0, 300);
+        requestAnimationFrame(() => animationLoop(context));
+    }
 }
