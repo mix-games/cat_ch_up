@@ -8,15 +8,18 @@ interface Block {
 interface Player {
     position: Coord; //足元のブロックの座標
 }
+interface Field {
+    terrain: Block[][];
+}
 
-function generateMap() {
-    let map: Block[][] = [];
-    for (let i = 0; i < 10; i++) map = generateRow(map);
-    return map;
+function initField(): Field {
+    let field: Field = { terrain:[] };
+    for (let i = 0; i < 10; i++) generateRow(field);
+    return field;
 }
 
 //Y座標は下から数える
-function generateRow(map: Block[][]): Block[][] {
+function generateRow(field: Field): void {
     const row: Block[] = [];
     for (let x = 0; x < 10; x++) {
         if(Math.random() < 0.7)
@@ -26,13 +29,13 @@ function generateRow(map: Block[][]): Block[][] {
         else
             row[x] = { collision: "ladder" };
     }
-    return [...map, row];
+    field.terrain.push(row);
 }
 
 const blockSize = 30;
 
-function drawMap(context: CanvasRenderingContext2D, map: Block[][], offsetX: number, offsetY: number): void {
-    map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
+function drawField(context: CanvasRenderingContext2D, field: Field, offsetX: number, offsetY: number): void {
+    field.terrain.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
     function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
         if(block.collision === "solid") {
             context.fillStyle = 'black';
@@ -65,7 +68,7 @@ window.onload = () => {
         return
     }
     
-    let map = generateMap();
+    let field = initField();
     let player = {position:{x:0, y:0}};
     
     canvas.addEventListener("click", (ev: MouseEvent) => {
@@ -77,7 +80,7 @@ window.onload = () => {
     animationLoop(context);
 
     function animationLoop(context: CanvasRenderingContext2D) {
-        drawMap(context, map, 0, 300);
+        drawField(context, field, 0, 300);
         drawPlayer(context, player, 0, 300);
         requestAnimationFrame(() => animationLoop(context));
     }

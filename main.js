@@ -1,12 +1,12 @@
 "use strict";
-function generateMap() {
-    let map = [];
+function initField() {
+    let field = { terrain: [] };
     for (let i = 0; i < 10; i++)
-        map = generateRow(map);
-    return map;
+        generateRow(field);
+    return field;
 }
 //Y座標は下から数える
-function generateRow(map) {
+function generateRow(field) {
     const row = [];
     for (let x = 0; x < 10; x++) {
         if (Math.random() < 0.7)
@@ -16,11 +16,11 @@ function generateRow(map) {
         else
             row[x] = { collision: "ladder" };
     }
-    return [...map, row];
+    field.terrain.push(row);
 }
 const blockSize = 30;
-function drawMap(context, map, offsetX, offsetY) {
-    map.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
+function drawField(context, field, offsetX, offsetY) {
+    field.terrain.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
     function drawBlock(context, block, x, y) {
         if (block.collision === "solid") {
             context.fillStyle = 'black';
@@ -51,7 +51,7 @@ window.onload = () => {
         alert("context2d not found");
         return;
     }
-    let map = generateMap();
+    let field = initField();
     let player = { position: { x: 0, y: 0 } };
     canvas.addEventListener("click", (ev) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -60,7 +60,7 @@ window.onload = () => {
     }, false);
     animationLoop(context);
     function animationLoop(context) {
-        drawMap(context, map, 0, 300);
+        drawField(context, field, 0, 300);
         drawPlayer(context, player, 0, 300);
         requestAnimationFrame(() => animationLoop(context));
     }
