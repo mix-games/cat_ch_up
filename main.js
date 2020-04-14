@@ -20,7 +20,7 @@ function generateRow(field) {
 }
 const blockSize = 30;
 function drawField(context, field, offsetX, offsetY) {
-    field.terrain.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(context, block, x, y)));
     function drawBlock(context, block, x, y) {
         if (block.collision === "solid") {
             context.fillStyle = 'black';

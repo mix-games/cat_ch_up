@@ -35,7 +35,7 @@ function generateRow(field: Field): void {
 const blockSize = 30;
 
 function drawField(context: CanvasRenderingContext2D, field: Field, offsetX: number, offsetY: number): void {
-    field.terrain.forEach((row, x) => row.forEach((block, y) => drawBlock(context, block, x, y)));
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(context, block, x, y)));
     function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
         if(block.collision === "solid") {
             context.fillStyle = 'black';
