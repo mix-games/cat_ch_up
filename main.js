@@ -121,6 +121,8 @@ function movePlayer(player, field, direction) {
     player.position = result.coord;
     console.log(direction + " " + result.actionType);
     //敵などのターン処理はここ
+    while (field.terrain.length - 5 < player.position.y)
+        generateRow(field);
 }
 const blockSize = 30;
 function drawField(context, field, offsetX, offsetY) {

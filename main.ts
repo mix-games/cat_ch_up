@@ -53,7 +53,7 @@ function generateRow(field: Field): void {
         if (bwt.collision === "ladder") return { collision: "ladder", texture: "ladder" };
         else if (bwt.collision === "solid") return { collision: "solid", texture: "condenser" };
         else return { collision: "air", texture: "plain" };
-    })
+    });
     field.terrain.push(row);
 }
 
@@ -145,6 +145,8 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     console.log(direction + " " + result.actionType);
 
     //敵などのターン処理はここ
+
+    while (field.terrain.length - 5 < player.position.y) generateRow(field);
 }
 
 
