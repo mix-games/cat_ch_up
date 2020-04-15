@@ -188,16 +188,19 @@ function updateCamera(camera: Camera, player: Player, field: Field): void {
 }
 
 window.onload = () => {
-    const canvas = document.getElementById("canvas");
-    if　(canvas === null || !(canvas instanceof HTMLCanvasElement)){
-        alert("canvas not found");
-        return;
-    }
-    const context: CanvasRenderingContext2D | null = canvas.getContext("2d");
-    if　(context === null){
-        alert("context2d not found");
-        return
-    }
+    const canvas: HTMLCanvasElement = (() => {
+        const x = document.getElementById("canvas");
+        if　(x === null || !(x instanceof HTMLCanvasElement))
+            throw new Error("canvas not found");
+        return x;
+    })();
+
+    const context: CanvasRenderingContext2D = (() => {
+        const x = canvas.getContext("2d");
+        if　(x === null)
+            throw new Error("context2d not found");
+        return x;
+    })();
     
     const field: Field = initField();
     const player: Player = { position:{x:0, y:0}, isSmall:false };
@@ -229,9 +232,9 @@ window.onload = () => {
         console.log("canStand: " + canStand(player.position, field, false));
     }, false);
 
-    animationLoop(context, canvas);
+    animationLoop();
 
-    function animationLoop(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
+    function animationLoop() {
         //updateCamera(camera, player, field);
         
         const offsetX = canvas.width / 2 - camera.centerX;
@@ -241,6 +244,6 @@ window.onload = () => {
 
         drawField(context, field, offsetX, offsetY);
         drawPlayer(context, player, offsetX, offsetY);
-        requestAnimationFrame(() => animationLoop(context, canvas));
+        requestAnimationFrame(animationLoop);
     }
 }
