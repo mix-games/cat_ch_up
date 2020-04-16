@@ -187,24 +187,32 @@ function updateCamera(camera: Camera, player: Player, field: Field): void {
     camera.centerY += (targetY - camera.centerY) * 0.2;
 }
 
-window.onload = () => {
-    const canvas: HTMLCanvasElement = (() => {
-        const x = document.getElementById("canvas");
-        if　(x === null || !(x instanceof HTMLCanvasElement))
-            throw new Error("canvas not found");
-        return x;
-    })();
+function animationLoop(context: CanvasRenderingContext2D, field: Field, player: Player, camera: Camera) {
+    //updateCamera(camera, player, field);
+    
+    const offsetX = context.canvas.width / 2 - camera.centerX;
+    const offsetY = context.canvas.height / 2 - camera.centerY;
 
-    const context: CanvasRenderingContext2D = (() => {
-        const x = canvas.getContext("2d");
-        if　(x === null)
-            throw new Error("context2d not found");
-        return x;
-    })();
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+
+    drawField(context, field, offsetX, offsetY);
+    drawPlayer(context, player, offsetX, offsetY);
+    requestAnimationFrame(() => animationLoop(context, field, player, camera));
+}
+
+window.onload = () => {
+    const canvas = document.getElementById("canvas");
+    if　(canvas === null || !(canvas instanceof HTMLCanvasElement))
+        throw new Error("canvas not found");
+
+    const context = canvas.getContext("2d");
+    if　(context === null)
+        throw new Error("context2d not found");
     
     const field: Field = initField();
     const player: Player = { position:{x:0, y:0}, isSmall:false };
     const camera: Camera = { centerX: 150, centerY: -150 };
+    
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -232,18 +240,5 @@ window.onload = () => {
         console.log("canStand: " + canStand(player.position, field, false));
     }, false);
 
-    animationLoop();
-
-    function animationLoop() {
-        //updateCamera(camera, player, field);
-        
-        const offsetX = canvas.width / 2 - camera.centerX;
-        const offsetY = canvas.height / 2 - camera.centerY;
-
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        drawField(context, field, offsetX, offsetY);
-        drawPlayer(context, player, offsetX, offsetY);
-        requestAnimationFrame(animationLoop);
-    }
+    animationLoop(context, field, player, camera);
 }
