@@ -152,51 +152,70 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
 interface Camera {
     centerX: number;
     centerY: number;
+
+    offsetX: number;
+    offsetY: number;
+
+    context: CanvasRenderingContext2D;
 }
 
-const blockSize = 30;
+function initCamera(context: CanvasRenderingContext2D) {
+    return {
+        centerX: 150,
+        centerY: -150,
 
-function drawField(context: CanvasRenderingContext2D, field: Field, offsetX: number, offsetY: number): void {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(context, block, x, y)));
-    
-    function drawBlock(context: CanvasRenderingContext2D, block:Block, x:number, y:number): void {
-        if (block.texture === "ladder") {
-            context.fillStyle = 'red';
-            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
-        }
-        else if (block.texture === "condenser") {
-            context.fillStyle = 'black';
-            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
-        }
-        else /*if (block.texture === "plain")*/ {
-            context.fillStyle = 'white';
-            context.fillRect(offsetX + x * blockSize, offsetY - y * blockSize, blockSize, blockSize);
-        }
-    }
-}
-function drawPlayer(context: CanvasRenderingContext2D, player:Player, offsetX: number, offsetY: number) {
-    context.fillStyle = 'yellow';
-    context.fillRect(offsetX + player.position.x * blockSize + 5, offsetY - (player.position.y + 1) * blockSize + 10, blockSize - 10, blockSize * 2 - 10);
+        offsetX: 0,
+        offsetY: 0,
+
+        context: context,
+    };
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field): void {
+    /*
     const targetX = (player.position.x + 0.5) * blockSize;
     const targetY = -(player.position.y + 0.5) * blockSize;
 
     camera.centerX += (targetX - camera.centerX) * 0.2;
     camera.centerY += (targetY - camera.centerY) * 0.2;
+    */
+    
+    camera.offsetX = camera.context.canvas.width / 2 - camera.centerX;
+    camera.offsetY = camera.context.canvas.height / 2 - camera.centerY;
+}
+
+const blockSize = 30;
+
+function drawField(camera: Camera, field: Field): void {
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(camera, block, x, y)));
+    
+    function drawBlock(camera: Camera, block:Block, x:number, y:number): void {
+        if (block.texture === "ladder") {
+            camera.context.fillStyle = 'red';
+            camera.context.fillRect(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, blockSize, blockSize);
+        }
+        else if (block.texture === "condenser") {
+            camera.context.fillStyle = 'black';
+            camera.context.fillRect(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, blockSize, blockSize);
+        }
+        else /*if (block.texture === "plain")*/ {
+            camera.context.fillStyle = 'white';
+            camera.context.fillRect(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, blockSize, blockSize);
+        }
+    }
+}
+function drawPlayer(camera: Camera, player:Player) {
+    camera.context.fillStyle = 'yellow';
+    camera.context.fillRect(camera.offsetX + player.position.x * blockSize + 5, camera.offsetY - (player.position.y + 1) * blockSize + 10, blockSize - 10, blockSize * 2 - 10);
 }
 
 function animationLoop(context: CanvasRenderingContext2D, field: Field, player: Player, camera: Camera) {
-    //updateCamera(camera, player, field);
-    
-    const offsetX = context.canvas.width / 2 - camera.centerX;
-    const offsetY = context.canvas.height / 2 - camera.centerY;
+    updateCamera(camera, player, field);
 
     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
 
-    drawField(context, field, offsetX, offsetY);
-    drawPlayer(context, player, offsetX, offsetY);
+    drawField(camera, field);
+    drawPlayer(camera, player);
     requestAnimationFrame(() => animationLoop(context, field, player, camera));
 }
 
@@ -211,7 +230,7 @@ window.onload = () => {
     
     const field: Field = initField();
     const player: Player = { position:{x:0, y:0}, isSmall:false };
-    const camera: Camera = { centerX: 150, centerY: -150 };
+    const camera: Camera = initCamera(context);
     
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
