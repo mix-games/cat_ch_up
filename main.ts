@@ -1,3 +1,86 @@
+type ImageResources = Map<string, HTMLImageElement>;
+interface ImageLoadingProgress {
+    finishedCount: number;
+    registeredCount: number;
+    imageResources: ImageResources;
+}
+function imageLoader(sources: string[], callback: ()=>void = () => { }, progress: ImageLoadingProgress = {
+        registeredCount: 0,
+        finishedCount: 0,
+        imageResources: new Map()
+    }) {
+    progress.registeredCount += sources.length;
+  
+    sources.forEach(source => {
+        const image = new Image();
+        image.onload = function() {
+        progress.imageResources.set(source, image);
+        progress.finishedCount++;
+        if (progress.registeredCount === progress.finishedCount)
+            callback();
+        }
+        image.src = source;
+    });
+
+    return progress;
+}
+
+
+interface Texture {
+    // これの実装を色々にしてアニメーションなどを表現する
+    draw: (x:number, y:number, camera:Camera, resources:ImageResources) => void;
+}
+  
+// 四角を描画するテクスチャ
+function createRectTexture(lightColor: string, width: number, height: number, shadowColor: string = lightColor): Texture{
+    return {
+        draw: (x:number, y:number, camera:Camera, resources:ImageResources) => {
+            camera.lightColor.fillStyle = lightColor;
+            camera.lightColor.fillRect(camera.offsetX + x, camera.offsetY + y, width, height);
+            camera.shadowColor.fillStyle = shadowColor;
+            camera.shadowColor.fillRect(camera.offsetX + x, camera.offsetY + y, width, height);
+        }
+    }
+}
+  
+// ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
+function createStaticTexture(source: string, textureOffsetX: number, textureOffsetY: number): Texture {
+    return {
+        draw: (x:number, y:number, camera:Camera, resources:ImageResources) => {
+            const image = resources.get(source);
+            if (image === undefined) { console.log("not loaded yet"); return; }
+            camera.lightColor.drawImage(image,
+                camera.offsetX + textureOffsetX + x,
+                camera.offsetY + textureOffsetY + y);
+            camera.shadowColor.drawImage(image,
+                camera.offsetX + textureOffsetX + x,
+                camera.offsetY + textureOffsetY + y);
+        }
+    }
+}
+
+function createStaticVolumeTexture(source: string, textureOffsetX:number, textureOffsetY:number, sh:number): Texture {
+    return {
+        draw: (x:number, y:number, camera:Camera, resources:ImageResources) => {
+            const image = resources.get(source);
+            if (image === undefined) { console.log("not loaded yet"); return; }
+      
+            camera.lightColor.drawImage(image, 0, 0, image.width, sh,
+                camera.offsetX + textureOffsetX + x,
+                camera.offsetY + textureOffsetY + y, image.width, sh);
+
+            camera.shadowColor.drawImage(image, 0, sh, image.width, sh,
+                camera.offsetX + textureOffsetX + x,
+                camera.offsetY + textureOffsetY + y, image.width, sh);
+
+            for(var i = 0; i < camera.volumeLayers.length; i++)
+                camera.volumeLayers[i].drawImage(image, 0, (i + 2) * sh, image.width, sh,
+                    camera.offsetX + textureOffsetX + x,
+                    camera.offsetY + textureOffsetY + y, image.width, sh);
+        }
+    }
+}
+
 interface Coord {
     x: number;
     y: number;
@@ -7,11 +90,7 @@ interface BlockWithoutTexture {
 }
 interface Block {
     collision: "ladder" | "solid" | "air";
-    texture: "ladder" | "condenser" | "plain"
-}
-interface Player {
-    position: Coord; //足元のブロックの座標
-    isSmall: boolean;
+    texture: Texture
 }
 interface Field {
     terrain: Block[][];
@@ -30,7 +109,7 @@ function rightCoord(coord: Coord): Coord{
     return { x:coord.x + 1, y:coord.y};
 }
 
-function initField(): Field {
+function createField(): Field {
     let field: Field = { terrain:[] };
     for (let i = 0; i < 10; i++) generateRow(field);
     return field;
@@ -50,17 +129,45 @@ function generateRow(field: Field): void {
             protoRow[x] = { collision: "ladder" };
     }
     const row = protoRow.map((bwt: BlockWithoutTexture): Block => {
-        if (bwt.collision === "ladder") return { collision: "ladder", texture: "ladder" };
-        else if (bwt.collision === "solid") return { collision: "solid", texture: "condenser" };
-        else return { collision: "air", texture: "plain" };
+        if (bwt.collision === "ladder") 
+            return {
+                collision: "ladder",
+                texture: createRectTexture("red", blockSize, blockSize)
+            };
+        else if (bwt.collision === "solid")
+            return {
+                collision: "solid",
+                texture: createRectTexture("black", blockSize, blockSize)
+            };
+        else return {
+            collision: "air",
+            texture: createRectTexture("white", blockSize, blockSize)
+        };
     });
     field.terrain.push(row);
 }
 
 function getBlock(terrain: Block[][], coord: Coord): Block {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
-        return { collision:"solid", texture: "plain" };
+        return {
+            collision:"solid",
+            texture: createRectTexture("white", blockSize, blockSize)
+        };
     return terrain[coord.y][coord.x];
+}
+
+interface Player {
+    position: Coord; //足元のブロックの座標
+    texture: Texture;
+    isSmall: boolean;
+}
+
+function createPlayer(): Player {
+    return {
+        position: { x: 0, y: 0 },
+        isSmall: false,
+        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4)
+    };
 }
 
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
@@ -149,26 +256,80 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     while (field.terrain.length - 5 < player.position.y) generateRow(field);
 }
 
-interface Camera {
-    centerX: number;
-    centerY: number;
+const blockSize = 16;
 
+function drawField(camera: Camera, field: Field, imageResources: ImageResources): void {
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(camera, block, x, y)));
+    
+    function drawBlock(camera: Camera, block:Block, x:number, y:number): void {
+        block.texture.draw(x * blockSize, - y * blockSize, camera, imageResources);
+    }
+}
+function drawPlayer(camera: Camera, player:Player, imageResources: ImageResources) {
+    player.texture.draw(player.position.x * blockSize + 2, - (player.position.y + 1) * blockSize + 4, camera, imageResources);
+}
+interface Camera {
     offsetX: number;
     offsetY: number;
 
-    context: CanvasRenderingContext2D;
+    lightColor: CanvasRenderingContext2D;
+    shadowColor: CanvasRenderingContext2D;
+    volumeLayers: CanvasRenderingContext2D[];
+  
+    compositScreen: CanvasRenderingContext2D;
+    shadowAccScreens: CanvasRenderingContext2D[];
+
+    compositOffsetX: number;
+    compositOffsetY: number;
+
+    centerX: number;
+    centerY: number;
 }
 
-function initCamera(context: CanvasRenderingContext2D) {
+function createCamera(width: number, height: number): Camera {
+    const marginTop = 28;
+    const marginLeft = 28;
+    const marginRignt = 0;
+    const marginBottom = 0;
+
+    const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
+    const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
+    const volumeLayers: CanvasRenderingContext2D[] = [];
+    for(let i = 0; i < 6; i++)
+        volumeLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
+
+    const shadowAccScreens: CanvasRenderingContext2D[] = [];
+    for(let i = 0; i < volumeLayers.length; i++) 
+        shadowAccScreens.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
+
+    const compositScreen = create2dScreen(width, height);
+  
     return {
-        centerX: 150,
-        centerY: -150,
+        centerX: 80,
+        centerY: -80,
 
         offsetX: 0,
         offsetY: 0,
 
-        context: context,
+        lightColor,
+        shadowColor,
+        volumeLayers,
+
+        compositScreen,
+        shadowAccScreens,
+    
+        compositOffsetX: -marginLeft,
+        compositOffsetY: -marginTop,
     };
+  
+    function create2dScreen(width: number, height: number): CanvasRenderingContext2D {
+        let canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        let context = canvas.getContext("2d");
+        if (context === null) throw new Error("failed to get 2D context");
+        return context;
+    }
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field): void {
@@ -180,43 +341,78 @@ function updateCamera(camera: Camera, player: Player, field: Field): void {
     camera.centerY += (targetY - camera.centerY) * 0.2;
     */
     
-    camera.offsetX = camera.context.canvas.width / 2 - camera.centerX;
-    camera.offsetY = camera.context.canvas.height / 2 - camera.centerY;
+    camera.offsetX = camera.lightColor.canvas.width / 2 - camera.centerX;
+    camera.offsetY = camera.lightColor.canvas.height / 2 - camera.centerY;
 }
 
-const blockSize = 30;
+function composit(camera: Camera, mainScreen: CanvasRenderingContext2D): void {
+    const shadowDirectionX = 3;
+    const shadowDirectionY = 2;
 
-function drawField(camera: Camera, field: Field): void {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(camera, block, x, y)));
-    
-    function drawBlock(camera: Camera, block:Block, x:number, y:number): void {
-        if (block.texture === "ladder") {
-            camera.context.fillStyle = 'red';
-            camera.context.fillRect(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, blockSize, blockSize);
+    // shadowAccScreens[i]にはi-1層目に落ちる影を描画する
+    for(let i = camera.volumeLayers.length - 1; 0 <= i; i--) {
+        camera.shadowAccScreens[i].globalCompositeOperation = "source-over";
+        camera.shadowAccScreens[i].drawImage(camera.volumeLayers[i].canvas, 0, 0);
+        if(i !== camera.volumeLayers.length - 1)
+            camera.shadowAccScreens[i].drawImage(camera.shadowAccScreens[i + 1].canvas, shadowDirectionX, shadowDirectionY);
+    }
+  
+    for(let i = 0; i < camera.shadowAccScreens.length; i++) {
+        //i-1層目の形で打ち抜く
+        if(i !== 0) {
+            camera.shadowAccScreens[i].globalCompositeOperation = "source-in";
+            camera.shadowAccScreens[i].drawImage(camera.volumeLayers[i - 1].canvas, -shadowDirectionY, -shadowDirectionY);
         }
-        else if (block.texture === "condenser") {
-            camera.context.fillStyle = 'black';
-            camera.context.fillRect(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, blockSize, blockSize);
-        }
-        else /*if (block.texture === "plain")*/ {
-            camera.context.fillStyle = 'white';
-            camera.context.fillRect(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, blockSize, blockSize);
-        }
+        //compositに累積
+        camera.compositScreen.globalCompositeOperation = "source-over";
+        camera.compositScreen.drawImage(camera.shadowAccScreens[i].canvas,
+            camera.compositOffsetX + shadowDirectionX,
+            camera.compositOffsetY + shadowDirectionY);
+        //見えなくなる部分を隠す
+        camera.compositScreen.globalCompositeOperation = "destination-out";
+        camera.compositScreen.drawImage(
+            camera.volumeLayers[i].canvas, camera.compositOffsetX, camera.compositOffsetY);
+    }
+    // 影部分が不透明な状態になっているはずなので、影色で上書きする
+    camera.compositScreen.globalCompositeOperation = "source-atop";
+    camera.compositScreen.drawImage(camera.shadowColor.canvas, camera.compositOffsetX, camera.compositOffsetY);
+    // 残りの部分に光色
+    camera.compositScreen.globalCompositeOperation = "destination-over";
+    camera.compositScreen.drawImage(camera.lightColor.canvas, camera.compositOffsetX, camera.compositOffsetY);
+    // メインスクリーン（本番のcanvas）にスムージングなしで拡大
+    mainScreen.imageSmoothingEnabled = false;
+    mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+    mainScreen.drawImage(camera.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+
+    //次フレームの描画に備えてレイヤーを消去
+    clearScreen(camera.lightColor);
+    clearScreen(camera.shadowColor);
+    for(var i = 0; i < camera.volumeLayers.length; i++) {
+        clearScreen(camera.volumeLayers[i]);
+        clearScreen(camera.shadowAccScreens[i]);
+    }
+    clearScreen(camera.compositScreen);
+
+    function clearScreen(screen: CanvasRenderingContext2D): void {
+        screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
     }
 }
-function drawPlayer(camera: Camera, player:Player) {
-    camera.context.fillStyle = 'yellow';
-    camera.context.fillRect(camera.offsetX + player.position.x * blockSize + 5, camera.offsetY - (player.position.y + 1) * blockSize + 10, blockSize - 10, blockSize * 2 - 10);
-}
 
-function animationLoop(context: CanvasRenderingContext2D, field: Field, player: Player, camera: Camera) {
-    updateCamera(camera, player, field);
+function animationLoop(field: Field, player: Player, camera: Camera, mainScreen: CanvasRenderingContext2D, imageLoadingProgress: ImageLoadingProgress): void {
+    if (imageLoadingProgress.registeredCount === imageLoadingProgress.finishedCount) {
+        updateCamera(camera, player, field);
 
-    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        drawField(camera, field, imageLoadingProgress.imageResources);
+        drawPlayer(camera, player, imageLoadingProgress.imageResources);
 
-    drawField(camera, field);
-    drawPlayer(camera, player);
-    requestAnimationFrame(() => animationLoop(context, field, player, camera));
+        composit(camera, mainScreen);
+    }
+    else {
+        console.log("loading " + imageLoadingProgress.finishedCount + "/" + imageLoadingProgress.registeredCount);
+        mainScreen.fillText("loading", 0, 0);
+    }
+
+    requestAnimationFrame(() => animationLoop(field, player, camera, mainScreen, imageLoadingProgress));
 }
 
 window.onload = () => {
@@ -224,14 +420,16 @@ window.onload = () => {
     if　(canvas === null || !(canvas instanceof HTMLCanvasElement))
         throw new Error("canvas not found");
 
-    const context = canvas.getContext("2d");
-    if　(context === null)
+    const mainScreen = canvas.getContext("2d");
+    if　(mainScreen === null)
         throw new Error("context2d not found");
+      
+    const field: Field = createField();
+    const player: Player = createPlayer();
+    const camera = createCamera(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
     
-    const field: Field = initField();
-    const player: Player = { position:{x:0, y:0}, isSmall:false };
-    const camera: Camera = initCamera(context);
-    
+    const imageLoadingProgress = imageLoader([]);
+
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -259,5 +457,5 @@ window.onload = () => {
         console.log("canStand: " + canStand(player.position, field, false));
     }, false);
 
-    animationLoop(context, field, player, camera);
+    animationLoop(field, player, camera, mainScreen, imageLoadingProgress);
 }
