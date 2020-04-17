@@ -7,7 +7,7 @@ function imageLoader(sources, callback = () => { }, progress = {
     progress.registeredCount += sources.length;
     sources.forEach(source => {
         const image = new Image();
-        image.onload = function () {
+        image.onload = () => {
             progress.imageResources.set(source, image);
             progress.finishedCount++;
             if (progress.registeredCount === progress.finishedCount)

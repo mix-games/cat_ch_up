@@ -4,21 +4,21 @@ interface ImageLoadingProgress {
     registeredCount: number;
     imageResources: ImageResources;
 }
-function imageLoader(sources: string[], callback: ()=>void = () => { }, progress: ImageLoadingProgress = {
-        registeredCount: 0,
-        finishedCount: 0,
-        imageResources: new Map()
-    }) {
+function imageLoader(sources: string[], callback: () => void = () => { }, progress: ImageLoadingProgress = {
+    registeredCount: 0,
+    finishedCount: 0,
+    imageResources: new Map()
+}) {
     progress.registeredCount += sources.length;
-  
+
     sources.forEach(source => {
         const image = new Image();
-        image.onload = function() {
-        progress.imageResources.set(source, image);
-        progress.finishedCount++;
-        if (progress.registeredCount === progress.finishedCount)
-            callback();
-        }
+        image.onload = () => {
+            progress.imageResources.set(source, image);
+            progress.finishedCount++;
+            if (progress.registeredCount === progress.finishedCount)
+                callback();
+        };
         image.src = source;
     });
 
@@ -29,7 +29,7 @@ interface Renderer {
     lightColor: CanvasRenderingContext2D;
     shadowColor: CanvasRenderingContext2D;
     volumeLayers: CanvasRenderingContext2D[];
-  
+
     compositScreen: CanvasRenderingContext2D;
     shadowAccScreens: CanvasRenderingContext2D[];
 
@@ -46,15 +46,15 @@ function createRenderer(width: number, height: number): Renderer {
     const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
     const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
     const volumeLayers: CanvasRenderingContext2D[] = [];
-    for(let i = 0; i < 6; i++)
+    for (let i = 0; i < 6; i++)
         volumeLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
 
     const shadowAccScreens: CanvasRenderingContext2D[] = [];
-    for(let i = 0; i < volumeLayers.length; i++) 
+    for (let i = 0; i < volumeLayers.length; i++)
         shadowAccScreens.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
 
     const compositScreen = create2dScreen(width, height);
-  
+
     return {
         lightColor,
         shadowColor,
@@ -62,11 +62,11 @@ function createRenderer(width: number, height: number): Renderer {
 
         compositScreen,
         shadowAccScreens,
-    
+
         compositOffsetX: -marginLeft,
         compositOffsetY: -marginTop,
     };
-  
+
     function create2dScreen(width: number, height: number): CanvasRenderingContext2D {
         let canvas = document.createElement("canvas");
         canvas.width = width;
@@ -82,16 +82,16 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
     const shadowDirectionY = 2;
 
     // shadowAccScreens[i]にはi-1層目に落ちる影を描画する
-    for(let i = renderer.volumeLayers.length - 1; 0 <= i; i--) {
+    for (let i = renderer.volumeLayers.length - 1; 0 <= i; i--) {
         renderer.shadowAccScreens[i].globalCompositeOperation = "source-over";
         renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i].canvas, 0, 0);
-        if(i !== renderer.volumeLayers.length - 1)
+        if (i !== renderer.volumeLayers.length - 1)
             renderer.shadowAccScreens[i].drawImage(renderer.shadowAccScreens[i + 1].canvas, shadowDirectionX, shadowDirectionY);
     }
-  
-    for(let i = 0; i < renderer.shadowAccScreens.length; i++) {
+
+    for (let i = 0; i < renderer.shadowAccScreens.length; i++) {
         //i-1層目の形で打ち抜く
-        if(i !== 0) {
+        if (i !== 0) {
             renderer.shadowAccScreens[i].globalCompositeOperation = "source-in";
             renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i - 1].canvas, -shadowDirectionY, -shadowDirectionY);
         }
@@ -119,7 +119,7 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
     //次フレームの描画に備えてレイヤーを消去
     clearScreen(renderer.lightColor);
     clearScreen(renderer.shadowColor);
-    for(var i = 0; i < renderer.volumeLayers.length; i++) {
+    for (var i = 0; i < renderer.volumeLayers.length; i++) {
         clearScreen(renderer.volumeLayers[i]);
         clearScreen(renderer.shadowAccScreens[i]);
     }
@@ -132,25 +132,25 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
 
 interface Texture {
     // これの実装を色々にしてアニメーションなどを表現する
-    draw: (x:number, y:number, renderer:Renderer, resources:ImageResources) => void;
+    draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => void;
 }
-  
+
 // 四角を描画するテクスチャ
-function createRectTexture(lightColor: string, width: number, height: number, shadowColor: string = lightColor): Texture{
+function createRectTexture(lightColor: string, width: number, height: number, shadowColor: string = lightColor): Texture {
     return {
-        draw: (x:number, y:number, renderer:Renderer, resources:ImageResources) => {
+        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             renderer.lightColor.fillStyle = lightColor;
             renderer.lightColor.fillRect(x, y, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
             renderer.shadowColor.fillRect(x, y, width, height);
         }
-    }
+    };
 }
-  
+
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
 function createStaticTexture(source: string, textureOffsetX: number, textureOffsetY: number): Texture {
     return {
-        draw: (x:number, y:number, renderer:Renderer, resources:ImageResources) => {
+        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             const image = resources.get(source);
             if (image === undefined) { console.log("not loaded yet"); return; }
             renderer.lightColor.drawImage(image,
@@ -160,15 +160,15 @@ function createStaticTexture(source: string, textureOffsetX: number, textureOffs
                 textureOffsetX + x,
                 textureOffsetY + y);
         }
-    }
+    };
 }
 
-function createStaticVolumeTexture(source: string, textureOffsetX:number, textureOffsetY:number, sh:number): Texture {
+function createStaticVolumeTexture(source: string, textureOffsetX: number, textureOffsetY: number, sh: number): Texture {
     return {
-        draw: (x:number, y:number, renderer:Renderer, resources:ImageResources) => {
+        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             const image = resources.get(source);
             if (image === undefined) { console.log("not loaded yet"); return; }
-      
+
             renderer.lightColor.drawImage(image, 0, 0, image.width, sh,
                 textureOffsetX + x,
                 textureOffsetY + y, image.width, sh);
@@ -177,12 +177,12 @@ function createStaticVolumeTexture(source: string, textureOffsetX:number, textur
                 textureOffsetX + x,
                 textureOffsetY + y, image.width, sh);
 
-            for(var i = 0; i < renderer.volumeLayers.length; i++)
+            for (var i = 0; i < renderer.volumeLayers.length; i++)
                 renderer.volumeLayers[i].drawImage(image, 0, (i + 2) * sh, image.width, sh,
                     textureOffsetX + x,
                     textureOffsetY + y, image.width, sh);
         }
-    }
+    };
 }
 
 interface Coord {
@@ -194,27 +194,27 @@ interface BlockWithoutTexture {
 }
 interface Block {
     collision: "ladder" | "solid" | "air";
-    texture: Texture
+    texture: Texture;
 }
 interface Field {
     terrain: Block[][];
 }
 
-function upCoord(coord: Coord): Coord{
-    return { x:coord.x, y:coord.y + 1};
+function upCoord(coord: Coord): Coord {
+    return { x: coord.x, y: coord.y + 1 };
 }
-function downCoord(coord: Coord): Coord{
-    return { x:coord.x, y:coord.y - 1};
+function downCoord(coord: Coord): Coord {
+    return { x: coord.x, y: coord.y - 1 };
 }
-function leftCoord(coord: Coord): Coord{
-    return { x:coord.x - 1, y:coord.y};
+function leftCoord(coord: Coord): Coord {
+    return { x: coord.x - 1, y: coord.y };
 }
-function rightCoord(coord: Coord): Coord{
-    return { x:coord.x + 1, y:coord.y};
+function rightCoord(coord: Coord): Coord {
+    return { x: coord.x + 1, y: coord.y };
 }
 
 function createField(): Field {
-    let field: Field = { terrain:[] };
+    let field: Field = { terrain: [] };
     for (let i = 0; i < 10; i++) generateRow(field);
     return field;
 }
@@ -225,15 +225,15 @@ const fieldWidth = 10;
 function generateRow(field: Field): void {
     const protoRow: BlockWithoutTexture[] = [];
     for (let x = 0; x < 10; x++) {
-        if(Math.random() < 0.7)
+        if (Math.random() < 0.7)
             protoRow[x] = { collision: "air" };
-        else if(Math.random() < 0.5)
+        else if (Math.random() < 0.5)
             protoRow[x] = { collision: "solid" };
         else
             protoRow[x] = { collision: "ladder" };
     }
     const row = protoRow.map((bwt: BlockWithoutTexture): Block => {
-        if (bwt.collision === "ladder") 
+        if (bwt.collision === "ladder")
             return {
                 collision: "ladder",
                 texture: createRectTexture("red", blockSize, blockSize)
@@ -254,7 +254,7 @@ function generateRow(field: Field): void {
 function getBlock(terrain: Block[][], coord: Coord): Block {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
-            collision:"solid",
+            collision: "solid",
             texture: createRectTexture("white", blockSize, blockSize)
         };
     return terrain[coord.y][coord.x];
@@ -278,7 +278,7 @@ function createPlayer(): Player {
 function canEnter(coord: Coord, field: Field, isSmall: boolean): boolean {
     if (isSmall)
         return getBlock(field.terrain, coord).collision !== "solid";
-    
+
     return getBlock(field.terrain, coord).collision !== "solid"
         && getBlock(field.terrain, upCoord(coord)).collision !== "solid";
 }
@@ -293,44 +293,44 @@ function canStand(coord: Coord, field: Field, isSmall: boolean): boolean {
     if (getBlock(field.terrain, coord).collision === "ladder"
         || getBlock(field.terrain, upCoord(coord)).collision === "ladder")
         return true;
-    
+
     return getBlock(field.terrain, downCoord(coord)).collision === "solid";
 }
 
 type Direction = "left" | "right" | "up" | "down";
 type ActionType = "walk" | "climb" | "drop";
-type MoveResult = null | { coord: Coord, actionType: ActionType };
+type MoveResult = null | { coord: Coord, actionType: ActionType; };
 
-function checkLeft(coord: Coord, field: Field, isSmall: boolean): MoveResult{
+function checkLeft(coord: Coord, field: Field, isSmall: boolean): MoveResult {
     // 左が空いているならそこ
     if (canEnter(leftCoord(coord), field, isSmall))
-        return { coord:leftCoord(coord), actionType:"walk" };
+        return { coord: leftCoord(coord), actionType: "walk" };
     // 上がふさがってなくて左上が空いているならそこ
-    if(canEnter(upCoord(coord), field, isSmall)
+    if (canEnter(upCoord(coord), field, isSmall)
         && canEnter(leftCoord(upCoord(coord)), field, isSmall))
-        return { coord:leftCoord(upCoord(coord)), actionType:"climb" };
+        return { coord: leftCoord(upCoord(coord)), actionType: "climb" };
     return null;
 }
-function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult{
+function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult {
     // 右が空いているならそこ
     if (canEnter(rightCoord(coord), field, isSmall))
-        return { coord: rightCoord(coord), actionType:"walk" };
+        return { coord: rightCoord(coord), actionType: "walk" };
     // 上がふさがってなくて右上が空いているならそこ
-    if(canEnter(upCoord(coord), field, isSmall)
+    if (canEnter(upCoord(coord), field, isSmall)
         && canEnter(rightCoord(upCoord(coord)), field, isSmall))
-        return { coord:rightCoord(upCoord(coord)), actionType:"climb" };
+        return { coord: rightCoord(upCoord(coord)), actionType: "climb" };
     return null;
 }
-function checkUp(coord: Coord, field: Field, isSmall: boolean): MoveResult{
+function checkUp(coord: Coord, field: Field, isSmall: boolean): MoveResult {
     // 真上に立てるなら登る？
     if (canStand(upCoord(coord), field, isSmall))
-        return { coord:upCoord(coord), actionType:"climb" };
+        return { coord: upCoord(coord), actionType: "climb" };
     return null;
 }
-function checkDown(coord: Coord, field: Field, isSmall: boolean): MoveResult{
+function checkDown(coord: Coord, field: Field, isSmall: boolean): MoveResult {
     // 真下が空いてるなら（飛び）下りる？
     if (canEnter(downCoord(coord), field, isSmall))
-        return { coord:downCoord(coord), actionType:"climb" };
+        return { coord: downCoord(coord), actionType: "climb" };
     return null;
 }
 
@@ -375,7 +375,7 @@ function createCamera(): Camera {
 
         offsetX: 0,
         offsetY: 0,
-    }
+    };
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
@@ -386,26 +386,26 @@ function updateCamera(camera: Camera, player: Player, field: Field, renderer: Re
     camera.centerX += (targetX - camera.centerX) * 0.2;
     camera.centerY += (targetY - camera.centerY) * 0.2;
     //*/
-    
+
     camera.offsetX = renderer.lightColor.canvas.width / 2 - camera.centerX;
     camera.offsetY = renderer.lightColor.canvas.height / 2 - camera.centerY;
 }
 
 const blockSize = 16;
 
-function drawBlock(block:Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
+function drawBlock(block: Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
     block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
 }
-function drawField(field: Field, camera: Camera, renderer: Renderer,  imageResources: ImageResources): void {
+function drawField(field: Field, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
     field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
 }
-function drawPlayer(player:Player, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
+function drawPlayer(player: Player, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
     player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);
 }
 
 function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, imageLoadingProgress: ImageLoadingProgress): void {
     if (imageLoadingProgress.registeredCount === imageLoadingProgress.finishedCount) {
-        updateCamera(camera, player, field, renderer,);
+        updateCamera(camera, player, field, renderer);
 
         drawField(field, camera, renderer, imageLoadingProgress.imageResources);
         drawPlayer(player, camera, renderer, imageLoadingProgress.imageResources);
@@ -422,18 +422,18 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
 
 window.onload = () => {
     const canvas = document.getElementById("canvas");
-    if　(canvas === null || !(canvas instanceof HTMLCanvasElement))
+    if (canvas === null || !(canvas instanceof HTMLCanvasElement))
         throw new Error("canvas not found");
 
     const mainScreen = canvas.getContext("2d");
-    if　(mainScreen === null)
+    if (mainScreen === null)
         throw new Error("context2d not found");
-      
+
     const field: Field = createField();
     const player: Player = createPlayer();
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    
+
     const imageLoadingProgress = imageLoader([]);
 
     /*
@@ -447,8 +447,8 @@ window.onload = () => {
     document.addEventListener("keydown", (event: KeyboardEvent) => {
         // リピート（長押し時に繰り返し発火する）は無視
         if (event.repeat) return;
-        
-        if (event.code === "KeyA") player.position.x--; 
+
+        if (event.code === "KeyA") player.position.x--;
         if (event.code === "KeyD") player.position.x++;
         if (event.code === "KeyW") player.position.y++;
         if (event.code === "KeyS") player.position.y--;
@@ -464,4 +464,4 @@ window.onload = () => {
     }, false);
 
     animationLoop(field, player, camera, renderer, mainScreen, imageLoadingProgress);
-}
+};
