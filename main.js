@@ -280,11 +280,11 @@ function movePlayer(player, field, direction) {
         generateRow(field);
 }
 const blockSize = 16;
+function drawBlock(block, coord, camera, renderer, imageResources) {
+    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+}
 function drawField(field, camera, renderer, imageResources) {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(renderer, block, x, y)));
-    function drawBlock(renderer, block, x, y) {
-        block.texture.draw(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, renderer, imageResources);
-    }
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
 }
 function drawPlayer(player, camera, renderer, imageResources) {
     player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);

@@ -362,12 +362,12 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
 
 const blockSize = 16;
 
+
+function drawBlock(block:Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
+    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+}
 function drawField(field: Field, camera: Camera, renderer: Renderer,  imageResources: ImageResources): void {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(renderer, block, x, y)));
-    
-    function drawBlock(renderer: Renderer, block:Block, x:number, y:number): void {
-        block.texture.draw(camera.offsetX + x * blockSize, camera.offsetY - y * blockSize, renderer, imageResources);
-    }
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
 }
 function drawPlayer(player:Player, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
     player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);
