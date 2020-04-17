@@ -17,6 +17,84 @@ function imageLoader(sources, callback = () => { }, progress = {
     });
     return progress;
 }
+function createRenderer(width, height) {
+    const marginTop = 28;
+    const marginLeft = 28;
+    const marginRignt = 0;
+    const marginBottom = 0;
+    const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
+    const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
+    const volumeLayers = [];
+    for (let i = 0; i < 6; i++)
+        volumeLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
+    const shadowAccScreens = [];
+    for (let i = 0; i < volumeLayers.length; i++)
+        shadowAccScreens.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
+    const compositScreen = create2dScreen(width, height);
+    return {
+        lightColor,
+        shadowColor,
+        volumeLayers,
+        compositScreen,
+        shadowAccScreens,
+        compositOffsetX: -marginLeft,
+        compositOffsetY: -marginTop,
+    };
+    function create2dScreen(width, height) {
+        let canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        let context = canvas.getContext("2d");
+        if (context === null)
+            throw new Error("failed to get 2D context");
+        return context;
+    }
+}
+function composit(renderer, mainScreen) {
+    const shadowDirectionX = 3;
+    const shadowDirectionY = 2;
+    // shadowAccScreens[i]にはi-1層目に落ちる影を描画する
+    for (let i = renderer.volumeLayers.length - 1; 0 <= i; i--) {
+        renderer.shadowAccScreens[i].globalCompositeOperation = "source-over";
+        renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i].canvas, 0, 0);
+        if (i !== renderer.volumeLayers.length - 1)
+            renderer.shadowAccScreens[i].drawImage(renderer.shadowAccScreens[i + 1].canvas, shadowDirectionX, shadowDirectionY);
+    }
+    for (let i = 0; i < renderer.shadowAccScreens.length; i++) {
+        //i-1層目の形で打ち抜く
+        if (i !== 0) {
+            renderer.shadowAccScreens[i].globalCompositeOperation = "source-in";
+            renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i - 1].canvas, -shadowDirectionY, -shadowDirectionY);
+        }
+        //compositに累積
+        renderer.compositScreen.globalCompositeOperation = "source-over";
+        renderer.compositScreen.drawImage(renderer.shadowAccScreens[i].canvas, renderer.compositOffsetX + shadowDirectionX, renderer.compositOffsetY + shadowDirectionY);
+        //見えなくなる部分を隠す
+        renderer.compositScreen.globalCompositeOperation = "destination-out";
+        renderer.compositScreen.drawImage(renderer.volumeLayers[i].canvas, renderer.compositOffsetX, renderer.compositOffsetY);
+    }
+    // 影部分が不透明な状態になっているはずなので、影色で上書きする
+    renderer.compositScreen.globalCompositeOperation = "source-atop";
+    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
+    // 残りの部分に光色
+    renderer.compositScreen.globalCompositeOperation = "destination-over";
+    renderer.compositScreen.drawImage(renderer.lightColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
+    // メインスクリーン（本番のcanvas）にスムージングなしで拡大
+    mainScreen.imageSmoothingEnabled = false;
+    mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+    mainScreen.drawImage(renderer.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+    //次フレームの描画に備えてレイヤーを消去
+    clearScreen(renderer.lightColor);
+    clearScreen(renderer.shadowColor);
+    for (var i = 0; i < renderer.volumeLayers.length; i++) {
+        clearScreen(renderer.volumeLayers[i]);
+        clearScreen(renderer.shadowAccScreens[i]);
+    }
+    clearScreen(renderer.compositScreen);
+    function clearScreen(screen) {
+        screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
+    }
+}
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor, width, height, shadowColor = lightColor) {
     return {
@@ -219,39 +297,6 @@ function createCamera() {
         offsetY: 0,
     };
 }
-function createRenderer(width, height) {
-    const marginTop = 28;
-    const marginLeft = 28;
-    const marginRignt = 0;
-    const marginBottom = 0;
-    const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
-    const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
-    const volumeLayers = [];
-    for (let i = 0; i < 6; i++)
-        volumeLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
-    const shadowAccScreens = [];
-    for (let i = 0; i < volumeLayers.length; i++)
-        shadowAccScreens.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
-    const compositScreen = create2dScreen(width, height);
-    return {
-        lightColor,
-        shadowColor,
-        volumeLayers,
-        compositScreen,
-        shadowAccScreens,
-        compositOffsetX: -marginLeft,
-        compositOffsetY: -marginTop,
-    };
-    function create2dScreen(width, height) {
-        let canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        let context = canvas.getContext("2d");
-        if (context === null)
-            throw new Error("failed to get 2D context");
-        return context;
-    }
-}
 function updateCamera(camera, player, field, renderer) {
     /*
     const targetX = (player.position.x + 0.5) * blockSize;
@@ -262,51 +307,6 @@ function updateCamera(camera, player, field, renderer) {
     //*/
     camera.offsetX = renderer.lightColor.canvas.width / 2 - camera.centerX;
     camera.offsetY = renderer.lightColor.canvas.height / 2 - camera.centerY;
-}
-function composit(renderer, mainScreen) {
-    const shadowDirectionX = 3;
-    const shadowDirectionY = 2;
-    // shadowAccScreens[i]にはi-1層目に落ちる影を描画する
-    for (let i = renderer.volumeLayers.length - 1; 0 <= i; i--) {
-        renderer.shadowAccScreens[i].globalCompositeOperation = "source-over";
-        renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i].canvas, 0, 0);
-        if (i !== renderer.volumeLayers.length - 1)
-            renderer.shadowAccScreens[i].drawImage(renderer.shadowAccScreens[i + 1].canvas, shadowDirectionX, shadowDirectionY);
-    }
-    for (let i = 0; i < renderer.shadowAccScreens.length; i++) {
-        //i-1層目の形で打ち抜く
-        if (i !== 0) {
-            renderer.shadowAccScreens[i].globalCompositeOperation = "source-in";
-            renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i - 1].canvas, -shadowDirectionY, -shadowDirectionY);
-        }
-        //compositに累積
-        renderer.compositScreen.globalCompositeOperation = "source-over";
-        renderer.compositScreen.drawImage(renderer.shadowAccScreens[i].canvas, renderer.compositOffsetX + shadowDirectionX, renderer.compositOffsetY + shadowDirectionY);
-        //見えなくなる部分を隠す
-        renderer.compositScreen.globalCompositeOperation = "destination-out";
-        renderer.compositScreen.drawImage(renderer.volumeLayers[i].canvas, renderer.compositOffsetX, renderer.compositOffsetY);
-    }
-    // 影部分が不透明な状態になっているはずなので、影色で上書きする
-    renderer.compositScreen.globalCompositeOperation = "source-atop";
-    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
-    // 残りの部分に光色
-    renderer.compositScreen.globalCompositeOperation = "destination-over";
-    renderer.compositScreen.drawImage(renderer.lightColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
-    // メインスクリーン（本番のcanvas）にスムージングなしで拡大
-    mainScreen.imageSmoothingEnabled = false;
-    mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
-    mainScreen.drawImage(renderer.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
-    //次フレームの描画に備えてレイヤーを消去
-    clearScreen(renderer.lightColor);
-    clearScreen(renderer.shadowColor);
-    for (var i = 0; i < renderer.volumeLayers.length; i++) {
-        clearScreen(renderer.volumeLayers[i]);
-        clearScreen(renderer.shadowAccScreens[i]);
-    }
-    clearScreen(renderer.compositScreen);
-    function clearScreen(screen) {
-        screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
-    }
 }
 function animationLoop(field, player, camera, renderer, mainScreen, imageLoadingProgress) {
     if (imageLoadingProgress.registeredCount === imageLoadingProgress.finishedCount) {
