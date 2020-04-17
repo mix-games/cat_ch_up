@@ -307,8 +307,8 @@ function checkLeft(coord: Coord, field: Field, isSmall: boolean): MoveResult{
         return { coord:leftCoord(coord), actionType:"walk" };
     // 上がふさがってなくて左上が空いているならそこ
     if(canEnter(upCoord(coord), field, isSmall)
-     && canEnter(leftCoord(upCoord(coord)), field, isSmall))
-     return { coord:leftCoord(upCoord(coord)), actionType:"climb" };
+        && canEnter(leftCoord(upCoord(coord)), field, isSmall))
+        return { coord:leftCoord(upCoord(coord)), actionType:"climb" };
     return null;
 }
 function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult{
@@ -317,8 +317,8 @@ function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult{
         return { coord: rightCoord(coord), actionType:"walk" };
     // 上がふさがってなくて右上が空いているならそこ
     if(canEnter(upCoord(coord), field, isSmall)
-     && canEnter(rightCoord(upCoord(coord)), field, isSmall))
-     return { coord:rightCoord(upCoord(coord)), actionType:"climb" };
+        && canEnter(rightCoord(upCoord(coord)), field, isSmall))
+        return { coord:rightCoord(upCoord(coord)), actionType:"climb" };
     return null;
 }
 function checkUp(coord: Coord, field: Field, isSmall: boolean): MoveResult{
@@ -360,19 +360,6 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     while (field.terrain.length - 5 < player.position.y) generateRow(field);
 }
 
-const blockSize = 16;
-
-
-function drawBlock(block:Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
-    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
-}
-function drawField(field: Field, camera: Camera, renderer: Renderer,  imageResources: ImageResources): void {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
-}
-function drawPlayer(player:Player, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
-    player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);
-}
-
 interface Camera {
     centerX: number;
     centerY: number;
@@ -402,6 +389,18 @@ function updateCamera(camera: Camera, player: Player, field: Field, renderer: Re
     
     camera.offsetX = renderer.lightColor.canvas.width / 2 - camera.centerX;
     camera.offsetY = renderer.lightColor.canvas.height / 2 - camera.centerY;
+}
+
+const blockSize = 16;
+
+function drawBlock(block:Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
+    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+}
+function drawField(field: Field, camera: Camera, renderer: Renderer,  imageResources: ImageResources): void {
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
+}
+function drawPlayer(player:Player, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
+    player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);
 }
 
 function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, imageLoadingProgress: ImageLoadingProgress): void {

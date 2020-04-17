@@ -279,16 +279,6 @@ function movePlayer(player, field, direction) {
     while (field.terrain.length - 5 < player.position.y)
         generateRow(field);
 }
-const blockSize = 16;
-function drawBlock(block, coord, camera, renderer, imageResources) {
-    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
-}
-function drawField(field, camera, renderer, imageResources) {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
-}
-function drawPlayer(player, camera, renderer, imageResources) {
-    player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);
-}
 function createCamera() {
     return {
         centerX: 80,
@@ -307,6 +297,16 @@ function updateCamera(camera, player, field, renderer) {
     //*/
     camera.offsetX = renderer.lightColor.canvas.width / 2 - camera.centerX;
     camera.offsetY = renderer.lightColor.canvas.height / 2 - camera.centerY;
+}
+const blockSize = 16;
+function drawBlock(block, coord, camera, renderer, imageResources) {
+    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+}
+function drawField(field, camera, renderer, imageResources) {
+    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
+}
+function drawPlayer(player, camera, renderer, imageResources) {
+    player.texture.draw(camera.offsetX + player.position.x * blockSize + 2, camera.offsetY - (player.position.y + 1) * blockSize + 4, renderer, imageResources);
 }
 function animationLoop(field, player, camera, renderer, mainScreen, imageLoadingProgress) {
     if (imageLoadingProgress.registeredCount === imageLoadingProgress.finishedCount) {
