@@ -23,6 +23,10 @@ function resourceLoader(sources: string[], callback: () => void = () => { }, pro
                 if (progress.registeredCount === progress.finishedCount)
                     callback();
             }, false);
+            image.addEventListener("error", () => {
+                //こうしないとロードがいつまでも終わらないことになるので。本当はカウンターを分けるべき？
+                progress.finishedCount++;
+            });
             image.src = source;
         }
         else if (source.match(/\.(wav|ogg|mp3)$/)) {
@@ -32,7 +36,10 @@ function resourceLoader(sources: string[], callback: () => void = () => { }, pro
                 progress.finishedCount++;
                 if (progress.registeredCount === progress.finishedCount)
                     callback();
-                }, false);
+            }, false);
+            audio.addEventListener("error", () => {
+                progress.finishedCount++;
+            });
             audio.src = source;
         }
         else throw new Error("unknown extension");
