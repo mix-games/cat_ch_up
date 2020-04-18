@@ -66,16 +66,16 @@ function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): v
     });
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
-    function drawArrow(startX: number, startY: number, endX: number, endY: number): void {
-        const arrowX = endX - startX;
-        const arrowY = endY - startY;
+    function drawArrow(fromX: number, fromY: number, toX: number, toY: number): void {
+        const arrowX = toX - fromX;
+        const arrowY = toY - fromY;
         const arrowL = Math.sqrt(arrowX * arrowX + arrowY * arrowY);
         const thicknessX = 3 * -arrowY / arrowL;
         const thicknessY = 3 * arrowX / arrowL;
         screen.beginPath();
-        screen.moveTo(startX, startY);
-        screen.lineTo(startX + thicknessX, startY + thicknessY);
-        screen.lineTo(endX + thicknessX, endY + thicknessY);
+        screen.moveTo(fromX, fromY);
+        screen.lineTo(fromX + thicknessX, fromY + thicknessY);
+        screen.lineTo(toX + thicknessX, toY + thicknessY);
         screen.fill();
     }
 }
