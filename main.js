@@ -1,41 +1,55 @@
 "use strict";
 let trafficDigraphForTest = new Map(); //for test
 function createTrafficDigraph(lowerBound, upperBound, field) {
-    const res = new Map();
+    const digraph = new Map();
+    // とりあえず虚無の頂点リストを作る（埋まってないマスのみで構成）
     for (let y = lowerBound; y < upperBound; y++) {
         for (let x = 0; x < fieldWidth; x++) {
-            const currentCoord = { x, y };
-            const outflow = [];
-            //埋まってるマスはグラフに参加しない
-            if (!canEnter(currentCoord, field, false))
-                continue;
-            //空中のマスは落ちるだけできる
-            if (!canStand(currentCoord, field, false)) {
-                res.set(currentCoord, [downCoord(currentCoord)]);
-                continue;
-            }
-            const left = checkLeft(currentCoord, field, false);
-            if (left !== null)
-                outflow.push(left.coord);
-            const right = checkRight(currentCoord, field, false);
-            if (right !== null)
-                outflow.push(right.coord);
-            const down = checkDown(currentCoord, field, false);
-            if (down !== null)
-                outflow.push(down.coord);
-            const up = checkUp(currentCoord, field, false);
-            if (up !== null)
-                outflow.push(up.coord);
-            res.set(currentCoord, outflow);
+            const coord = { x, y };
+            if (canEnter(coord, field, false))
+                digraph.set(JSON.stringify(coord), { coord, inflow: [], outflow: [] });
         }
     }
-    return res;
+    for (let y = lowerBound; y < upperBound; y++) {
+        for (let x = 0; x < fieldWidth; x++) {
+            const coord = { x, y };
+            if (!canEnter(coord, field, false))
+                continue;
+            //空中のマスは落ちるだけできる
+            if (!canStand(coord, field, false)) {
+                addArrow(digraph, coord, downCoord(coord));
+                continue;
+            }
+            const left = checkLeft(coord, field, false);
+            if (left !== null)
+                addArrow(digraph, coord, left.coord);
+            const right = checkRight(coord, field, false);
+            if (right !== null)
+                addArrow(digraph, coord, right.coord);
+            const down = checkDown(coord, field, false);
+            if (down !== null)
+                addArrow(digraph, coord, down.coord);
+            const up = checkUp(coord, field, false);
+            if (up !== null)
+                addArrow(digraph, coord, up.coord);
+        }
+    }
+    return digraph;
+    function addArrow(digraph, from, to) {
+        const fromVertex = digraph.get(JSON.stringify(from));
+        const toVertex = digraph.get(JSON.stringify(to));
+        // どちらかの頂点が範囲外なら無視
+        if (fromVertex === undefined || toVertex === undefined)
+            return;
+        fromVertex.outflow.push(to);
+        toVertex.inflow.push(from);
+    }
 }
 function drawDigraphForTest(camera, screen) {
     screen.fillStyle = "gray";
-    trafficDigraphForTest.forEach((ends, start) => {
-        ends.forEach((end) => {
-            drawArrow(camera.offsetX + (start.x + 0.5) * blockSize, camera.offsetY - (start.y - 0.5) * blockSize, camera.offsetX + (end.x + 0.5) * blockSize, camera.offsetY - (end.y - 0.5) * blockSize);
+    trafficDigraphForTest.forEach((vertex) => {
+        vertex.outflow.forEach((to) => {
+            drawArrow(camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize, camera.offsetX + (to.x + 0.5) * blockSize, camera.offsetY - (to.y - 0.5) * blockSize);
         });
     });
     //alert("こんにちは")
