@@ -198,6 +198,7 @@ interface Block {
 }
 interface Field {
     terrain: Block[][];
+    neko: Neko;
 }
 
 function upCoord(coord: Coord): Coord {
@@ -214,7 +215,10 @@ function rightCoord(coord: Coord): Coord {
 }
 
 function createField(): Field {
-    let field: Field = { terrain: [] };
+    let field: Field = {
+        terrain: [],
+        neko: createNeko()
+    };
     for (let i = 0; i < 10; i++) generateRow(field);
     return field;
 }
@@ -260,9 +264,12 @@ function getBlock(terrain: Block[][], coord: Coord): Block {
     return terrain[coord.y][coord.x];
 }
 
-interface Player {
-    position: Coord; //足元のブロックの座標
+interface GameObject {
+    coord: Coord; //足元のブロックの座標
     texture: Texture;
+}
+
+interface Player extends GameObject {
     isSmall: boolean;
 }
 
@@ -355,9 +362,32 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
 
     console.log(direction + " " + result.actionType);
 
+    turn(field, player);
+}
+
+function turn(field: Field, player: Player) {
     //敵などのターン処理はここ
 
-    while (field.terrain.length - 5 < player.position.y) generateRow(field);
+    controlNeko(field.neko, field, player);
+
+    while (field.terrain.length - 5 < player.coord.y || field.terrain.length - 5 < field.neko.coord.y)
+        generateRow(field);
+}
+
+interface Neko extends GameObject {
+    coord:  Coord;
+    texture: Texture;
+}
+
+function createNeko(): Neko {
+    return {
+        coord: { x: 0, y: 5 },
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, 2, 2)
+    };
+}
+
+function controlNeko(neko: Neko, field:Field, player:Player): void {
+    neko.coord.x++;
 }
 
 interface Camera {
@@ -399,8 +429,8 @@ function drawBlock(block: Block, coord: Coord, camera: Camera, renderer: Rendere
 function drawField(field: Field, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
     field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
 }
-function drawPlayer(player: Player, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
-    player.texture.draw(camera.offsetX + player.coord.x * blockSize, camera.offsetY - player.coord.y * blockSize, renderer, imageResources);
+function drawGameObject(gameObject: GameObject, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
+    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
 }
 
 function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, imageLoadingProgress: ImageLoadingProgress): void {
@@ -408,7 +438,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         updateCamera(camera, player, field, renderer);
 
         drawField(field, camera, renderer, imageLoadingProgress.imageResources);
-        drawPlayer(player, camera, renderer, imageLoadingProgress.imageResources);
+        drawGameObject(player, camera, renderer, imageLoadingProgress.imageResources);
+        drawGameObject(field.neko, camera, renderer, imageLoadingProgress.imageResources);
 
         composit(renderer, mainScreen);
     }
