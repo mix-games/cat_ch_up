@@ -158,6 +158,12 @@ interface Texture {
     draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => void;
 }
 
+function createEmptyTexture(): Texture {
+    return {
+        draw: () => {}
+    };
+}
+
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor: string, width: number, height: number, offsetX: number, offsetY: number, shadowColor: string = lightColor): Texture {
     return {
@@ -272,7 +278,7 @@ function generateRow(field: Field): void {
             };
         else return {
             collision: "air",
-            texture: createRectTexture("white", blockSize, blockSize, 0, 0)
+            texture: createEmptyTexture()
         };
     });
     field.terrain.push(row);
@@ -282,7 +288,7 @@ function getBlock(terrain: Block[][], coord: Coord): Block {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
-            texture: createRectTexture("white", blockSize, blockSize, 0, 0)
+            texture: createEmptyTexture()
         };
     return terrain[coord.y][coord.x];
 }

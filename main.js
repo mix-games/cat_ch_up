@@ -117,6 +117,11 @@ function composit(renderer, mainScreen) {
         screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
     }
 }
+function createEmptyTexture() {
+    return {
+        draw: () => { }
+    };
+}
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowColor = lightColor) {
     return {
@@ -204,7 +209,7 @@ function generateRow(field) {
         else
             return {
                 collision: "air",
-                texture: createRectTexture("white", blockSize, blockSize, 0, 0)
+                texture: createEmptyTexture()
             };
     });
     field.terrain.push(row);
@@ -213,7 +218,7 @@ function getBlock(terrain, coord) {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
-            texture: createRectTexture("white", blockSize, blockSize, 0, 0)
+            texture: createEmptyTexture()
         };
     return terrain[coord.y][coord.x];
 }
