@@ -1,19 +1,34 @@
 "use strict";
-function imageLoader(sources, callback = () => { }, progress = {
+function resourceLoader(sources, callback = () => { }, progress = {
     registeredCount: 0,
     finishedCount: 0,
-    imageResources: new Map()
+    imageResources: new Map(),
+    audioResources: new Map()
 }) {
     progress.registeredCount += sources.length;
     sources.forEach(source => {
-        const image = new Image();
-        image.onload = () => {
-            progress.imageResources.set(source, image);
-            progress.finishedCount++;
-            if (progress.registeredCount === progress.finishedCount)
-                callback();
-        };
-        image.src = source;
+        if (source.match(/\.(bmp|png|jpg)$/)) {
+            const image = new Image();
+            image.addEventListener('load', () => {
+                progress.imageResources.set(source, image);
+                progress.finishedCount++;
+                if (progress.registeredCount === progress.finishedCount)
+                    callback();
+            }, false);
+            image.src = source;
+        }
+        else if (source.match(/\.(wav|ogg|mp3)$/)) {
+            const audio = new Audio();
+            audio.addEventListener('canplaythrough', () => {
+                progress.audioResources.set(source, audio);
+                progress.finishedCount++;
+                if (progress.registeredCount === progress.finishedCount)
+                    callback();
+            }, false);
+            audio.src = source;
+        }
+        else
+            throw new Error("unknown extension");
     });
     return progress;
 }
@@ -324,19 +339,19 @@ function drawField(field, camera, renderer, imageResources) {
 function drawGameObject(gameObject, camera, renderer, imageResources) {
     gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
 }
-function animationLoop(field, player, camera, renderer, mainScreen, imageLoadingProgress) {
-    if (imageLoadingProgress.registeredCount === imageLoadingProgress.finishedCount) {
+function animationLoop(field, player, camera, renderer, mainScreen, loadingProgress) {
+    if (loadingProgress.registeredCount === loadingProgress.finishedCount) {
         updateCamera(camera, player, field, renderer);
-        drawField(field, camera, renderer, imageLoadingProgress.imageResources);
-        drawGameObject(player, camera, renderer, imageLoadingProgress.imageResources);
-        drawGameObject(field.neko, camera, renderer, imageLoadingProgress.imageResources);
+        drawField(field, camera, renderer, loadingProgress.imageResources);
+        drawGameObject(player, camera, renderer, loadingProgress.imageResources);
+        drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
         composit(renderer, mainScreen);
     }
     else {
-        console.log("loading " + imageLoadingProgress.finishedCount + "/" + imageLoadingProgress.registeredCount);
+        console.log("loading " + loadingProgress.finishedCount + "/" + loadingProgress.registeredCount);
         mainScreen.fillText("loading", 0, 0);
     }
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, imageLoadingProgress));
+    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
 }
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -349,7 +364,7 @@ window.onload = () => {
     const player = createPlayer();
     const camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const imageLoadingProgress = imageLoader([]);
+    const loadingProgress = resourceLoader([]);
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -381,5 +396,5 @@ window.onload = () => {
         console.log("canEnter: " + canEnter(player.coord, field, false));
         console.log("canStand: " + canStand(player.coord, field, false));
     }, false);
-    animationLoop(field, player, camera, renderer, mainScreen, imageLoadingProgress);
+    animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
 };
