@@ -17,26 +17,26 @@ function createTrafficDigraph(lowerBound: number, upperBound: number, field: Fie
     }
     return res;
 }
-function drawDigraphForTest(camera: Camera, mainScreen: CanvasRenderingContext2D): void{//for test
-    mainScreen.fillStyle = "gray";
+function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): void{//for test
+    screen.fillStyle = "gray";
     trafficDigraphForTest.forEach((ends: Coord[], start: Coord): void => {
         ends.forEach((end: Coord): void => {
-            drawArrow(camera.offsetX + start.x * blockSize, camera.offsetY - start.y * blockSize,
-                camera.offsetX + end.x * blockSize, camera.offsetY - end.y * blockSize)
+            drawArrow(camera.offsetX + (start.x + 0.5) * blockSize, camera.offsetY - (start.y - 0.5) * blockSize,
+                camera.offsetX + (end.x + 0.5) * blockSize, camera.offsetY - (end.y - 0.5) * blockSize)
         })
     })
-    alert("こんにちは")
+    //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
     function drawArrow(startX: number, startY: number, endX: number, endY: number): void{
         const arrowX = endX - startX;
         const arrowY = endY - startY;
         const arrowL = Math.sqrt(arrowX * arrowX + arrowY * arrowY);
-        const thicknessX = 2 * -arrowY / arrowL;
-        const thicknessY = 2 * arrowX / arrowL;
-        mainScreen.beginPath();
-        mainScreen.moveTo(startX, startY);
-        mainScreen.lineTo(startX + thicknessX, startY + thicknessY);
-        mainScreen.lineTo(endX + thicknessX, endY + thicknessY);
-        mainScreen.fill();
+        const thicknessX = 3 * -arrowY / arrowL;
+        const thicknessY = 3 * arrowX / arrowL;
+        screen.beginPath();
+        screen.moveTo(startX, startY);
+        screen.lineTo(startX + thicknessX, startY + thicknessY);
+        screen.lineTo(endX + thicknessX, endY + thicknessY);
+        screen.fill();
     }
 }

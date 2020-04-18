@@ -22,26 +22,26 @@ function createTrafficDigraph(lowerBound, upperBound, field) {
     }
     return res;
 }
-function drawDigraphForTest(camera, mainScreen) {
-    mainScreen.fillStyle = "gray";
+function drawDigraphForTest(camera, screen) {
+    screen.fillStyle = "gray";
     trafficDigraphForTest.forEach((ends, start) => {
         ends.forEach((end) => {
-            drawArrow(camera.offsetX + start.x * blockSize, camera.offsetY - start.y * blockSize, camera.offsetX + end.x * blockSize, camera.offsetY - end.y * blockSize);
+            drawArrow(camera.offsetX + (start.x + 0.5) * blockSize, camera.offsetY - (start.y - 0.5) * blockSize, camera.offsetX + (end.x + 0.5) * blockSize, camera.offsetY - (end.y - 0.5) * blockSize);
         });
     });
-    alert("こんにちは");
+    //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
     function drawArrow(startX, startY, endX, endY) {
         const arrowX = endX - startX;
         const arrowY = endY - startY;
         const arrowL = Math.sqrt(arrowX * arrowX + arrowY * arrowY);
-        const thicknessX = 2 * -arrowY / arrowL;
-        const thicknessY = 2 * arrowX / arrowL;
-        mainScreen.beginPath();
-        mainScreen.moveTo(startX, startY);
-        mainScreen.lineTo(startX + thicknessX, startY + thicknessY);
-        mainScreen.lineTo(endX + thicknessX, endY + thicknessY);
-        mainScreen.fill();
+        const thicknessX = 3 * -arrowY / arrowL;
+        const thicknessY = 3 * arrowX / arrowL;
+        screen.beginPath();
+        screen.moveTo(startX, startY);
+        screen.lineTo(startX + thicknessX, startY + thicknessY);
+        screen.lineTo(endX + thicknessX, endY + thicknessY);
+        screen.fill();
     }
 }
 function imageLoader(sources, callback = () => { }, progress = {
@@ -199,7 +199,7 @@ function createField() {
     };
     for (let i = 0; i < 10; i++)
         generateRow(field);
-    trafficDigraphForTest = createTrafficDigraph(0, 10, field); //for test
+    trafficDigraphForTest = createTrafficDigraph(0, 8, field); //for test
     return field;
 }
 const fieldWidth = 10;
@@ -376,8 +376,8 @@ function animationLoop(field, player, camera, renderer, mainScreen, imageLoading
         drawField(field, camera, renderer, imageLoadingProgress.imageResources);
         drawGameObject(player, camera, renderer, imageLoadingProgress.imageResources);
         drawGameObject(field.neko, camera, renderer, imageLoadingProgress.imageResources);
+        drawDigraphForTest(camera, renderer.lightColor); //for test
         composit(renderer, mainScreen);
-        drawDigraphForTest(camera, mainScreen); //for test
     }
     else {
         console.log("loading " + imageLoadingProgress.finishedCount + "/" + imageLoadingProgress.registeredCount);
