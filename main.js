@@ -5,6 +5,14 @@ function createTrafficDigraph(lowerBound, upperBound, field) {
     for (let i = lowerBound; i < upperBound; i++) {
         for (let j = 0; j < fieldWidth; j++) {
             const fromIJ = [];
+            //埋まってるマスはグラフに参加しない
+            if (!canEnter({ x: j, y: i }, field, false))
+                continue;
+            //空中のマスは落ちるだけできる
+            if (!canStand({ x: j, y: i }, field, false)) {
+                res.set({ x: j, y: i }, [downCoord({ x: j, y: i })]);
+                continue;
+            }
             const left = checkLeft({ x: j, y: i }, field, false);
             if (left != null)
                 fromIJ.push(left.coord);
