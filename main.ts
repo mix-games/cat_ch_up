@@ -220,6 +220,7 @@ function createField(): Field {
         neko: createNeko()
     };
     for (let i = 0; i < 10; i++) generateRow(field);
+    trafficDigraphForTest = createTrafficDigraph(0, 10, field)//for test
     return field;
 }
 
@@ -442,6 +443,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawGameObject(field.neko, camera, renderer, imageLoadingProgress.imageResources);
 
         composit(renderer, mainScreen);
+        drawDigraphForTest(camera, mainScreen);//for test
     }
     else {
         console.log("loading " + imageLoadingProgress.finishedCount + "/" + imageLoadingProgress.registeredCount);
