@@ -41,17 +41,70 @@ function createTrafficDigraph(lowerBound, upperBound, field) {
         // どちらかの頂点が範囲外なら無視
         if (fromVertex === undefined || toVertex === undefined)
             return;
-        fromVertex.outflow.push(to);
-        toVertex.inflow.push(from);
+        fromVertex.outflow.push(toVertex);
+        toVertex.inflow.push(fromVertex);
+    }
+}
+let sccs = []; //テスト
+// 強連結成分(stronglyConnectedComponent) 分解
+function sccDecomposition(vertexes) {
+    const seen = new Map();
+    let components = [];
+    let root = vertexes[0];
+    // 全部巡回できてなかったら、次の根を選ぶ
+    while (root !== undefined) {
+        const stack = outflowRecursion(root, seen, []);
+        const seen2 = new Map();
+        const componentBuffer = [];
+        // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
+        let root2 = stack[0];
+        while (root2 !== undefined) {
+            componentBuffer.push(inflowRecursion(root2, seen, seen2, []));
+            root2 = stack.find(v => !seen2.get(JSON.stringify(v.coord)));
+        }
+        //componentsに移動
+        components = [...components, ...componentBuffer];
+        // 適当な未探索ノードを選ぶ
+        root = vertexes.find(v => !seen.get(JSON.stringify(v.coord)));
+    }
+    return components;
+    //一つ目の再帰
+    function outflowRecursion(currentVertex, seen, stack) {
+        // 巡回済みなら何もせず帰る（未巡回ならfalseではなくundefinedが帰るだろうがfalsyなので問題ない）
+        if (seen.get(JSON.stringify(currentVertex.coord)))
+            return stack;
+        // 巡回済みフラグを残す（coordがIDのようにふるまうはず）
+        seen.set(JSON.stringify(currentVertex.coord), true);
+        // 行きがけ順でstackに記録
+        stack.push(currentVertex);
+        // 深さ優先探索
+        currentVertex.outflow.forEach(to => outflowRecursion(to, seen, stack));
+        return stack;
+    }
+    //二つ目の再帰
+    function inflowRecursion(currentVertex, seen, seen2, component) {
+        // 巡回済みまたは一つ目の再帰で未巡回なら何もせず帰る
+        if (!seen.get(JSON.stringify(currentVertex.coord)) || seen2.get(JSON.stringify(currentVertex.coord)))
+            return component;
+        // 巡回済みフラグを残す
+        seen2.set(JSON.stringify(currentVertex.coord), true);
+        // componentに追加
+        component.push(currentVertex);
+        // 深さ優先探索
+        currentVertex.outflow.forEach(to => inflowRecursion(to, seen, seen2, component));
+        return component;
     }
 }
 function drawDigraphForTest(camera, screen) {
     screen.fillStyle = "gray";
     trafficDigraphForTest.forEach((vertex) => {
         vertex.outflow.forEach((to) => {
-            drawArrow(camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize, camera.offsetX + (to.x + 0.5) * blockSize, camera.offsetY - (to.y - 0.5) * blockSize);
+            drawArrow(camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize, camera.offsetX + (to.coord.x + 0.5) * blockSize, camera.offsetY - (to.coord.y - 0.5) * blockSize);
         });
     });
+    sccs.forEach((component, componentIndex) => component.forEach(vertex => {
+        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
+    }));
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
     function drawArrow(fromX, fromY, toX, toY) {
@@ -223,6 +276,7 @@ function createField() {
     for (let i = 0; i < 10; i++)
         generateRow(field);
     trafficDigraphForTest = createTrafficDigraph(0, 8, field); //for test
+    sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
     return field;
 }
 const fieldWidth = 10;

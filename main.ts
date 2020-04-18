@@ -221,6 +221,7 @@ function createField(): Field {
     };
     for (let i = 0; i < 10; i++) generateRow(field);
     trafficDigraphForTest = createTrafficDigraph(0, 8, field)//for test
+    sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
     return field;
 }
 
