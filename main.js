@@ -181,6 +181,27 @@ function createAnimationTexture(source, textureOffsetX, textureOffsetY, sw, time
         }
     };
 }
+function createAnimationVolumeTexture(source, textureOffsetX, textureOffsetY, sw, sh, timeline, loop) {
+    const startTime = new Date().getTime();
+    return {
+        draw: (x, y, renderer, resources) => {
+            const image = resources.get(source);
+            if (image === undefined) {
+                console.log("not loaded yet");
+                return;
+            }
+            const elapse = new Date().getTime() - startTime;
+            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
+            let frame = timeline.findIndex(t => phase < t);
+            if (frame === -1)
+                frame = timeline.length - 1;
+            renderer.lightColor.drawImage(image, sw * frame, 0, sw, sh, textureOffsetX + x, textureOffsetY + y, sw, sh);
+            renderer.shadowColor.drawImage(image, sw * frame, sh, sw, sh, textureOffsetX + x, textureOffsetY + y, sw, sh);
+            for (var i = 0; i < renderer.volumeLayers.length; i++)
+                renderer.volumeLayers[i].drawImage(image, sw * frame, (i + 2) * sh, sw, sh, textureOffsetX + x, textureOffsetY + y, sw, sh);
+        }
+    };
+}
 function upCoord(coord) {
     return { x: coord.x, y: coord.y + 1 };
 }
