@@ -57,23 +57,27 @@ function createTrafficDigraph(lowerBound: number, upperBound: number, field: Fie
     }
 }
 
-let sccs: DigraphVertex[][] = []; //テスト
+let sccs: scComponent[] = []; //テスト
+
+interface scComponent {
+    vertexes: DigraphVertex[];
+}
 
 // 強連結成分(stronglyConnectedComponent) 分解
-function sccDecomposition(vertexes: DigraphVertex[]): DigraphVertex[][] {
+function sccDecomposition(vertexes: DigraphVertex[]): scComponent[] {
     const seen: Map<DigraphVertex, undefined | 1 | 2> = new Map();
-    let components: DigraphVertex[][] = [];
+    let components: scComponent[] = [];
 
     let root: DigraphVertex | undefined = vertexes[0];
     // 全部巡回できてなかったら、次の根を選ぶ
     while (root !== undefined) {
         const stack = outflowRecursion(root, seen, []);
 
-        const componentBuffer: DigraphVertex[][] = [];
+        const componentBuffer: scComponent[] = [];
         // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
         let root2: DigraphVertex | undefined = stack[0];
         while (root2 !== undefined) {
-            componentBuffer.push(inflowRecursion(root2, seen, []));
+            componentBuffer.push(inflowRecursion(root2, seen, {vertexes: []}));
             root2 = stack.find(v => seen.get(v) === 1);
         }
         //componentsに移動
@@ -100,13 +104,13 @@ function sccDecomposition(vertexes: DigraphVertex[]): DigraphVertex[][] {
     }
 
     //二つ目の再帰
-    function inflowRecursion(currentVertex: DigraphVertex, seen: Map<DigraphVertex, undefined | 1 | 2>, component: DigraphVertex[]): DigraphVertex[] {
+    function inflowRecursion(currentVertex: DigraphVertex, seen: Map<DigraphVertex, undefined | 1 | 2>, component: scComponent): scComponent {
         // 巡回済みまたは一つ目の再帰で未巡回なら何もせず帰る
         if (seen.get(currentVertex) !== 1) return component;
         // 巡回済みフラグを残す
         seen.set(currentVertex, 2);
         // componentに追加
-        component.push(currentVertex);
+        component.vertexes.push(currentVertex);
         // 深さ優先探索
         currentVertex.outflow.forEach(to => inflowRecursion(to, seen, component));
 
@@ -125,7 +129,7 @@ function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): v
                 camera.offsetY - (to.coord.y - 0.5) * blockSize);
         });
     });*/
-    sccs.forEach((component, componentIndex) => component.forEach(vertex => {
+    sccs.forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(),
             camera.offsetX + (vertex.coord.x + 0.5) * blockSize,
             camera.offsetY - (vertex.coord.y - 0.5) * blockSize);

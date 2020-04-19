@@ -58,7 +58,7 @@ function sccDecomposition(vertexes) {
         // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
         let root2 = stack[0];
         while (root2 !== undefined) {
-            componentBuffer.push(inflowRecursion(root2, seen, []));
+            componentBuffer.push(inflowRecursion(root2, seen, { vertexes: [] }));
             root2 = stack.find(v => seen.get(v) === 1);
         }
         //componentsに移動
@@ -88,7 +88,7 @@ function sccDecomposition(vertexes) {
         // 巡回済みフラグを残す
         seen.set(currentVertex, 2);
         // componentに追加
-        component.push(currentVertex);
+        component.vertexes.push(currentVertex);
         // 深さ優先探索
         currentVertex.outflow.forEach(to => inflowRecursion(to, seen, component));
         return component;
@@ -105,7 +105,7 @@ function drawDigraphForTest(camera, screen) {
                 camera.offsetY - (to.coord.y - 0.5) * blockSize);
         });
     });*/
-    sccs.forEach((component, componentIndex) => component.forEach(vertex => {
+    sccs.forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
     //alert("こんにちは")
