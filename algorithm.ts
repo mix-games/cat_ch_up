@@ -109,7 +109,7 @@ function sccDecomposition(vertexes: DigraphVertex[]): scComponent[] {
         // componentに追加
         component.vertexes.push(currentVertex);
         // 深さ優先探索
-        currentVertex.outflow.forEach(to => inflowRecursion(to, seen, component));
+        currentVertex.inflow.forEach(from => inflowRecursion(from, seen, component));
 
         return component;
     }
