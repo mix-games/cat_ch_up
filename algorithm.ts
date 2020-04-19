@@ -73,15 +73,12 @@ function sccDecomposition(vertexes: DigraphVertex[]): scComponent[] {
     while (root !== undefined) {
         const stack = outflowRecursion(root, seen, []);
 
-        const componentBuffer: scComponent[] = [];
         // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
         let root2: DigraphVertex | undefined = stack[0];
         while (root2 !== undefined) {
-            componentBuffer.push(inflowRecursion(root2, seen, {vertexes: []}));
+            components.push(inflowRecursion(root2, seen, {vertexes: []}));
             root2 = stack.find(v => seen.get(v) === 1);
         }
-        //componentsに移動
-        components = [...components, ...componentBuffer];
         
         // 適当な未探索ノードを選ぶ
         root = vertexes.find(v => seen.get(v) === undefined);
