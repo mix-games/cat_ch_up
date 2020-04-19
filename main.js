@@ -95,18 +95,15 @@ function sccDecomposition(vertexes) {
     }
 }
 function drawDigraphForTest(camera, screen) {
-    /*screen.fillStyle = "gray";
-    trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
-        vertex.outflow.forEach((to: DigraphVertex): void => {
-            drawArrow(
-                camera.offsetX + (vertex.coord.x + 0.5) * blockSize,
-                camera.offsetY - (vertex.coord.y - 0.5) * blockSize,
-                camera.offsetX + (to.coord.x + 0.5) * blockSize,
-                camera.offsetY - (to.coord.y - 0.5) * blockSize);
+    screen.fillStyle = "lightgray";
+    trafficDigraphForTest.forEach((vertex) => {
+        vertex.outflow.forEach((to) => {
+            drawArrow(camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize, camera.offsetX + (to.coord.x + 0.5) * blockSize, camera.offsetY - (to.coord.y - 0.5) * blockSize);
         });
-    });*/
+    });
+    screen.fillStyle = "black";
     sccs.forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
-        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
+        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x) * blockSize, camera.offsetY - (vertex.coord.y - 1) * blockSize);
     }));
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize

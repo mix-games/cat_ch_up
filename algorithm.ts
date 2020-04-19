@@ -119,7 +119,7 @@ function sccDecomposition(vertexes: DigraphVertex[]): scComponent[] {
 }
 
 function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): void {//for test
-    /*screen.fillStyle = "gray";
+    screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
         vertex.outflow.forEach((to: DigraphVertex): void => {
             drawArrow(
@@ -128,11 +128,12 @@ function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): v
                 camera.offsetX + (to.coord.x + 0.5) * blockSize,
                 camera.offsetY - (to.coord.y - 0.5) * blockSize);
         });
-    });*/
+    });
+    screen.fillStyle = "black";
     sccs.forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(),
-            camera.offsetX + (vertex.coord.x + 0.5) * blockSize,
-            camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
+            camera.offsetX + (vertex.coord.x) * blockSize,
+            camera.offsetY - (vertex.coord.y - 1) * blockSize);
     }));
 
     //alert("こんにちは")
