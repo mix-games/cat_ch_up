@@ -134,35 +134,16 @@ function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowCo
     };
 }
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source, offsetX, offsetY) {
-    return {
-        draw: (x, y, renderer, resources) => {
-            const image = resources.get(source);
-            if (image === undefined) {
-                console.log("not loaded yet");
-                return;
-            }
-            renderer.lightColor.drawImage(image, offsetX + x, offsetY + y);
-            renderer.shadowColor.drawImage(image, offsetX + x, offsetY + y);
-        }
-    };
+function createStaticTexture(source, offsetX, offsetY, useShadowColor) {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
 }
-function createStaticVolumeTexture(source, textureOffsetX, textureOffsetY, sh) {
-    return {
-        draw: (x, y, renderer, resources) => {
-            const image = resources.get(source);
-            if (image === undefined) {
-                console.log("not loaded yet");
-                return;
-            }
-            renderer.lightColor.drawImage(image, 0, 0, image.width, sh, textureOffsetX + x, textureOffsetY + y, image.width, sh);
-            renderer.shadowColor.drawImage(image, 0, sh, image.width, sh, textureOffsetX + x, textureOffsetY + y, image.width, sh);
-            for (var i = 0; i < renderer.volumeLayers.length; i++)
-                renderer.volumeLayers[i].drawImage(image, 0, (i + 2) * sh, image.width, sh, textureOffsetX + x, textureOffsetY + y, image.width, sh);
-        }
-    };
+function createStaticVolumeTexture(source, offsetX, offsetY, sh, useShadowColor, volumeLayout) {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
 }
-function createAnimationTexture(source, textureOffsetX, textureOffsetY, sw, timeline, loop) {
+function createAnimationTexture(source, offsetX, offsetY, sw, timeline, loop) {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+}
+function createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, sh, useShadowColor, volumeLayout) {
     const startTime = new Date().getTime();
     return {
         draw: (x, y, renderer, resources) => {
@@ -171,34 +152,24 @@ function createAnimationTexture(source, textureOffsetX, textureOffsetY, sw, time
                 console.log("not loaded yet");
                 return;
             }
+            if (sh === -1)
+                sh = image.height;
+            if (sw === -1)
+                sw = image.width;
             const elapse = new Date().getTime() - startTime;
             const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
             let frame = timeline.findIndex(t => phase < t);
             if (frame === -1)
-                frame = timeline.length - 1;
-            renderer.lightColor.drawImage(image, sw * frame, 0, sw, image.height, textureOffsetX + x, textureOffsetY + y, sw, image.height);
-            renderer.shadowColor.drawImage(image, sw * frame, 0, sw, image.height, textureOffsetX + x, textureOffsetY + y, sw, image.height);
-        }
-    };
-}
-function createAnimationVolumeTexture(source, textureOffsetX, textureOffsetY, sw, sh, timeline, loop) {
-    const startTime = new Date().getTime();
-    return {
-        draw: (x, y, renderer, resources) => {
-            const image = resources.get(source);
-            if (image === undefined) {
-                console.log("not loaded yet");
-                return;
-            }
-            const elapse = new Date().getTime() - startTime;
-            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-            let frame = timeline.findIndex(t => phase < t);
-            if (frame === -1)
-                frame = timeline.length - 1;
-            renderer.lightColor.drawImage(image, sw * frame, 0, sw, sh, textureOffsetX + x, textureOffsetY + y, sw, sh);
-            renderer.shadowColor.drawImage(image, sw * frame, sh, sw, sh, textureOffsetX + x, textureOffsetY + y, sw, sh);
-            for (var i = 0; i < renderer.volumeLayers.length; i++)
-                renderer.volumeLayers[i].drawImage(image, sw * frame, (i + 2) * sh, sw, sh, textureOffsetX + x, textureOffsetY + y, sw, sh);
+                frame = Math.max(0, timeline.length - 1);
+            renderer.lightColor.drawImage(image, sw * frame, // アニメーションによる横位置
+            0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
+            sw, sh, offsetX + x, offsetY + y, sw, sh);
+            renderer.shadowColor.drawImage(image, sw * frame, // アニメーションによる横位置
+            useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+            sw, sh, offsetX + x, offsetY + y, sw, sh);
+            volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(image, sw * frame, // アニメーションによる横位置
+            (layout + (useShadowColor ? 2 : 1)) * sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
+            sw, sh, offsetX + x, offsetY + y, sw, sh));
         }
     };
 }

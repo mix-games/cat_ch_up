@@ -177,93 +177,60 @@ function createRectTexture(lightColor: string, width: number, height: number, of
 }
 
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source: string, offsetX: number, offsetY: number): Texture {
+function createStaticTexture(source: string, offsetX: number, offsetY: number, useShadowColor: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
+}
+
+function createStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
+}
+
+function createAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+}
+
+function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    const startTime = new Date().getTime();
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             const image = resources.get(source);
             if (image === undefined) { console.log("not loaded yet"); return; }
-            renderer.lightColor.drawImage(image,
+
+            if (sh === -1) sh = image.height;
+            if (sw === -1) sw = image.width;
+
+            const elapse = new Date().getTime() - startTime;
+            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
+
+            let frame = timeline.findIndex(t => phase < t);
+            if (frame === -1) frame = Math.max(0, timeline.length - 1);
+
+            renderer.lightColor.drawImage(
+                image,
+                sw * frame, // アニメーションによる横位置
+                0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
+                sw, sh,
                 offsetX + x,
-                offsetY + y);
+                offsetY + y,
+                sw, sh);
+
             renderer.shadowColor.drawImage(image,
+                sw * frame, // アニメーションによる横位置
+                useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+                sw, sh,
                 offsetX + x,
-                offsetY + y);
-        }
-    };
-}
-
-function createStaticVolumeTexture(source: string, textureOffsetX: number, textureOffsetY: number, sh: number): Texture {
-    return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
-            const image = resources.get(source);
-            if (image === undefined) { console.log("not loaded yet"); return; }
-
-            renderer.lightColor.drawImage(image, 0, 0, image.width, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, image.width, sh);
-
-            renderer.shadowColor.drawImage(image, 0, sh, image.width, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, image.width, sh);
-
-            for (var i = 0; i < renderer.volumeLayers.length; i++)
-                renderer.volumeLayers[i].drawImage(image, 0, (i + 2) * sh, image.width, sh,
-                    textureOffsetX + x,
-                    textureOffsetY + y, image.width, sh);
-        }
-    };
-}
-
-function createAnimationTexture(source: string, textureOffsetX: number, textureOffsetY: number, sw: number, timeline: number[], loop: boolean): Texture {
-    const startTime = new Date().getTime();
-    return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
-            const image = resources.get(source);
-            if (image === undefined) { console.log("not loaded yet"); return; }
-
-            const elapse = new Date().getTime() - startTime;
-            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-
-            let frame = timeline.findIndex(t => phase < t);
-            if (frame === -1) frame = timeline.length - 1;
-
-            renderer.lightColor.drawImage(image, sw * frame, 0, sw, image.height,
-                textureOffsetX + x,
-                textureOffsetY + y, sw, image.height);
-
-            renderer.shadowColor.drawImage(image, sw * frame, 0, sw, image.height,
-                textureOffsetX + x,
-                textureOffsetY + y, sw, image.height);
-        }
-    };
-}
-
-
-function createAnimationVolumeTexture(source: string, textureOffsetX: number, textureOffsetY: number, sw: number, sh: number, timeline: number[], loop: boolean): Texture {
-    const startTime = new Date().getTime();
-    return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
-            const image = resources.get(source);
-            if (image === undefined) { console.log("not loaded yet"); return; }
-
-            const elapse = new Date().getTime() - startTime;
-            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-
-            let frame = timeline.findIndex(t => phase < t);
-            if (frame === -1) frame = timeline.length - 1;
-
-            renderer.lightColor.drawImage(image, sw * frame, 0, sw, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, sw, sh);
-
-            renderer.shadowColor.drawImage(image, sw * frame, sh, sw, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, sw, sh);
-
-            for (var i = 0; i < renderer.volumeLayers.length; i++)
-                renderer.volumeLayers[i].drawImage(image, sw * frame, (i + 2) * sh, sw, sh,
-                    textureOffsetX + x,
-                    textureOffsetY + y, sw, sh);
+                offsetY + y,
+                sw, sh);
+            
+            volumeLayout.forEach((target, layout) => 
+                renderer.volumeLayers[target].drawImage(image,
+                    sw * frame, // アニメーションによる横位置
+                    (layout + (useShadowColor ? 2 : 1)) * sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
+                    sw, sh,
+                    offsetX + x,
+                    offsetY + y,
+                    sw, sh)
+            );
         }
     };
 }
