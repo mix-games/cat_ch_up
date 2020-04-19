@@ -249,7 +249,7 @@ function createField(): Field {
         neko: createNeko()
     };
     for (let i = 0; i < 10; i++) generateRow(field);
-    trafficDigraphForTest = createTrafficDigraph(0, 8, field)//for test
+    trafficDigraphForTest = createTrafficDigraph(0, 8, field)//テスト
     sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
     return field;
 }
@@ -475,7 +475,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
         drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
 
-        drawDigraphForTest(camera, renderer.lightColor);//for test
+        drawDigraphForTest(camera, renderer.lightColor);//テスト
         
         composit(renderer, mainScreen);
     }

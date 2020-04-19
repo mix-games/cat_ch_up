@@ -5,7 +5,7 @@ interface DigraphVertex {
 }
 type Digraph = Map<string, DigraphVertex>;
 
-let trafficDigraphForTest: Digraph = new Map();//for test
+let trafficDigraphForTest: Digraph = new Map();//テスト
 
 function createTrafficDigraph(lowerBound: number, upperBound: number, field: Field): Digraph {
     const digraph: Digraph = new Map();
@@ -132,7 +132,8 @@ function sccDecomposition(vertexes: DigraphVertex[]): SCCDecomposition {
     }
 }
 
-function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): void {//for test
+//テスト
+function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): void {
     screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
         vertex.outflow.forEach((to: DigraphVertex): void => {
