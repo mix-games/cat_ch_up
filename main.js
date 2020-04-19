@@ -54,27 +54,26 @@ function sccDecomposition(vertexes) {
     // 全部巡回できてなかったら、次の根を選ぶ
     while (root !== undefined) {
         const stack = outflowRecursion(root, seen, []);
-        const seen2 = new Map();
         const componentBuffer = [];
         // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
         let root2 = stack[0];
         while (root2 !== undefined) {
-            componentBuffer.push(inflowRecursion(root2, seen, seen2, []));
-            root2 = stack.find(v => !seen2.get(JSON.stringify(v.coord)));
+            componentBuffer.push(inflowRecursion(root2, seen, []));
+            root2 = stack.find(v => seen.get(v) === 1);
         }
         //componentsに移動
         components = [...components, ...componentBuffer];
         // 適当な未探索ノードを選ぶ
-        root = vertexes.find(v => !seen.get(JSON.stringify(v.coord)));
+        root = vertexes.find(v => seen.get(v) === undefined);
     }
     return components;
     //一つ目の再帰
     function outflowRecursion(currentVertex, seen, stack) {
-        // 巡回済みなら何もせず帰る（未巡回ならfalseではなくundefinedが帰るだろうがfalsyなので問題ない）
-        if (seen.get(JSON.stringify(currentVertex.coord)))
+        // 巡回済みなら何もせず帰る
+        if (seen.get(currentVertex) !== undefined)
             return stack;
         // 巡回済みフラグを残す（coordがIDのようにふるまうはず）
-        seen.set(JSON.stringify(currentVertex.coord), true);
+        seen.set(currentVertex, 1);
         // 行きがけ順でstackに記録
         stack.push(currentVertex);
         // 深さ優先探索
@@ -82,26 +81,30 @@ function sccDecomposition(vertexes) {
         return stack;
     }
     //二つ目の再帰
-    function inflowRecursion(currentVertex, seen, seen2, component) {
+    function inflowRecursion(currentVertex, seen, component) {
         // 巡回済みまたは一つ目の再帰で未巡回なら何もせず帰る
-        if (!seen.get(JSON.stringify(currentVertex.coord)) || seen2.get(JSON.stringify(currentVertex.coord)))
+        if (seen.get(currentVertex) !== 1)
             return component;
         // 巡回済みフラグを残す
-        seen2.set(JSON.stringify(currentVertex.coord), true);
+        seen.set(currentVertex, 2);
         // componentに追加
         component.push(currentVertex);
         // 深さ優先探索
-        currentVertex.outflow.forEach(to => inflowRecursion(to, seen, seen2, component));
+        currentVertex.outflow.forEach(to => inflowRecursion(to, seen, component));
         return component;
     }
 }
 function drawDigraphForTest(camera, screen) {
-    screen.fillStyle = "gray";
-    trafficDigraphForTest.forEach((vertex) => {
-        vertex.outflow.forEach((to) => {
-            drawArrow(camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize, camera.offsetX + (to.coord.x + 0.5) * blockSize, camera.offsetY - (to.coord.y - 0.5) * blockSize);
+    /*screen.fillStyle = "gray";
+    trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
+        vertex.outflow.forEach((to: DigraphVertex): void => {
+            drawArrow(
+                camera.offsetX + (vertex.coord.x + 0.5) * blockSize,
+                camera.offsetY - (vertex.coord.y - 0.5) * blockSize,
+                camera.offsetX + (to.coord.x + 0.5) * blockSize,
+                camera.offsetY - (to.coord.y - 0.5) * blockSize);
         });
-    });
+    });*/
     sccs.forEach((component, componentIndex) => component.forEach(vertex => {
         screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
