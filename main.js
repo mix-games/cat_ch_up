@@ -162,6 +162,25 @@ function createStaticVolumeTexture(source, textureOffsetX, textureOffsetY, sh) {
         }
     };
 }
+function createAnimationTexture(source, textureOffsetX, textureOffsetY, sw, timeline, loop) {
+    const startTime = new Date().getTime();
+    return {
+        draw: (x, y, renderer, resources) => {
+            const image = resources.get(source);
+            if (image === undefined) {
+                console.log("not loaded yet");
+                return;
+            }
+            const elapse = new Date().getTime() - startTime;
+            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
+            let frame = timeline.findIndex(t => phase < t);
+            if (frame === -1)
+                frame = timeline.length - 1;
+            renderer.lightColor.drawImage(image, sw * frame, 0, sw, image.height, textureOffsetX + x, textureOffsetY + y, sw, image.height);
+            renderer.shadowColor.drawImage(image, sw * frame, 0, sw, image.height, textureOffsetX + x, textureOffsetY + y, sw, image.height);
+        }
+    };
+}
 function upCoord(coord) {
     return { x: coord.x, y: coord.y + 1 };
 }
@@ -360,6 +379,7 @@ function animationLoop(field, player, camera, renderer, mainScreen, loadingProgr
         drawField(field, camera, renderer, loadingProgress.imageResources);
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
         drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
+        testAnimation.draw(0, 0, renderer, loadingProgress.imageResources);
         composit(renderer, mainScreen);
     }
     else {
@@ -368,6 +388,7 @@ function animationLoop(field, player, camera, renderer, mainScreen, loadingProgr
     }
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
 }
+let testAnimation;
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))
@@ -379,7 +400,8 @@ window.onload = () => {
     const player = createPlayer();
     const camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const loadingProgress = resourceLoader([]);
+    const loadingProgress = resourceLoader(["test.png"]);
+    testAnimation = createAnimationTexture("test.png", 40, 40, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;

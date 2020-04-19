@@ -214,6 +214,30 @@ function createStaticVolumeTexture(source: string, textureOffsetX: number, textu
     };
 }
 
+function createAnimationTexture(source: string, textureOffsetX: number, textureOffsetY: number, sw: number, timeline: number[], loop: boolean): Texture {
+    const startTime = new Date().getTime();
+    return {
+        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
+            const image = resources.get(source);
+            if (image === undefined) { console.log("not loaded yet"); return; }
+
+            const elapse = new Date().getTime() - startTime;
+            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
+
+            let frame = timeline.findIndex(t => phase < t);
+            if (frame === -1) frame = timeline.length - 1;
+
+            renderer.lightColor.drawImage(image, sw * frame, 0, sw, image.height,
+                textureOffsetX + x,
+                textureOffsetY + y, sw, image.height);
+
+            renderer.shadowColor.drawImage(image, sw * frame, 0, sw, image.height,
+                textureOffsetX + x,
+                textureOffsetY + y, sw, image.height);
+        }
+    };
+}
+
 interface Coord {
     x: number;
     y: number;
@@ -473,6 +497,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
         drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
 
+        testAnimation.draw(0, 0, renderer, loadingProgress.imageResources);
+
         composit(renderer, mainScreen);
     }
     else {
@@ -482,6 +508,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
 
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
 }
+
+let testAnimation: Texture;
 
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -497,7 +525,9 @@ window.onload = () => {
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
-    const loadingProgress = resourceLoader([]);
+    const loadingProgress = resourceLoader(["test.png"]);
+
+    testAnimation = createAnimationTexture("test.png", 40, 40, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
