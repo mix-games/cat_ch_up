@@ -318,7 +318,7 @@ function canEnter(coord: Coord, field: Field, isSmall: boolean): boolean {
     return getBlock(field.terrain, coord).collision !== "solid"
         && getBlock(field.terrain, upCoord(coord)).collision !== "solid";
 }
-//その場に立てるか判定。上半身か下半身がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
+//その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
 function canStand(coord: Coord, field: Field, isSmall: boolean): boolean {
     if (!canEnter(coord, field, isSmall))
         return false;
@@ -327,7 +327,8 @@ function canStand(coord: Coord, field: Field, isSmall: boolean): boolean {
         return true;
 
     if (getBlock(field.terrain, coord).collision === "ladder"
-        || getBlock(field.terrain, upCoord(coord)).collision === "ladder")
+        || getBlock(field.terrain, upCoord(coord)).collision === "ladder"
+        || getBlock(field.terrain, downCoord(coord)).collision === "ladder")
         return true;
 
     return getBlock(field.terrain, downCoord(coord)).collision === "solid";
@@ -358,8 +359,10 @@ function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult {
     return null;
 }
 function checkUp(coord: Coord, field: Field, isSmall: boolean): MoveResult {
-    // 真上に留まれるなら登る？
-    if (canStand(upCoord(coord), field, isSmall))
+    // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
+    if ((getBlock(field.terrain, coord).collision === "ladder" ||
+        getBlock(field.terrain, upCoord(coord)).collision === "ladder") &&
+        canStand(upCoord(coord), field, isSmall))
         return { coord: upCoord(coord), actionType: "climb" };
     return null;
 }
