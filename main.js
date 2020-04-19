@@ -45,50 +45,68 @@ function createTrafficDigraph(lowerBound, upperBound, field) {
         toVertex.inflow.push(fromVertex);
     }
 }
-let sccs = []; //テスト
+let sccs = new Map(); //テスト
 // 強連結成分(stronglyConnectedComponent) 分解
 function sccDecomposition(vertexes) {
     const seen = new Map();
-    let components = [];
+    const decomposition = new Map();
     let root = vertexes[0];
     // 全部巡回できてなかったら、次の根を選ぶ
     while (root !== undefined) {
-        const stack = outflowRecursion(root, seen, []);
+        const stack = [];
+        outflowRecursion(root, seen, stack);
         // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
         let root2 = stack[0];
         while (root2 !== undefined) {
-            components.push(inflowRecursion(root2, seen, { vertexes: [] }));
+            const component = { vertexes: [], inflow: new Set(), outflow: new Set() };
+            inflowRecursion(root2, seen, component, decomposition);
             root2 = stack.find(v => seen.get(v) === 1);
         }
         // 適当な未探索ノードを選ぶ
         root = vertexes.find(v => seen.get(v) === undefined);
     }
-    return components;
+    vertexes.forEach((vertex) => {
+        const component = decomposition.get(vertex);
+        if (component === undefined)
+            throw new Error("んなはずない");
+        component.vertexes.push(vertex);
+        vertex.outflow.forEach(to => {
+            const toComponent = decomposition.get(to);
+            if (toComponent === undefined)
+                throw new Error("んなはずない2");
+            component.outflow.add(toComponent);
+        });
+        vertex.inflow.forEach(from => {
+            const fromComponent = decomposition.get(from);
+            if (fromComponent === undefined)
+                throw new Error("んなはずない3");
+            component.outflow.add(fromComponent);
+        });
+    });
+    return decomposition;
     //一つ目の再帰
     function outflowRecursion(currentVertex, seen, stack) {
         // 巡回済みなら何もせず帰る
         if (seen.get(currentVertex) !== undefined)
-            return stack;
+            return;
         // 巡回済みフラグを残す（coordがIDのようにふるまうはず）
         seen.set(currentVertex, 1);
         // 行きがけ順でstackに記録
         stack.push(currentVertex);
         // 深さ優先探索
         currentVertex.outflow.forEach(to => outflowRecursion(to, seen, stack));
-        return stack;
     }
     //二つ目の再帰
-    function inflowRecursion(currentVertex, seen, component) {
+    function inflowRecursion(currentVertex, seen, component, decomposition) {
         // 巡回済みまたは一つ目の再帰で未巡回なら何もせず帰る
         if (seen.get(currentVertex) !== 1)
-            return component;
+            return;
         // 巡回済みフラグを残す
         seen.set(currentVertex, 2);
         // componentに追加
-        component.vertexes.push(currentVertex);
+        decomposition.set(currentVertex, component);
         // 深さ優先探索
-        currentVertex.inflow.forEach(from => inflowRecursion(from, seen, component));
-        return component;
+        currentVertex.inflow.forEach(from => inflowRecursion(from, seen, component, decomposition));
     }
 }
 function drawDigraphForTest(camera, screen) {
@@ -99,7 +117,7 @@ function drawDigraphForTest(camera, screen) {
         });
     });
     screen.fillStyle = "black";
-    sccs.forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
+    Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x) * blockSize, camera.offsetY - (vertex.coord.y - 1) * blockSize);
     }));
     //alert("こんにちは")
