@@ -195,24 +195,28 @@ function generateRow(field) {
         else
             protoRow[x] = { collision: "ladder" };
     }
-    const row = protoRow.map((bwt) => {
-        if (bwt.collision === "ladder")
-            return {
-                collision: "ladder",
-                texture: createRectTexture("red", blockSize, blockSize, 0, 0)
-            };
-        else if (bwt.collision === "solid")
-            return {
-                collision: "solid",
-                texture: createRectTexture("black", blockSize, blockSize, 0, 0)
-            };
-        else
-            return {
-                collision: "air",
-                texture: createEmptyTexture()
-            };
+    field.terrain.push(assignTexture(protoRow));
+}
+function assignTexture(protoRow) {
+    return protoRow.map((bwt) => {
+        switch (bwt.collision) {
+            case "ladder":
+                return {
+                    collision: "ladder",
+                    texture: createRectTexture("red", blockSize, blockSize, 0, 0)
+                };
+            case "solid":
+                return {
+                    collision: "solid",
+                    texture: createRectTexture("black", blockSize, blockSize, 0, 0)
+                };
+            case "air":
+                return {
+                    collision: "air",
+                    texture: createEmptyTexture()
+                };
+        }
     });
-    field.terrain.push(row);
 }
 function getBlock(terrain, coord) {
     if (terrain.length <= coord.y)

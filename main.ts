@@ -266,23 +266,28 @@ function generateRow(field: Field): void {
         else
             protoRow[x] = { collision: "ladder" };
     }
-    const row = protoRow.map((bwt: BlockWithoutTexture): Block => {
-        if (bwt.collision === "ladder")
+    field.terrain.push(assignTexture(protoRow));
+}
+function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
+    return protoRow.map((bwt: BlockWithoutTexture): Block => {
+        switch(bwt.collision) {
+            case "ladder":
             return {
                 collision: "ladder",
                 texture: createRectTexture("red", blockSize, blockSize, 0, 0)
             };
-        else if (bwt.collision === "solid")
+            case "solid":
             return {
                 collision: "solid",
                 texture: createRectTexture("black", blockSize, blockSize, 0, 0)
             };
-        else return {
-            collision: "air",
-            texture: createEmptyTexture()
-        };
+            case "air":
+            return {
+                collision: "air",
+                texture: createEmptyTexture()
+            };
+        }
     });
-    field.terrain.push(row);
 }
 
 function getBlock(terrain: Terrain, coord: Coord): Block {
