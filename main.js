@@ -175,8 +175,21 @@ function rightCoord(coord) {
     return { x: coord.x + 1, y: coord.y };
 }
 function createField() {
+    const protoTerrain = [[], []];
+    for (let x = 0; x < 10; x++) {
+        if (Math.random() < 0.7)
+            protoTerrain[0][x] = { collision: "air" };
+        else
+            protoTerrain[0][x] = { collision: "ladder" };
+    }
+    for (let x = 0; x < 10; x++) {
+        if (protoTerrain[0][x].collision === "ladder")
+            protoTerrain[1][x] = { collision: "ladder" };
+        else
+            protoTerrain[1][x] = { collision: "air" };
+    }
     let field = {
-        terrain: [],
+        terrain: protoTerrain.map((protoRow) => assignTexture(protoRow)),
         neko: createNeko()
     };
     for (let i = 0; i < 10; i++)
