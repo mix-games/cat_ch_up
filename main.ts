@@ -225,8 +225,9 @@ interface Block {
     collision: "ladder" | "solid" | "air";
     texture: Texture;
 }
+type Terrain = Block[][];
 interface Field {
-    terrain: Block[][];
+    terrain: Terrain;
     neko: Neko;
 }
 
@@ -284,7 +285,7 @@ function generateRow(field: Field): void {
     field.terrain.push(row);
 }
 
-function getBlock(terrain: Block[][], coord: Coord): Block {
+function getBlock(terrain: Terrain, coord: Coord): Block {
     if (terrain.length <= coord.y) 
         throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
@@ -313,64 +314,64 @@ function createPlayer(): Player {
 }
 
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
-function canEnter(coord: Coord, field: Field, isSmall: boolean): boolean {
+function canEnter(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
     if (isSmall)
-        return getBlock(field.terrain, coord).collision !== "solid";
+        return getBlock(terrain, coord).collision !== "solid";
 
-    return getBlock(field.terrain, coord).collision !== "solid"
-        && getBlock(field.terrain, upCoord(coord)).collision !== "solid";
+    return getBlock(terrain, coord).collision !== "solid"
+        && getBlock(terrain, upCoord(coord)).collision !== "solid";
 }
 //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-function canStand(coord: Coord, field: Field, isSmall: boolean): boolean {
-    if (!canEnter(coord, field, isSmall))
+function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
+    if (!canEnter(coord, terrain, isSmall))
         return false;
 
-    if (isSmall && getBlock(field.terrain, coord).collision === "ladder")
+    if (isSmall && getBlock(terrain, coord).collision === "ladder")
         return true;
 
-    if (getBlock(field.terrain, coord).collision === "ladder"
-        || getBlock(field.terrain, upCoord(coord)).collision === "ladder"
-        || getBlock(field.terrain, downCoord(coord)).collision === "ladder")
+    if (getBlock(terrain, coord).collision === "ladder"
+        || getBlock(terrain, upCoord(coord)).collision === "ladder"
+        || getBlock(terrain, downCoord(coord)).collision === "ladder")
         return true;
 
-    return getBlock(field.terrain, downCoord(coord)).collision === "solid";
+    return getBlock(terrain, downCoord(coord)).collision === "solid";
 }
 
 type Direction = "left" | "right" | "up" | "down";
 type ActionType = "walk" | "climb" | "drop";
 type MoveResult = null | { coord: Coord, actionType: ActionType; };
 
-function checkLeft(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 左が空いているならそこ
-    if (canEnter(leftCoord(coord), field, isSmall))
+    if (canEnter(leftCoord(coord), terrain, isSmall))
         return { coord: leftCoord(coord), actionType: "walk" };
     // 上がふさがってなくて左上が空いているならそこ
-    if (canEnter(upCoord(coord), field, isSmall)
-        && canEnter(leftCoord(upCoord(coord)), field, isSmall))
+    if (canEnter(upCoord(coord), terrain, isSmall)
+        && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
         return { coord: leftCoord(upCoord(coord)), actionType: "climb" };
     return null;
 }
-function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 右が空いているならそこ
-    if (canEnter(rightCoord(coord), field, isSmall))
+    if (canEnter(rightCoord(coord), terrain, isSmall))
         return { coord: rightCoord(coord), actionType: "walk" };
     // 上がふさがってなくて右上が空いているならそこ
-    if (canEnter(upCoord(coord), field, isSmall)
-        && canEnter(rightCoord(upCoord(coord)), field, isSmall))
+    if (canEnter(upCoord(coord), terrain, isSmall)
+        && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
         return { coord: rightCoord(upCoord(coord)), actionType: "climb" };
     return null;
 }
-function checkUp(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
-    if ((getBlock(field.terrain, coord).collision === "ladder" ||
-        getBlock(field.terrain, upCoord(coord)).collision === "ladder") &&
-        canStand(upCoord(coord), field, isSmall))
+    if ((getBlock(terrain, coord).collision === "ladder" ||
+        getBlock(terrain, upCoord(coord)).collision === "ladder") &&
+        canStand(upCoord(coord), terrain, isSmall))
         return { coord: upCoord(coord), actionType: "climb" };
     return null;
 }
-function checkDown(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 真下が空いてるなら（飛び）下りる？
-    if (canEnter(downCoord(coord), field, isSmall))
+    if (canEnter(downCoord(coord), terrain, isSmall))
         return { coord: downCoord(coord), actionType: "climb" };
     return null;
 }
@@ -380,15 +381,15 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     let result: MoveResult = null;
 
     switch (direction) {
-        case "left": result = checkLeft(player.coord, field, player.isSmall); break;
-        case "right": result = checkRight(player.coord, field, player.isSmall); break;
-        case "up": result = checkUp(player.coord, field, player.isSmall); break;
-        case "down": result = checkDown(player.coord, field, player.isSmall); break;
+        case "left": result = checkLeft(player.coord, field.terrain, player.isSmall); break;
+        case "right": result = checkRight(player.coord, field.terrain, player.isSmall); break;
+        case "up": result = checkUp(player.coord, field.terrain, player.isSmall); break;
+        case "down": result = checkDown(player.coord, field.terrain, player.isSmall); break;
     }
     if (result === null) return null;
 
     // 立てる場所まで落とす
-    while (!canStand(result.coord, field, player.isSmall)) {
+    while (!canStand(result.coord, field.terrain, player.isSmall)) {
         result.actionType = "drop";
         result.coord = downCoord(result.coord);
     }
@@ -524,8 +525,6 @@ window.onload = () => {
         if (event.code === "ArrowDown") movePlayer(player, field, "down");
 
         console.log(player.coord);
-        console.log("canEnter: " + canEnter(player.coord, field, false));
-        console.log("canStand: " + canStand(player.coord, field, false));
     }, false);
 
     animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
