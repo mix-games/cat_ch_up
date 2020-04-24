@@ -285,6 +285,8 @@ function generateRow(field: Field): void {
 }
 
 function getBlock(terrain: Block[][], coord: Coord): Block {
+    if (terrain.length <= coord.y) 
+        throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
