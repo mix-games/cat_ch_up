@@ -246,13 +246,13 @@ function rightCoord(coord: Coord): Coord {
 
 function createField(): Field {
     const protoTerrain: BlockWithoutTexture[][] = [[], []];
-    for (let x = 0; x < 10; x++) {
+    for (let x = 0; x < fieldWidth; x++) {
         if (Math.random() < 0.7)
             protoTerrain[0][x] = { collision: "air" };
         else
             protoTerrain[0][x] = { collision: "ladder" };
     }
-    for (let x = 0; x < 10; x++) {
+    for (let x = 0; x < fieldWidth; x++) {
         if (protoTerrain[0][x].collision === "ladder")
             protoTerrain[1][x] = { collision: "ladder" };
         else
@@ -272,7 +272,7 @@ const fieldWidth = 10;
 //Y座標は下から数える
 function generateRow(field: Field): void {
     const protoRow: BlockWithoutTexture[] = [];
-        for (let x = 0; x < 10; x++) {
+        for (let x = 0; x < fieldWidth; x++) {
             if (Math.random() < 0.7)
                 protoRow[x] = { collision: "air" };
             else if (Math.random() < 0.5)
