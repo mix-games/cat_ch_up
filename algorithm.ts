@@ -7,7 +7,7 @@ type Digraph = Map<string, DigraphVertex>;
 
 let trafficDigraphForTest: Digraph = new Map();//テスト
 
-function createTrafficDigraph(lowerBound: number, upperBound: number, field: Field): Digraph {
+function createTrafficDigraph(lowerBound: number, upperBound: number, terrain: Terrain): Digraph {
     const digraph: Digraph = new Map();
 
     // とりあえず虚無の頂点リストを作る（埋まってないマスのみで構成）
@@ -15,7 +15,7 @@ function createTrafficDigraph(lowerBound: number, upperBound: number, field: Fie
         for (let x = 0; x < fieldWidth; x++) {
             const coord: Coord = { x, y };
 
-            if (canEnter(coord, field, false))
+            if (canEnter(coord, terrain, false))
                 digraph.set(JSON.stringify(coord), { coord, inflow: [], outflow: [] });
         }
     }
@@ -24,21 +24,21 @@ function createTrafficDigraph(lowerBound: number, upperBound: number, field: Fie
         for (let x = 0; x < fieldWidth; x++) {
             const coord: Coord = { x, y };
 
-            if (!canEnter(coord, field, false))
+            if (!canEnter(coord, terrain, false))
                 continue;
             //空中のマスは落ちるだけできる
-            if (!canStand(coord, field, false)) {
+            if (!canStand(coord, terrain, false)) {
                 addArrow(digraph, coord, downCoord(coord));
                 continue;
             }
 
-            const left = checkLeft(coord, field, false);
+            const left = checkLeft(coord, terrain, false);
             if (left !== null) addArrow(digraph, coord, left.coord);
-            const right = checkRight(coord, field, false);
+            const right = checkRight(coord, terrain, false);
             if (right !== null) addArrow(digraph, coord, right.coord);
-            const down = checkDown(coord, field, false);
+            const down = checkDown(coord, terrain, false);
             if (down !== null) addArrow(digraph, coord, down.coord);
-            const up = checkUp(coord, field, false);
+            const up = checkUp(coord, terrain, false);
             if (up !== null) addArrow(digraph, coord, up.coord);
         }
     }
@@ -138,17 +138,17 @@ function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): v
     trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
         vertex.outflow.forEach((to: DigraphVertex): void => {
             drawArrow(
-                camera.offsetX + (vertex.coord.x + 0.5) * blockSize,
-                camera.offsetY - (vertex.coord.y - 0.5) * blockSize,
-                camera.offsetX + (to.coord.x + 0.5) * blockSize,
-                camera.offsetY - (to.coord.y - 0.5) * blockSize);
+                camera.offsetX + (vertex.coord.x) * blockSize,
+                camera.offsetY - (vertex.coord.y) * blockSize,
+                camera.offsetX + (to.coord.x) * blockSize,
+                camera.offsetY - (to.coord.y) * blockSize);
         });
     });
     screen.fillStyle = "black";
     Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(),
-            camera.offsetX + (vertex.coord.x) * blockSize,
-            camera.offsetY - (vertex.coord.y - 1) * blockSize);
+            camera.offsetX + (vertex.coord.x - 0.5) * blockSize,
+            camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
 
     //alert("こんにちは")

@@ -285,7 +285,7 @@ function createField(): Field {
         neko: createNeko()
     };
     for (let i = 0; i < 10; i++) generateRow(field);
-    trafficDigraphForTest = createTrafficDigraph(0, 8, field)//テスト
+    trafficDigraphForTest = createTrafficDigraph(0, 8, field.terrain)//テスト
     sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
     return field;
 }

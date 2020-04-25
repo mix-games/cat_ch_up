@@ -1,35 +1,35 @@
 "use strict";
 let trafficDigraphForTest = new Map(); //テスト
-function createTrafficDigraph(lowerBound, upperBound, field) {
+function createTrafficDigraph(lowerBound, upperBound, terrain) {
     const digraph = new Map();
     // とりあえず虚無の頂点リストを作る（埋まってないマスのみで構成）
     for (let y = lowerBound; y < upperBound; y++) {
         for (let x = 0; x < fieldWidth; x++) {
             const coord = { x, y };
-            if (canEnter(coord, field, false))
+            if (canEnter(coord, terrain, false))
                 digraph.set(JSON.stringify(coord), { coord, inflow: [], outflow: [] });
         }
     }
     for (let y = lowerBound; y < upperBound; y++) {
         for (let x = 0; x < fieldWidth; x++) {
             const coord = { x, y };
-            if (!canEnter(coord, field, false))
+            if (!canEnter(coord, terrain, false))
                 continue;
             //空中のマスは落ちるだけできる
-            if (!canStand(coord, field, false)) {
+            if (!canStand(coord, terrain, false)) {
                 addArrow(digraph, coord, downCoord(coord));
                 continue;
             }
-            const left = checkLeft(coord, field, false);
+            const left = checkLeft(coord, terrain, false);
             if (left !== null)
                 addArrow(digraph, coord, left.coord);
-            const right = checkRight(coord, field, false);
+            const right = checkRight(coord, terrain, false);
             if (right !== null)
                 addArrow(digraph, coord, right.coord);
-            const down = checkDown(coord, field, false);
+            const down = checkDown(coord, terrain, false);
             if (down !== null)
                 addArrow(digraph, coord, down.coord);
-            const up = checkUp(coord, field, false);
+            const up = checkUp(coord, terrain, false);
             if (up !== null)
                 addArrow(digraph, coord, up.coord);
         }
@@ -114,12 +114,12 @@ function drawDigraphForTest(camera, screen) {
     screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex) => {
         vertex.outflow.forEach((to) => {
-            drawArrow(camera.offsetX + (vertex.coord.x + 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize, camera.offsetX + (to.coord.x + 0.5) * blockSize, camera.offsetY - (to.coord.y - 0.5) * blockSize);
+            drawArrow(camera.offsetX + (vertex.coord.x) * blockSize, camera.offsetY - (vertex.coord.y) * blockSize, camera.offsetX + (to.coord.x) * blockSize, camera.offsetY - (to.coord.y) * blockSize);
         });
     });
     screen.fillStyle = "black";
     Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
-        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x) * blockSize, camera.offsetY - (vertex.coord.y - 1) * blockSize);
+        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x - 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
@@ -342,7 +342,7 @@ function createField() {
     };
     for (let i = 0; i < 10; i++)
         generateRow(field);
-    trafficDigraphForTest = createTrafficDigraph(0, 8, field); //テスト
+    trafficDigraphForTest = createTrafficDigraph(0, 8, field.terrain); //テスト
     sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
     return field;
 }
