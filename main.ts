@@ -236,8 +236,8 @@ function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: 
 }
 
 interface Coord {
-    x: number;
-    y: number;
+    readonly x: number;
+    readonly y: number;
 }
 interface BlockWithoutTexture {
     collision: "ladder" | "solid" | "air";
@@ -252,17 +252,21 @@ interface Field {
     neko: Neko;
 }
 
+function createCoord(x:number, y:number){
+    return {x, y};
+}
+
 function upCoord(coord: Coord): Coord {
-    return { x: coord.x, y: coord.y + 1 };
+    return createCoord(coord.x, coord.y + 1);
 }
 function downCoord(coord: Coord): Coord {
-    return { x: coord.x, y: coord.y - 1 };
+    return createCoord(coord.x, coord.y - 1);
 }
 function leftCoord(coord: Coord): Coord {
-    return { x: coord.x - 1, y: coord.y };
+    return createCoord(coord.x - 1, coord.y);
 }
 function rightCoord(coord: Coord): Coord {
-    return { x: coord.x + 1, y: coord.y };
+    return createCoord(coord.x + 1, coord.y);
 }
 
 function createField(): Field {
@@ -347,7 +351,7 @@ interface Player extends GameObject {
 
 function createPlayer(): Player {
     return {
-        coord: { x: 0, y: 0 },
+        coord: createCoord(0, 0),
         isSmall: false,
         texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
     };
@@ -456,13 +460,13 @@ interface Neko extends GameObject {
 
 function createNeko(): Neko {
     return {
-        coord: { x: 0, y: 5 },
+        coord: createCoord(0, 5),
         texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
     };
 }
 
 function controlNeko(neko: Neko, field:Field, player:Player): void {
-    neko.coord.x++;
+    neko.coord = rightCoord(neko.coord);
 }
 
 interface Camera {
@@ -490,7 +494,7 @@ function createCamera(): Camera {
         clearanceY,
 
         // カメラ中心の移動目標マス
-        coord: { x: clearanceX, y: clearanceY },
+        coord: createCoord(clearanceX, clearanceY),
 
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
         centerX: clearanceX * blockSize,
@@ -507,14 +511,13 @@ function createCamera(): Camera {
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
-    camera.coord.x = 
+    camera.coord = createCoord(
         Math.max(player.coord.x - camera.clearanceX, 
         Math.min(player.coord.x + camera.clearanceX,
-            camera.coord.x));
-    camera.coord.y = 
+            camera.coord.x)),
         Math.max(player.coord.y - camera.clearanceY, 
         Math.min(player.coord.y + camera.clearanceY,
-            camera.coord.y));
+            camera.coord.y)));
     
     const targetX = camera.coord.x * blockSize;
     const targetY = -camera.coord.y * blockSize;
@@ -601,10 +604,10 @@ window.onload = () => {
         // リピート（長押し時に繰り返し発火する）は無視
         if (event.repeat) return;
 
-        if (event.code === "KeyA") player.coord.x--;
-        if (event.code === "KeyD") player.coord.x++;
-        if (event.code === "KeyW") player.coord.y++;
-        if (event.code === "KeyS") player.coord.y--;
+        if (event.code === "KeyA") player.coord = leftCoord(player.coord);
+        if (event.code === "KeyD") player.coord = rightCoord(player.coord);
+        if (event.code === "KeyW") player.coord = upCoord(player.coord);
+        if (event.code === "KeyS") player.coord = downCoord(player.coord);
 
         if (event.code === "ArrowLeft") movePlayer(player, field, "left");
         if (event.code === "ArrowRight") movePlayer(player, field, "right");

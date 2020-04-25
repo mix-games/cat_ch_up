@@ -173,17 +173,20 @@ function createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, lo
         }
     };
 }
+function createCoord(x, y) {
+    return { x, y };
+}
 function upCoord(coord) {
-    return { x: coord.x, y: coord.y + 1 };
+    return createCoord(coord.x, coord.y + 1);
 }
 function downCoord(coord) {
-    return { x: coord.x, y: coord.y - 1 };
+    return createCoord(coord.x, coord.y - 1);
 }
 function leftCoord(coord) {
-    return { x: coord.x - 1, y: coord.y };
+    return createCoord(coord.x - 1, coord.y);
 }
 function rightCoord(coord) {
-    return { x: coord.x + 1, y: coord.y };
+    return createCoord(coord.x + 1, coord.y);
 }
 function createField() {
     const protoTerrain = [[], []];
@@ -254,7 +257,7 @@ function getBlock(terrain, coord) {
 }
 function createPlayer() {
     return {
-        coord: { x: 0, y: 0 },
+        coord: createCoord(0, 0),
         isSmall: false,
         texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
     };
@@ -348,12 +351,12 @@ function turn(field, player) {
 }
 function createNeko() {
     return {
-        coord: { x: 0, y: 5 },
+        coord: createCoord(0, 5),
         texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
     };
 }
 function controlNeko(neko, field, player) {
-    neko.coord.x++;
+    neko.coord = rightCoord(neko.coord);
 }
 function createCamera() {
     const clearanceX = 4;
@@ -363,7 +366,7 @@ function createCamera() {
         clearanceX,
         clearanceY,
         // カメラ中心の移動目標マス
-        coord: { x: clearanceX, y: clearanceY },
+        coord: createCoord(clearanceX, clearanceY),
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
         centerX: clearanceX * blockSize,
         centerY: -clearanceY * blockSize,
@@ -376,10 +379,7 @@ function createCamera() {
     };
 }
 function updateCamera(camera, player, field, renderer) {
-    camera.coord.x =
-        Math.max(player.coord.x - camera.clearanceX, Math.min(player.coord.x + camera.clearanceX, camera.coord.x));
-    camera.coord.y =
-        Math.max(player.coord.y - camera.clearanceY, Math.min(player.coord.y + camera.clearanceY, camera.coord.y));
+    camera.coord = createCoord(Math.max(player.coord.x - camera.clearanceX, Math.min(player.coord.x + camera.clearanceX, camera.coord.x)), Math.max(player.coord.y - camera.clearanceY, Math.min(player.coord.y + camera.clearanceY, camera.coord.y)));
     const targetX = camera.coord.x * blockSize;
     const targetY = -camera.coord.y * blockSize;
     const smooth = 0.9; // 1フレームあたりの減衰比(0～1の無次元値)
@@ -445,13 +445,13 @@ window.onload = () => {
         if (event.repeat)
             return;
         if (event.code === "KeyA")
-            player.coord.x--;
+            player.coord = leftCoord(player.coord);
         if (event.code === "KeyD")
-            player.coord.x++;
+            player.coord = rightCoord(player.coord);
         if (event.code === "KeyW")
-            player.coord.y++;
+            player.coord = upCoord(player.coord);
         if (event.code === "KeyS")
-            player.coord.y--;
+            player.coord = downCoord(player.coord);
         if (event.code === "ArrowLeft")
             movePlayer(player, field, "left");
         if (event.code === "ArrowRight")
