@@ -177,27 +177,24 @@ function createRectTexture(lightColor: string, width: number, height: number, of
 }
 
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source: string, offsetX: number, offsetY: number, useShadowColor: boolean): Texture {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
+function createStaticTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
 }
 
-function createStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
+function createStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
 }
 
-function createAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean): Texture {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+function createAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, sh:number, useShadowColor: boolean, timeline: number[], loop: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
 }
 
-function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
     const startTime = new Date().getTime();
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             const image = resources.get(source);
             if (image === undefined) { console.log("not loaded yet"); return; }
-
-            if (sh === -1) sh = image.height;
-            if (sw === -1) sw = image.width;
 
             const elapse = new Date().getTime() - startTime;
             const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
@@ -244,12 +241,14 @@ interface BlockWithoutTexture {
 }
 interface Block {
     collision: "ladder" | "solid" | "air";
-    texture: Texture;
+    texture0: Texture;
+    texture1: Texture;
 }
 type Terrain = Block[][];
 interface Field {
     terrain: Terrain;
     neko: Neko;
+    backgroundTexture: Texture;
 }
 
 function createCoord(x:number, y:number){
@@ -286,7 +285,8 @@ function createField(): Field {
 
     let field: Field = {
         terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow)),
-        neko: createNeko()
+        neko: createNeko(),
+        backgroundTexture: createStaticTexture("image/background.png", 200, 200, 400, 400, false)
     };
     for (let i = 0; i < 10; i++) generateRow(field);
     return field;
@@ -313,17 +313,20 @@ function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
             case "ladder":
             return {
                 collision: "ladder",
-                texture: createRectTexture("red", blockSize, blockSize, blockSize / 2, blockSize / 2)
+                texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                texture1: createStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
             };
             case "solid":
             return {
                 collision: "solid",
-                texture: createRectTexture("black", blockSize, blockSize, blockSize / 2, blockSize / 2)
+                texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                texture1: createStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
             };
             case "air":
             return {
                 collision: "air",
-                texture: createEmptyTexture()
+                texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                texture1: createEmptyTexture()
             };
         }
     });
@@ -335,7 +338,8 @@ function getBlock(terrain: Terrain, coord: Coord): Block {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
-            texture: createEmptyTexture()
+            texture0: createEmptyTexture(),
+            texture1: createEmptyTexture()
         };
     return terrain[coord.y][coord.x];
 }
@@ -487,7 +491,7 @@ interface Camera {
 
 function createCamera(): Camera {
     const clearanceX = 4;
-    const clearanceY = 4;
+    const clearanceY = 2;
     return {
         // ヒステリシスゆとり幅
         clearanceX,
@@ -540,25 +544,41 @@ function updateCamera(camera: Camera, player: Player, field: Field, renderer: Re
     camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
 
-const blockSize = 16;
+const blockSize = 20;
 
-function drawBlock(block: Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
-    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
-}
 function drawField(field: Field, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
+    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer, imageResources);
+
     const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
     const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;
     const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
     const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
     const y2 = Math.ceil(-camera.centerY / blockSize) + yRange;
+
     for(var x = x1; x <= x2; x++) {
         for(var y = y1; y <= y2; y++) {
             if (field.terrain.length <= y) continue;
             const coord = createCoord(x, y);
-            drawBlock(getBlock(field.terrain, coord), coord, camera, renderer, imageResources);
+            getBlock(field.terrain, coord).texture0.draw(
+                camera.offsetX + coord.x * blockSize,
+                camera.offsetY - coord.y * blockSize,
+                renderer, imageResources);
         }
     }
+
+    for(var x = x1; x <= x2; x++) {
+        for(var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y) continue;
+            const coord = createCoord(x, y);
+            getBlock(field.terrain, coord).texture1.draw(
+                camera.offsetX + coord.x * blockSize,
+                camera.offsetY - coord.y * blockSize,
+                renderer, imageResources);
+        }
+    }
+
+    drawGameObject(field.neko, camera, renderer, imageResources);
 }
 function drawGameObject(gameObject: GameObject, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
     gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
@@ -570,7 +590,6 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
 
         drawField(field, camera, renderer, loadingProgress.imageResources);
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
-        drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
 
         testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
 
@@ -600,9 +619,9 @@ window.onload = () => {
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
-    const loadingProgress = resourceLoader(["test.png"]);
+    const loadingProgress = resourceLoader(["test.png", "image/terrain/condenser.png", "image/terrain/ladder.png", "image/terrain/wall.png", "image/background.png"]);
 
-    testAnimation = createAnimationTexture("test.png", 0, 0, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
+    testAnimation = createAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {

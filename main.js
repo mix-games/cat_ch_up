@@ -134,16 +134,16 @@ function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowCo
     };
 }
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source, offsetX, offsetY, useShadowColor) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
+function createStaticTexture(source, offsetX, offsetY, sw, sh, useShadowColor) {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
 }
-function createStaticVolumeTexture(source, offsetX, offsetY, sh, useShadowColor, volumeLayout) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
+function createStaticVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, volumeLayout) {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
 }
-function createAnimationTexture(source, offsetX, offsetY, sw, timeline, loop) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+function createAnimationTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop) {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
 }
-function createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, sh, useShadowColor, volumeLayout) {
+function createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, volumeLayout) {
     const startTime = new Date().getTime();
     return {
         draw: (x, y, renderer, resources) => {
@@ -152,10 +152,6 @@ function createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, lo
                 console.log("not loaded yet");
                 return;
             }
-            if (sh === -1)
-                sh = image.height;
-            if (sw === -1)
-                sw = image.width;
             const elapse = new Date().getTime() - startTime;
             const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
             let frame = timeline.findIndex(t => phase < t);
@@ -204,7 +200,8 @@ function createField() {
     }
     let field = {
         terrain: protoTerrain.map((protoRow) => assignTexture(protoRow)),
-        neko: createNeko()
+        neko: createNeko(),
+        backgroundTexture: createStaticTexture("image/background.png", 200, 200, 400, 400, false)
     };
     for (let i = 0; i < 10; i++)
         generateRow(field);
@@ -230,17 +227,20 @@ function assignTexture(protoRow) {
             case "ladder":
                 return {
                     collision: "ladder",
-                    texture: createRectTexture("red", blockSize, blockSize, blockSize / 2, blockSize / 2)
+                    texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                    texture1: createStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
                 };
             case "solid":
                 return {
                     collision: "solid",
-                    texture: createRectTexture("black", blockSize, blockSize, blockSize / 2, blockSize / 2)
+                    texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                    texture1: createStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
                 };
             case "air":
                 return {
                     collision: "air",
-                    texture: createEmptyTexture()
+                    texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                    texture1: createEmptyTexture()
                 };
         }
     });
@@ -251,7 +251,8 @@ function getBlock(terrain, coord) {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
-            texture: createEmptyTexture()
+            texture0: createEmptyTexture(),
+            texture1: createEmptyTexture()
         };
     return terrain[coord.y][coord.x];
 }
@@ -360,7 +361,7 @@ function controlNeko(neko, field, player) {
 }
 function createCamera() {
     const clearanceX = 4;
-    const clearanceY = 4;
+    const clearanceY = 2;
     return {
         // ヒステリシスゆとり幅
         clearanceX,
@@ -394,11 +395,9 @@ function updateCamera(camera, player, field, renderer) {
     camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
     camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
-const blockSize = 16;
-function drawBlock(block, coord, camera, renderer, imageResources) {
-    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
-}
+const blockSize = 20;
 function drawField(field, camera, renderer, imageResources) {
+    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer, imageResources);
     const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
     const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;
@@ -410,9 +409,18 @@ function drawField(field, camera, renderer, imageResources) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            drawBlock(getBlock(field.terrain, coord), coord, camera, renderer, imageResources);
+            getBlock(field.terrain, coord).texture0.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
         }
     }
+    for (var x = x1; x <= x2; x++) {
+        for (var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y)
+                continue;
+            const coord = createCoord(x, y);
+            getBlock(field.terrain, coord).texture1.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+        }
+    }
+    drawGameObject(field.neko, camera, renderer, imageResources);
 }
 function drawGameObject(gameObject, camera, renderer, imageResources) {
     gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
@@ -422,7 +430,6 @@ function animationLoop(field, player, camera, renderer, mainScreen, loadingProgr
         updateCamera(camera, player, field, renderer);
         drawField(field, camera, renderer, loadingProgress.imageResources);
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
-        drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
         testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
         composit(renderer, mainScreen);
     }
@@ -444,8 +451,8 @@ window.onload = () => {
     const player = createPlayer();
     const camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const loadingProgress = resourceLoader(["test.png"]);
-    testAnimation = createAnimationTexture("test.png", 0, 0, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
+    const loadingProgress = resourceLoader(["test.png", "image/terrain/condenser.png", "image/terrain/ladder.png", "image/terrain/wall.png", "image/background.png"]);
+    testAnimation = createAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true);
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
