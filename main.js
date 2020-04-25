@@ -368,8 +368,10 @@ function updateCamera(camera, player, field, renderer) {
         camera.coord.y = player.coord.y + camera.clearanceY;
     if (camera.coord.y < player.coord.y - camera.clearanceY)
         camera.coord.y = player.coord.y - camera.clearanceY;
-    camera.centerX += (camera.coord.x * blockSize - camera.centerX) * 0.2;
-    camera.centerY += (-camera.coord.y * blockSize - camera.centerY) * 0.2;
+    const targetX = camera.coord.x * blockSize;
+    const targetY = -camera.coord.y * blockSize;
+    camera.centerX += (targetX - camera.centerX) * 0.2;
+    camera.centerY += (targetY - camera.centerY) * 0.2;
     camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
     camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
