@@ -461,17 +461,19 @@ interface Camera {
 }
 
 function createCamera(): Camera {
+    const clearanceX = 3;
+    const clearanceY = 1;
     return {
         // ヒステリシスゆとり幅
-        clearanceX: 3,
-        clearanceY: 1,
+        clearanceX,
+        clearanceY,
 
         // カメラ中心の移動目標マス
-        coord: { x: 3, y: 1 },
+        coord: { x: clearanceX, y: clearanceY },
 
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
-        centerX: 3 * blockSize,
-        centerY: -1 * blockSize,
+        centerX: clearanceX * blockSize,
+        centerY: -clearanceY * blockSize,
         
         // カメラの移動速度
         velocityX: 0,
