@@ -445,6 +445,11 @@ function controlNeko(neko: Neko, field:Field, player:Player): void {
 }
 
 interface Camera {
+    readonly clearanceX: number;
+    readonly clearanceY: number;
+
+    target: Coord;
+
     centerX: number;
     centerY: number;
 
@@ -454,28 +459,41 @@ interface Camera {
 
 function createCamera(): Camera {
     return {
+        // ヒステリシスゆとり幅
+        clearanceX: 3,
+        clearanceY: 1,
+
+        // カメラ中心の移動目標マス
+        target: { x: 3, y:1 },
+
+        // カメラ中心のスクリーン座標(移動アニメーション折り込み)
         centerX: 80,
         centerY: -80,
 
+        // 描画用オフセット（スクリーン左上座標）
         offsetX: 0,
         offsetY: 0,
     };
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
-    /*
-    const targetX = (player.coord.x + 0.5) * blockSize;
-    const targetY = -(player.coord.y + 0.5) * blockSize;
-
-    camera.centerX += (targetX - camera.centerX) * 0.2;
-    camera.centerY += (targetY - camera.centerY) * 0.2;
-    //*/
-
-    camera.offsetX = renderer.lightColor.canvas.width / 2 - camera.centerX;
-    camera.offsetY = renderer.lightColor.canvas.height / 2 - camera.centerY;
+    if (camera.target.x > player.coord.x + camera.clearanceX)
+        camera.target.x = player.coord.x + camera.clearanceX;
+    if (camera.target.x < player.coord.x - camera.clearanceX) 
+        camera.target.x = player.coord.x - camera.clearanceX;
+    if (camera.target.y > player.coord.y + camera.clearanceY)
+        camera.target.y = player.coord.y + camera.clearanceY;
+    if (camera.target.y < player.coord.y - camera.clearanceY) 
+        camera.target.y = player.coord.y - camera.clearanceY;
+    
+    camera.centerX += (camera.target.x * blockSize - camera.centerX) * 0.2;
+    camera.centerY += (-camera.target.y * blockSize - camera.centerY) * 0.2;
+    
+    camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
+    camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
 
-const blockSize = 16;
+const blockSize = 32;
 
 function drawBlock(block: Block, coord: Coord, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
     block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
