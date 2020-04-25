@@ -169,47 +169,68 @@ function createRectTexture(lightColor: string, width: number, height: number, of
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             renderer.lightColor.fillStyle = lightColor;
-            renderer.lightColor.fillRect(x + offsetX, y + offsetY, width, height);
+            renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
-            renderer.shadowColor.fillRect(x + offsetX, y + offsetY, width, height);
+            renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
         }
     };
 }
 
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source: string, offsetX: number, offsetY: number): Texture {
-    return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
-            const image = resources.get(source);
-            if (image === undefined) { console.log("not loaded yet"); return; }
-            renderer.lightColor.drawImage(image,
-                offsetX + x,
-                offsetY + y);
-            renderer.shadowColor.drawImage(image,
-                offsetX + x,
-                offsetY + y);
-        }
-    };
+function createStaticTexture(source: string, offsetX: number, offsetY: number, useShadowColor: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
 }
 
-function createStaticVolumeTexture(source: string, textureOffsetX: number, textureOffsetY: number, sh: number): Texture {
+function createStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
+}
+
+function createAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+}
+
+function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    const startTime = new Date().getTime();
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             const image = resources.get(source);
             if (image === undefined) { console.log("not loaded yet"); return; }
 
-            renderer.lightColor.drawImage(image, 0, 0, image.width, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, image.width, sh);
+            if (sh === -1) sh = image.height;
+            if (sw === -1) sw = image.width;
 
-            renderer.shadowColor.drawImage(image, 0, sh, image.width, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, image.width, sh);
+            const elapse = new Date().getTime() - startTime;
+            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
 
-            for (var i = 0; i < renderer.volumeLayers.length; i++)
-                renderer.volumeLayers[i].drawImage(image, 0, (i + 2) * sh, image.width, sh,
-                    textureOffsetX + x,
-                    textureOffsetY + y, image.width, sh);
+            let frame = timeline.findIndex(t => phase < t);
+            if (frame === -1) frame = Math.max(0, timeline.length - 1);
+
+            renderer.lightColor.drawImage(
+                image,
+                sw * frame, // アニメーションによる横位置
+                0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
+                sw, sh,
+                x - offsetX,
+                y - offsetY,
+                sw, sh);
+
+            renderer.shadowColor.drawImage(image,
+                sw * frame, // アニメーションによる横位置
+                useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+                sw, sh,
+                x - offsetX,
+                y - offsetY,
+                sw, sh);
+            
+            volumeLayout.forEach((target, layout) => 
+                renderer.volumeLayers[target].drawImage(image,
+                    sw * frame, // アニメーションによる横位置
+                    (layout + (useShadowColor ? 2 : 1)) * sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
+                    sw, sh,
+                    x - offsetX,
+                    y - offsetY,
+                    sw, sh)
+            );
         }
     };
 }
@@ -225,8 +246,9 @@ interface Block {
     collision: "ladder" | "solid" | "air";
     texture: Texture;
 }
+type Terrain = Block[][];
 interface Field {
-    terrain: Block[][];
+    terrain: Terrain;
     neko: Neko;
 }
 
@@ -244,8 +266,22 @@ function rightCoord(coord: Coord): Coord {
 }
 
 function createField(): Field {
+    const protoTerrain: BlockWithoutTexture[][] = [[], []];
+    for (let x = 0; x < fieldWidth; x++) {
+        if (Math.random() < 0.7)
+            protoTerrain[0][x] = { collision: "air" };
+        else
+            protoTerrain[0][x] = { collision: "ladder" };
+    }
+    for (let x = 0; x < fieldWidth; x++) {
+        if (protoTerrain[0][x].collision === "ladder")
+            protoTerrain[1][x] = { collision: "ladder" };
+        else
+            protoTerrain[1][x] = { collision: "air" };
+    }
+
     let field: Field = {
-        terrain: [],
+        terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow)),
         neko: createNeko()
     };
     for (let i = 0; i < 10; i++) generateRow(field);
@@ -259,34 +295,41 @@ const fieldWidth = 10;
 //Y座標は下から数える
 function generateRow(field: Field): void {
     const protoRow: BlockWithoutTexture[] = [];
-    for (let x = 0; x < 10; x++) {
-        if (Math.random() < 0.7)
-            protoRow[x] = { collision: "air" };
-        else if (Math.random() < 0.5)
-            protoRow[x] = { collision: "solid" };
-        else
-            protoRow[x] = { collision: "ladder" };
+        for (let x = 0; x < fieldWidth; x++) {
+            if (Math.random() < 0.7)
+                protoRow[x] = { collision: "air" };
+            else if (Math.random() < 0.5)
+                protoRow[x] = { collision: "solid" };
+            else
+                protoRow[x] = { collision: "ladder" };
     }
-    const row = protoRow.map((bwt: BlockWithoutTexture): Block => {
-        if (bwt.collision === "ladder")
+    field.terrain.push(assignTexture(protoRow));
+}
+function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
+    return protoRow.map((bwt: BlockWithoutTexture): Block => {
+        switch(bwt.collision) {
+            case "ladder":
             return {
                 collision: "ladder",
-                texture: createRectTexture("red", blockSize, blockSize, 0, 0)
+                texture: createRectTexture("red", blockSize, blockSize, blockSize / 2, blockSize / 2)
             };
-        else if (bwt.collision === "solid")
+            case "solid":
             return {
                 collision: "solid",
-                texture: createRectTexture("black", blockSize, blockSize, 0, 0)
+                texture: createRectTexture("black", blockSize, blockSize, blockSize / 2, blockSize / 2)
             };
-        else return {
-            collision: "air",
-            texture: createEmptyTexture()
-        };
+            case "air":
+            return {
+                collision: "air",
+                texture: createEmptyTexture()
+            };
+        }
     });
-    field.terrain.push(row);
 }
 
-function getBlock(terrain: Block[][], coord: Coord): Block {
+function getBlock(terrain: Terrain, coord: Coord): Block {
+    if (terrain.length <= coord.y) 
+        throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
@@ -308,69 +351,69 @@ function createPlayer(): Player {
     return {
         coord: { x: 0, y: 0 },
         isSmall: false,
-        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, 2, - blockSize + 4)
+        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
     };
 }
 
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
-function canEnter(coord: Coord, field: Field, isSmall: boolean): boolean {
+function canEnter(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
     if (isSmall)
-        return getBlock(field.terrain, coord).collision !== "solid";
+        return getBlock(terrain, coord).collision !== "solid";
 
-    return getBlock(field.terrain, coord).collision !== "solid"
-        && getBlock(field.terrain, upCoord(coord)).collision !== "solid";
+    return getBlock(terrain, coord).collision !== "solid"
+        && getBlock(terrain, upCoord(coord)).collision !== "solid";
 }
 //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-function canStand(coord: Coord, field: Field, isSmall: boolean): boolean {
-    if (!canEnter(coord, field, isSmall))
+function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
+    if (!canEnter(coord, terrain, isSmall))
         return false;
 
-    if (isSmall && getBlock(field.terrain, coord).collision === "ladder")
+    if (isSmall && getBlock(terrain, coord).collision === "ladder")
         return true;
 
-    if (getBlock(field.terrain, coord).collision === "ladder"
-        || getBlock(field.terrain, upCoord(coord)).collision === "ladder"
-        || getBlock(field.terrain, downCoord(coord)).collision === "ladder")
+    if (getBlock(terrain, coord).collision === "ladder"
+        || getBlock(terrain, upCoord(coord)).collision === "ladder"
+        || getBlock(terrain, downCoord(coord)).collision === "ladder")
         return true;
 
-    return getBlock(field.terrain, downCoord(coord)).collision === "solid";
+    return getBlock(terrain, downCoord(coord)).collision === "solid";
 }
 
 type Direction = "left" | "right" | "up" | "down";
 type ActionType = "walk" | "climb" | "drop";
 type MoveResult = null | { coord: Coord, actionType: ActionType; };
 
-function checkLeft(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 左が空いているならそこ
-    if (canEnter(leftCoord(coord), field, isSmall))
+    if (canEnter(leftCoord(coord), terrain, isSmall))
         return { coord: leftCoord(coord), actionType: "walk" };
     // 上がふさがってなくて左上が空いているならそこ
-    if (canEnter(upCoord(coord), field, isSmall)
-        && canEnter(leftCoord(upCoord(coord)), field, isSmall))
+    if (canEnter(upCoord(coord), terrain, isSmall)
+        && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
         return { coord: leftCoord(upCoord(coord)), actionType: "climb" };
     return null;
 }
-function checkRight(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 右が空いているならそこ
-    if (canEnter(rightCoord(coord), field, isSmall))
+    if (canEnter(rightCoord(coord), terrain, isSmall))
         return { coord: rightCoord(coord), actionType: "walk" };
     // 上がふさがってなくて右上が空いているならそこ
-    if (canEnter(upCoord(coord), field, isSmall)
-        && canEnter(rightCoord(upCoord(coord)), field, isSmall))
+    if (canEnter(upCoord(coord), terrain, isSmall)
+        && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
         return { coord: rightCoord(upCoord(coord)), actionType: "climb" };
     return null;
 }
-function checkUp(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
-    if ((getBlock(field.terrain, coord).collision === "ladder" ||
-        getBlock(field.terrain, upCoord(coord)).collision === "ladder") &&
-        canStand(upCoord(coord), field, isSmall))
+    if ((getBlock(terrain, coord).collision === "ladder" ||
+        getBlock(terrain, upCoord(coord)).collision === "ladder") &&
+        canStand(upCoord(coord), terrain, isSmall))
         return { coord: upCoord(coord), actionType: "climb" };
     return null;
 }
-function checkDown(coord: Coord, field: Field, isSmall: boolean): MoveResult {
+function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 真下が空いてるなら（飛び）下りる？
-    if (canEnter(downCoord(coord), field, isSmall))
+    if (canEnter(downCoord(coord), terrain, isSmall))
         return { coord: downCoord(coord), actionType: "climb" };
     return null;
 }
@@ -380,15 +423,15 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     let result: MoveResult = null;
 
     switch (direction) {
-        case "left": result = checkLeft(player.coord, field, player.isSmall); break;
-        case "right": result = checkRight(player.coord, field, player.isSmall); break;
-        case "up": result = checkUp(player.coord, field, player.isSmall); break;
-        case "down": result = checkDown(player.coord, field, player.isSmall); break;
+        case "left": result = checkLeft(player.coord, field.terrain, player.isSmall); break;
+        case "right": result = checkRight(player.coord, field.terrain, player.isSmall); break;
+        case "up": result = checkUp(player.coord, field.terrain, player.isSmall); break;
+        case "down": result = checkDown(player.coord, field.terrain, player.isSmall); break;
     }
     if (result === null) return null;
 
     // 立てる場所まで落とす
-    while (!canStand(result.coord, field, player.isSmall)) {
+    while (!canStand(result.coord, field.terrain, player.isSmall)) {
         result.actionType = "drop";
         result.coord = downCoord(result.coord);
     }
@@ -416,7 +459,7 @@ interface Neko extends GameObject {
 function createNeko(): Neko {
     return {
         coord: { x: 0, y: 5 },
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, 2, 2)
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
     };
 }
 
@@ -425,6 +468,14 @@ function controlNeko(neko: Neko, field:Field, player:Player): void {
 }
 
 interface Camera {
+    readonly clearanceX: number;
+    readonly clearanceY: number;
+
+    coord: Coord;
+
+    velocityX: number;
+    velocityY: number;
+
     centerX: number;
     centerY: number;
 
@@ -433,26 +484,59 @@ interface Camera {
 }
 
 function createCamera(): Camera {
+    const clearanceX = 4;
+    const clearanceY = 4;
     return {
-        centerX: 80,
-        centerY: -80,
+        // ヒステリシスゆとり幅
+        clearanceX,
+        clearanceY,
 
+        // カメラ中心の移動目標マス
+        coord: { x: clearanceX, y: clearanceY },
+
+        // カメラ中心のスクリーン座標(移動アニメーション折り込み)
+        centerX: clearanceX * blockSize,
+        centerY: -clearanceY * blockSize,
+        
+        // カメラの移動速度
+        velocityX: 0,
+        velocityY: 0,
+
+        // 描画用オフセット（スクリーン左上座標）
         offsetX: 0,
         offsetY: 0,
     };
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
-    /*
-    const targetX = (player.coord.x + 0.5) * blockSize;
-    const targetY = -(player.coord.y + 0.5) * blockSize;
+    if (camera.coord.x > player.coord.x + camera.clearanceX)
+        camera.coord.x = player.coord.x + camera.clearanceX;
+    if (camera.coord.x < player.coord.x - camera.clearanceX) 
+        camera.coord.x = player.coord.x - camera.clearanceX;
+    if (camera.coord.y > player.coord.y + camera.clearanceY)
+        camera.coord.y = player.coord.y + camera.clearanceY;
+    if (camera.coord.y < player.coord.y - camera.clearanceY) 
+        camera.coord.y = player.coord.y - camera.clearanceY;
+    
+    const targetX = camera.coord.x * blockSize;
+    const targetY = -camera.coord.y * blockSize;
+    const smooth = 0.9; // 1フレームあたりの減衰比(0～1の無次元値)
+    const accel = 1; // 1フレームあたりの速度変化
 
-    camera.centerX += (targetX - camera.centerX) * 0.2;
-    camera.centerY += (targetY - camera.centerY) * 0.2;
-    //*/
-
-    camera.offsetX = renderer.lightColor.canvas.width / 2 - camera.centerX;
-    camera.offsetY = renderer.lightColor.canvas.height / 2 - camera.centerY;
+    camera.velocityX = 
+        Math.max(camera.velocityX * smooth - accel,
+        Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
+            ((targetX - camera.centerX) * (1 - smooth))));  //この速度にしておけば公比smoothの無限級数がtargetXに収束する
+    camera.velocityY = 
+        Math.max(camera.velocityY * smooth - accel,
+        Math.min(camera.velocityY * smooth + accel,
+            ((targetY - camera.centerY) * (1 - smooth))));
+    
+    camera.centerX += camera.velocityX;
+    camera.centerY += camera.velocityY;
+    
+    camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
+    camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
 
 const blockSize = 16;
@@ -476,6 +560,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
 
         drawDigraphForTest(camera, renderer.lightColor);//テスト
+        testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
         
         composit(renderer, mainScreen);
     }
@@ -486,6 +571,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
 
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
 }
+
+let testAnimation: Texture;
 
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -501,7 +588,9 @@ window.onload = () => {
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
-    const loadingProgress = resourceLoader([]);
+    const loadingProgress = resourceLoader(["test.png"]);
+
+    testAnimation = createAnimationTexture("test.png", 0, 0, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
@@ -526,8 +615,6 @@ window.onload = () => {
         if (event.code === "ArrowDown") movePlayer(player, field, "down");
 
         console.log(player.coord);
-        console.log("canEnter: " + canEnter(player.coord, field, false));
-        console.log("canStand: " + canStand(player.coord, field, false));
     }, false);
 
     animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
