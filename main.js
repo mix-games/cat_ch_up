@@ -362,15 +362,17 @@ function controlNeko(neko, field, player) {
 function createCamera() {
     const clearanceX = 4;
     const clearanceY = 2;
+    const initialY = 5;
     return {
         // ヒステリシスゆとり幅
         clearanceX,
         clearanceY,
+        initialY,
         // カメラ中心の移動目標マス
         coord: createCoord(clearanceX, clearanceY),
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
         centerX: clearanceX * blockSize,
-        centerY: -clearanceY * blockSize,
+        centerY: -initialY * blockSize,
         // カメラの移動速度
         velocityX: 0,
         velocityY: 0,
@@ -380,7 +382,7 @@ function createCamera() {
     };
 }
 function updateCamera(camera, player, field, renderer) {
-    camera.coord = createCoord(Math.max(player.coord.x - camera.clearanceX, Math.min(player.coord.x + camera.clearanceX, camera.coord.x)), Math.max(player.coord.y - camera.clearanceY, Math.min(player.coord.y + camera.clearanceY, camera.coord.y)));
+    camera.coord = createCoord(Math.max(player.coord.x - camera.clearanceX, Math.min(player.coord.x + camera.clearanceX, camera.coord.x)), Math.max(camera.initialY, Math.max(player.coord.y - camera.clearanceY, Math.min(player.coord.y + camera.clearanceY, camera.coord.y))));
     const targetX = camera.coord.x * blockSize;
     const targetY = -camera.coord.y * blockSize;
     const smooth = 0.9; // 1フレームあたりの減衰比(0～1の無次元値)

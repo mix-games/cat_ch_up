@@ -477,6 +477,8 @@ interface Camera {
     readonly clearanceX: number;
     readonly clearanceY: number;
 
+    readonly initialY: number;
+
     coord: Coord;
 
     velocityX: number;
@@ -492,17 +494,20 @@ interface Camera {
 function createCamera(): Camera {
     const clearanceX = 4;
     const clearanceY = 2;
+    const initialY = 5;
     return {
         // ヒステリシスゆとり幅
         clearanceX,
         clearanceY,
 
+        initialY,
+        
         // カメラ中心の移動目標マス
         coord: createCoord(clearanceX, clearanceY),
 
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
         centerX: clearanceX * blockSize,
-        centerY: -clearanceY * blockSize,
+        centerY: -initialY * blockSize,
         
         // カメラの移動速度
         velocityX: 0,
@@ -519,9 +524,10 @@ function updateCamera(camera: Camera, player: Player, field: Field, renderer: Re
         Math.max(player.coord.x - camera.clearanceX, 
         Math.min(player.coord.x + camera.clearanceX,
             camera.coord.x)),
+        Math.max(camera.initialY,
         Math.max(player.coord.y - camera.clearanceY, 
         Math.min(player.coord.y + camera.clearanceY,
-            camera.coord.y)));
+            camera.coord.y))));
     
     const targetX = camera.coord.x * blockSize;
     const targetY = -camera.coord.y * blockSize;
