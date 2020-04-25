@@ -399,7 +399,20 @@ function drawBlock(block, coord, camera, renderer, imageResources) {
     block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
 }
 function drawField(field, camera, renderer, imageResources) {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
+    const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
+    const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
+    const x1 = Math.floor(camera.centerX / blockSize) - xRange;
+    const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
+    const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
+    const y2 = Math.ceil(-camera.centerY / blockSize) + yRange;
+    for (var x = x1; x <= x2; x++) {
+        for (var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y)
+                continue;
+            const coord = createCoord(x, y);
+            drawBlock(getBlock(field.terrain, coord), coord, camera, renderer, imageResources);
+        }
+    }
 }
 function drawGameObject(gameObject, camera, renderer, imageResources) {
     gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
