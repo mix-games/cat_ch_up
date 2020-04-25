@@ -352,8 +352,8 @@ function createCamera() {
         // カメラ中心の移動目標マス
         coord: { x: 3, y: 1 },
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
-        centerX: 80,
-        centerY: -80,
+        centerX: 3 * blockSize,
+        centerY: -1 * blockSize,
         // 描画用オフセット（スクリーン左上座標）
         offsetX: 0,
         offsetY: 0,
