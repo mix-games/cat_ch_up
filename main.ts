@@ -169,9 +169,9 @@ function createRectTexture(lightColor: string, width: number, height: number, of
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             renderer.lightColor.fillStyle = lightColor;
-            renderer.lightColor.fillRect(x + offsetX, y + offsetY, width, height);
+            renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
-            renderer.shadowColor.fillRect(x + offsetX, y + offsetY, width, height);
+            renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
         }
     };
 }
@@ -210,16 +210,16 @@ function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: 
                 sw * frame, // アニメーションによる横位置
                 0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
                 sw, sh,
-                offsetX + x,
-                offsetY + y,
+                x - offsetX,
+                y - offsetY,
                 sw, sh);
 
             renderer.shadowColor.drawImage(image,
                 sw * frame, // アニメーションによる横位置
                 useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
                 sw, sh,
-                offsetX + x,
-                offsetY + y,
+                x - offsetX,
+                y - offsetY,
                 sw, sh);
             
             volumeLayout.forEach((target, layout) => 
@@ -227,8 +227,8 @@ function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: 
                     sw * frame, // アニメーションによる横位置
                     (layout + (useShadowColor ? 2 : 1)) * sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
                     sw, sh,
-                    offsetX + x,
-                    offsetY + y,
+                    x - offsetX,
+                    y - offsetY,
                     sw, sh)
             );
         }
@@ -290,12 +290,12 @@ function generateRow(field: Field): void {
         if (bwt.collision === "ladder")
             return {
                 collision: "ladder",
-                texture: createRectTexture("red", blockSize, blockSize, 0, 0)
+                texture: createRectTexture("red", blockSize, blockSize, blockSize / 2, blockSize / 2)
             };
         else if (bwt.collision === "solid")
             return {
                 collision: "solid",
-                texture: createRectTexture("black", blockSize, blockSize, 0, 0)
+                texture: createRectTexture("black", blockSize, blockSize, blockSize / 2, blockSize / 2)
             };
         else return {
             collision: "air",
@@ -327,7 +327,7 @@ function createPlayer(): Player {
     return {
         coord: { x: 0, y: 0 },
         isSmall: false,
-        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, 2, - blockSize + 4)
+        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
     };
 }
 
@@ -435,7 +435,7 @@ interface Neko extends GameObject {
 function createNeko(): Neko {
     return {
         coord: { x: 0, y: 5 },
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, 2, 2)
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
     };
 }
 
@@ -494,7 +494,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
         drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
 
-        testAnimation.draw(0, 0, renderer, loadingProgress.imageResources);
+        testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
 
         composit(renderer, mainScreen);
     }
@@ -524,7 +524,7 @@ window.onload = () => {
 
     const loadingProgress = resourceLoader(["test.png"]);
 
-    testAnimation = createAnimationTexture("test.png", 40, 40, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
+    testAnimation = createAnimationTexture("test.png", 0, 0, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
