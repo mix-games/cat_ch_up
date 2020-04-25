@@ -507,14 +507,14 @@ function createCamera(): Camera {
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
-    if (camera.coord.x > player.coord.x + camera.clearanceX)
-        camera.coord.x = player.coord.x + camera.clearanceX;
-    if (camera.coord.x < player.coord.x - camera.clearanceX) 
-        camera.coord.x = player.coord.x - camera.clearanceX;
-    if (camera.coord.y > player.coord.y + camera.clearanceY)
-        camera.coord.y = player.coord.y + camera.clearanceY;
-    if (camera.coord.y < player.coord.y - camera.clearanceY) 
-        camera.coord.y = player.coord.y - camera.clearanceY;
+    camera.coord.x = 
+        Math.max(player.coord.x - camera.clearanceX, 
+        Math.min(player.coord.x + camera.clearanceX,
+            camera.coord.x));
+    camera.coord.y = 
+        Math.max(player.coord.y - camera.clearanceY, 
+        Math.min(player.coord.y + camera.clearanceY,
+            camera.coord.y));
     
     const targetX = camera.coord.x * blockSize;
     const targetY = -camera.coord.y * blockSize;
