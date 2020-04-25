@@ -345,8 +345,8 @@ function controlNeko(neko, field, player) {
     neko.coord.x++;
 }
 function createCamera() {
-    const clearanceX = 3;
-    const clearanceY = 1;
+    const clearanceX = 4;
+    const clearanceY = 4;
     return {
         // ヒステリシスゆとり幅
         clearanceX,
@@ -387,7 +387,7 @@ function updateCamera(camera, player, field, renderer) {
     camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
     camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
-const blockSize = 32;
+const blockSize = 16;
 function drawBlock(block, coord, camera, renderer, imageResources) {
     block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
 }
