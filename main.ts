@@ -169,47 +169,68 @@ function createRectTexture(lightColor: string, width: number, height: number, of
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             renderer.lightColor.fillStyle = lightColor;
-            renderer.lightColor.fillRect(x + offsetX, y + offsetY, width, height);
+            renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
-            renderer.shadowColor.fillRect(x + offsetX, y + offsetY, width, height);
+            renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
         }
     };
 }
 
 // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source: string, offsetX: number, offsetY: number): Texture {
-    return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
-            const image = resources.get(source);
-            if (image === undefined) { console.log("not loaded yet"); return; }
-            renderer.lightColor.drawImage(image,
-                offsetX + x,
-                offsetY + y);
-            renderer.shadowColor.drawImage(image,
-                offsetX + x,
-                offsetY + y);
-        }
-    };
+function createStaticTexture(source: string, offsetX: number, offsetY: number, useShadowColor: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
 }
 
-function createStaticVolumeTexture(source: string, textureOffsetX: number, textureOffsetY: number, sh: number): Texture {
+function createStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
+}
+
+function createAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean): Texture {
+    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+}
+
+function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, timeline: number[], loop: boolean, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+    const startTime = new Date().getTime();
     return {
         draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
             const image = resources.get(source);
             if (image === undefined) { console.log("not loaded yet"); return; }
 
-            renderer.lightColor.drawImage(image, 0, 0, image.width, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, image.width, sh);
+            if (sh === -1) sh = image.height;
+            if (sw === -1) sw = image.width;
 
-            renderer.shadowColor.drawImage(image, 0, sh, image.width, sh,
-                textureOffsetX + x,
-                textureOffsetY + y, image.width, sh);
+            const elapse = new Date().getTime() - startTime;
+            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
 
-            for (var i = 0; i < renderer.volumeLayers.length; i++)
-                renderer.volumeLayers[i].drawImage(image, 0, (i + 2) * sh, image.width, sh,
-                    textureOffsetX + x,
-                    textureOffsetY + y, image.width, sh);
+            let frame = timeline.findIndex(t => phase < t);
+            if (frame === -1) frame = Math.max(0, timeline.length - 1);
+
+            renderer.lightColor.drawImage(
+                image,
+                sw * frame, // アニメーションによる横位置
+                0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
+                sw, sh,
+                x - offsetX,
+                y - offsetY,
+                sw, sh);
+
+            renderer.shadowColor.drawImage(image,
+                sw * frame, // アニメーションによる横位置
+                useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+                sw, sh,
+                x - offsetX,
+                y - offsetY,
+                sw, sh);
+            
+            volumeLayout.forEach((target, layout) => 
+                renderer.volumeLayers[target].drawImage(image,
+                    sw * frame, // アニメーションによる横位置
+                    (layout + (useShadowColor ? 2 : 1)) * sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
+                    sw, sh,
+                    x - offsetX,
+                    y - offsetY,
+                    sw, sh)
+            );
         }
     };
 }
@@ -288,12 +309,12 @@ function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
             case "ladder":
             return {
                 collision: "ladder",
-                texture: createRectTexture("red", blockSize, blockSize, 0, 0)
+                texture: createRectTexture("red", blockSize, blockSize, blockSize / 2, blockSize / 2)
             };
             case "solid":
             return {
                 collision: "solid",
-                texture: createRectTexture("black", blockSize, blockSize, 0, 0)
+                texture: createRectTexture("black", blockSize, blockSize, blockSize / 2, blockSize / 2)
             };
             case "air":
             return {
@@ -328,7 +349,7 @@ function createPlayer(): Player {
     return {
         coord: { x: 0, y: 0 },
         isSmall: false,
-        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, 2, - blockSize + 4)
+        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
     };
 }
 
@@ -436,7 +457,7 @@ interface Neko extends GameObject {
 function createNeko(): Neko {
     return {
         coord: { x: 0, y: 5 },
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, 2, 2)
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
     };
 }
 
@@ -536,6 +557,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawGameObject(player, camera, renderer, loadingProgress.imageResources);
         drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
 
+        testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
+
         composit(renderer, mainScreen);
     }
     else {
@@ -545,6 +568,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
 
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
 }
+
+let testAnimation: Texture;
 
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -560,7 +585,9 @@ window.onload = () => {
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
-    const loadingProgress = resourceLoader([]);
+    const loadingProgress = resourceLoader(["test.png"]);
+
+    testAnimation = createAnimationTexture("test.png", 0, 0, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
