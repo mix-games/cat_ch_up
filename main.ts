@@ -448,7 +448,7 @@ interface Camera {
     readonly clearanceX: number;
     readonly clearanceY: number;
 
-    target: Coord;
+    coord: Coord;
 
     centerX: number;
     centerY: number;
@@ -464,7 +464,7 @@ function createCamera(): Camera {
         clearanceY: 1,
 
         // カメラ中心の移動目標マス
-        target: { x: 3, y:1 },
+        coord: { x: 3, y: 1 },
 
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
         centerX: 80,
@@ -477,17 +477,17 @@ function createCamera(): Camera {
 }
 
 function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
-    if (camera.target.x > player.coord.x + camera.clearanceX)
-        camera.target.x = player.coord.x + camera.clearanceX;
-    if (camera.target.x < player.coord.x - camera.clearanceX) 
-        camera.target.x = player.coord.x - camera.clearanceX;
-    if (camera.target.y > player.coord.y + camera.clearanceY)
-        camera.target.y = player.coord.y + camera.clearanceY;
-    if (camera.target.y < player.coord.y - camera.clearanceY) 
-        camera.target.y = player.coord.y - camera.clearanceY;
+    if (camera.coord.x > player.coord.x + camera.clearanceX)
+        camera.coord.x = player.coord.x + camera.clearanceX;
+    if (camera.coord.x < player.coord.x - camera.clearanceX) 
+        camera.coord.x = player.coord.x - camera.clearanceX;
+    if (camera.coord.y > player.coord.y + camera.clearanceY)
+        camera.coord.y = player.coord.y + camera.clearanceY;
+    if (camera.coord.y < player.coord.y - camera.clearanceY) 
+        camera.coord.y = player.coord.y - camera.clearanceY;
     
-    camera.centerX += (camera.target.x * blockSize - camera.centerX) * 0.2;
-    camera.centerY += (-camera.target.y * blockSize - camera.centerY) * 0.2;
+    camera.centerX += (camera.coord.x * blockSize - camera.centerX) * 0.2;
+    camera.centerY += (-camera.coord.y * blockSize - camera.centerY) * 0.2;
     
     camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
     camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
