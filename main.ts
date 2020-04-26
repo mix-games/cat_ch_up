@@ -1,4 +1,4 @@
-function resourceLoader(callback: () => void = () => { }) {
+function loadResources(callback: () => void = () => { }) {
     const progress = {
         registeredCount: 0,
         finishedCount: 0,
@@ -97,7 +97,7 @@ function resourceLoader(callback: () => void = () => { }) {
     }
 }
 
-type Resources = ReturnType<typeof resourceLoader>;
+type Resources = ReturnType<typeof loadResources>;
 
 interface Renderer {
     lightColor: CanvasRenderingContext2D;
@@ -614,7 +614,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
 }
 
-const resources: Resources = resourceLoader();
+const resources: Resources = loadResources();
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))
@@ -629,7 +629,7 @@ window.onload = () => {
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
-    const loadingProgress = resourceLoader();
+    const loadingProgress = loadResources();
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
