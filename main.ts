@@ -3,6 +3,12 @@ function loadResources(callback: () => void = () => { }) {
         registeredCount: 0,
         finishedCount: 0,
         errorCount: 0,
+        isFinished: function(): boolean {
+            return this.registeredCount === this.finishedCount + this.errorCount;
+        },
+        rate: function(): number {
+            return (this.finishedCount + this.errorCount) / this.registeredCount;
+        }
     }
 
     return {
@@ -19,7 +25,7 @@ function loadResources(callback: () => void = () => { }) {
         progress.registeredCount++;
         image.addEventListener('load', () => {
             progress.finishedCount++;
-            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+            if (progress.isFinished())
                 callback();
         }, false);
         image.addEventListener("error", () => {
@@ -32,7 +38,7 @@ function loadResources(callback: () => void = () => { }) {
         const audio = new Audio();
         audio.addEventListener('canplaythrough', () => {
             progress.finishedCount++;
-            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+            if (progress.isFinished())
                 callback();
         }, false);
         audio.addEventListener("error", () => {
@@ -596,7 +602,7 @@ function drawGameObject(gameObject: GameObject, camera: Camera, renderer: Render
 }
 
 function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
-    if (resources._progress.registeredCount === resources._progress.finishedCount + resources._progress.errorCount) {
+    if (resources._progress.isFinished()) {
         updateCamera(camera, player, field, renderer);
 
         drawField(field, camera, renderer);
@@ -607,8 +613,8 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         composit(renderer, mainScreen);
     }
     else {
-        console.log("loading " + (resources._progress.finishedCount + resources._progress.errorCount)+ "/" + resources._progress.registeredCount);
-        mainScreen.fillText("loading", 0, 0);
+        console.log("loading " + (resources._progress.rate() * 100) + "%");
+        mainScreen.fillText("loading", 0, 50);
     }
 
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));

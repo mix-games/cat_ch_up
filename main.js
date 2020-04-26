@@ -4,6 +4,12 @@ function loadResources(callback = () => { }) {
         registeredCount: 0,
         finishedCount: 0,
         errorCount: 0,
+        isFinished: function () {
+            return this.registeredCount === this.finishedCount + this.errorCount;
+        },
+        rate: function () {
+            return (this.finishedCount + this.errorCount) / this.registeredCount;
+        }
     };
     return {
         _progress: progress,
@@ -18,7 +24,7 @@ function loadResources(callback = () => { }) {
         progress.registeredCount++;
         image.addEventListener('load', () => {
             progress.finishedCount++;
-            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+            if (progress.isFinished())
                 callback();
         }, false);
         image.addEventListener("error", () => {
@@ -31,7 +37,7 @@ function loadResources(callback = () => { }) {
         const audio = new Audio();
         audio.addEventListener('canplaythrough', () => {
             progress.finishedCount++;
-            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+            if (progress.isFinished())
                 callback();
         }, false);
         audio.addEventListener("error", () => {
@@ -434,7 +440,7 @@ function drawGameObject(gameObject, camera, renderer) {
     gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
 }
 function animationLoop(field, player, camera, renderer, mainScreen, resources) {
-    if (resources._progress.registeredCount === resources._progress.finishedCount + resources._progress.errorCount) {
+    if (resources._progress.isFinished()) {
         updateCamera(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
@@ -442,8 +448,8 @@ function animationLoop(field, player, camera, renderer, mainScreen, resources) {
         composit(renderer, mainScreen);
     }
     else {
-        console.log("loading " + (resources._progress.finishedCount + resources._progress.errorCount) + "/" + resources._progress.registeredCount);
-        mainScreen.fillText("loading", 0, 0);
+        console.log("loading " + (resources._progress.rate() * 100) + "%");
+        mainScreen.fillText("loading", 0, 50);
     }
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
 }
