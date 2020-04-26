@@ -1,5 +1,5 @@
 "use strict";
-function resourceLoader(callback = () => { }) {
+function loadResources(callback = () => { }) {
     const progress = {
         registeredCount: 0,
         finishedCount: 0,
@@ -447,7 +447,7 @@ function animationLoop(field, player, camera, renderer, mainScreen, resources) {
     }
     requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
 }
-const resources = resourceLoader();
+const resources = loadResources();
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))
@@ -459,7 +459,7 @@ window.onload = () => {
     const player = createPlayer();
     const camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const loadingProgress = resourceLoader();
+    const loadingProgress = loadResources();
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
