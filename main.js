@@ -1,43 +1,77 @@
 "use strict";
-function resourceLoader(sources, callback = () => { }, progress = {
-    registeredCount: 0,
-    finishedCount: 0,
-    imageResources: new Map(),
-    audioResources: new Map()
-}) {
-    progress.registeredCount += sources.length;
-    sources.forEach(source => {
-        if (source.match(/\.(bmp|png|jpg)$/)) {
-            const image = new Image();
-            image.addEventListener('load', () => {
-                progress.imageResources.set(source, image);
-                progress.finishedCount++;
-                if (progress.registeredCount === progress.finishedCount)
-                    callback();
-            }, false);
-            image.addEventListener("error", () => {
-                //こうしないとロードがいつまでも終わらないことになるので。本当はカウンターを分けるべき？
-                progress.finishedCount++;
-            });
-            image.src = source;
-        }
-        else if (source.match(/\.(wav|ogg|mp3)$/)) {
-            const audio = new Audio();
-            audio.addEventListener('canplaythrough', () => {
-                progress.audioResources.set(source, audio);
-                progress.finishedCount++;
-                if (progress.registeredCount === progress.finishedCount)
-                    callback();
-            }, false);
-            audio.addEventListener("error", () => {
-                progress.finishedCount++;
-            });
-            audio.src = source;
-        }
-        else
-            throw new Error("unknown extension");
-    });
-    return progress;
+function resourceLoader(callback = () => { }) {
+    const progress = {
+        registeredCount: 0,
+        finishedCount: 0,
+        errorCount: 0,
+    };
+    return {
+        _progress: progress,
+        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true),
+        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+        terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
+        terrain_condenser_texture: loadStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
+    };
+    function loadImage(source) {
+        const image = new Image();
+        progress.registeredCount++;
+        image.addEventListener('load', () => {
+            progress.finishedCount++;
+            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+                callback();
+        }, false);
+        image.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        image.src = source;
+        return image;
+    }
+    function loadSound(source) {
+        const audio = new Audio();
+        audio.addEventListener('canplaythrough', () => {
+            progress.finishedCount++;
+            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+                callback();
+        }, false);
+        audio.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        audio.src = source;
+        return audio;
+    }
+    // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
+    function loadStaticTexture(source, offsetX, offsetY, sw, sh, useShadowColor) {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
+    }
+    function loadStaticVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, volumeLayout) {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
+    }
+    function loadAnimationTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop) {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
+    }
+    function loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, volumeLayout) {
+        const startTime = new Date().getTime();
+        const image = loadImage(source);
+        return {
+            draw: (x, y, renderer) => {
+                const elapse = new Date().getTime() - startTime;
+                const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
+                let frame = timeline.findIndex(t => phase < t);
+                if (frame === -1)
+                    frame = Math.max(0, timeline.length - 1);
+                renderer.lightColor.drawImage(image, sw * frame, // アニメーションによる横位置
+                0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
+                sw, sh, x - offsetX, y - offsetY, sw, sh);
+                renderer.shadowColor.drawImage(image, sw * frame, // アニメーションによる横位置
+                useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+                sw, sh, x - offsetX, y - offsetY, sw, sh);
+                volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(image, sw * frame, // アニメーションによる横位置
+                (layout + (useShadowColor ? 2 : 1)) * sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
+                sw, sh, x - offsetX, y - offsetY, sw, sh));
+            }
+        };
+    }
 }
 function createRenderer(width, height) {
     const marginTop = 28;
@@ -125,47 +159,11 @@ function createEmptyTexture() {
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowColor = lightColor) {
     return {
-        draw: (x, y, renderer, resources) => {
+        draw: (x, y, renderer) => {
             renderer.lightColor.fillStyle = lightColor;
             renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
             renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
-        }
-    };
-}
-// ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source, offsetX, offsetY, sw, sh, useShadowColor) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
-}
-function createStaticVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, volumeLayout) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
-}
-function createAnimationTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
-}
-function createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, volumeLayout) {
-    const startTime = new Date().getTime();
-    return {
-        draw: (x, y, renderer, resources) => {
-            const image = resources.get(source);
-            if (image === undefined) {
-                console.log("not loaded yet");
-                return;
-            }
-            const elapse = new Date().getTime() - startTime;
-            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-            let frame = timeline.findIndex(t => phase < t);
-            if (frame === -1)
-                frame = Math.max(0, timeline.length - 1);
-            renderer.lightColor.drawImage(image, sw * frame, // アニメーションによる横位置
-            0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
-            sw, sh, x - offsetX, y - offsetY, sw, sh);
-            renderer.shadowColor.drawImage(image, sw * frame, // アニメーションによる横位置
-            useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
-            sw, sh, x - offsetX, y - offsetY, sw, sh);
-            volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(image, sw * frame, // アニメーションによる横位置
-            (layout + (useShadowColor ? 2 : 1)) * sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
-            sw, sh, x - offsetX, y - offsetY, sw, sh));
         }
     };
 }
@@ -201,7 +199,7 @@ function createField() {
     let field = {
         terrain: protoTerrain.map((protoRow) => assignTexture(protoRow)),
         neko: createNeko(),
-        backgroundTexture: createStaticTexture("image/background.png", 200, 200, 400, 400, false)
+        backgroundTexture: resources.background_texture
     };
     for (let i = 0; i < 10; i++)
         generateRow(field);
@@ -227,19 +225,19 @@ function assignTexture(protoRow) {
             case "ladder":
                 return {
                     collision: "ladder",
-                    texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
-                    texture1: createStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
+                    texture0: resources.terrain_wall_texture,
+                    texture1: resources.terrain_ladder_texture,
                 };
             case "solid":
                 return {
                     collision: "solid",
-                    texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
-                    texture1: createStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
+                    texture0: resources.terrain_wall_texture,
+                    texture1: resources.terrain_condenser_texture,
                 };
             case "air":
                 return {
                     collision: "air",
-                    texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                    texture0: resources.terrain_wall_texture,
                     texture1: createEmptyTexture()
                 };
         }
@@ -398,8 +396,8 @@ function updateCamera(camera, player, field, renderer) {
     camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
 }
 const blockSize = 20;
-function drawField(field, camera, renderer, imageResources) {
-    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer, imageResources);
+function drawField(field, camera, renderer) {
+    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer);
     const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
     const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;
@@ -411,7 +409,7 @@ function drawField(field, camera, renderer, imageResources) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            getBlock(field.terrain, coord).texture0.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+            getBlock(field.terrain, coord).texture0.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     }
     for (var x = x1; x <= x2; x++) {
@@ -419,29 +417,29 @@ function drawField(field, camera, renderer, imageResources) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            getBlock(field.terrain, coord).texture1.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
+            getBlock(field.terrain, coord).texture1.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     }
-    drawGameObject(field.neko, camera, renderer, imageResources);
+    drawGameObject(field.neko, camera, renderer);
 }
-function drawGameObject(gameObject, camera, renderer, imageResources) {
-    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
+function drawGameObject(gameObject, camera, renderer) {
+    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
 }
-function animationLoop(field, player, camera, renderer, mainScreen, loadingProgress) {
-    if (loadingProgress.registeredCount === loadingProgress.finishedCount) {
+function animationLoop(field, player, camera, renderer, mainScreen, resources) {
+    if (resources._progress.registeredCount === resources._progress.finishedCount + resources._progress.errorCount) {
         updateCamera(camera, player, field, renderer);
-        drawField(field, camera, renderer, loadingProgress.imageResources);
-        drawGameObject(player, camera, renderer, loadingProgress.imageResources);
-        testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
+        drawField(field, camera, renderer);
+        drawGameObject(player, camera, renderer);
+        resources.testAnimation.draw(40, 40, renderer);
         composit(renderer, mainScreen);
     }
     else {
-        console.log("loading " + loadingProgress.finishedCount + "/" + loadingProgress.registeredCount);
+        console.log("loading " + (resources._progress.finishedCount + resources._progress.errorCount) + "/" + resources._progress.registeredCount);
         mainScreen.fillText("loading", 0, 0);
     }
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
+    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
 }
-let testAnimation;
+const resources = resourceLoader();
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))
@@ -453,8 +451,7 @@ window.onload = () => {
     const player = createPlayer();
     const camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const loadingProgress = resourceLoader(["test.png", "image/terrain/condenser.png", "image/terrain/ladder.png", "image/terrain/wall.png", "image/background.png"]);
-    testAnimation = createAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true);
+    const loadingProgress = resourceLoader();
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;

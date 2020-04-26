@@ -1,52 +1,103 @@
-type ImageResources = Map<string, HTMLImageElement>;
-type AudioResources = Map<string, HTMLAudioElement>;
-interface LoadingProgress {
-    finishedCount: number;
-    registeredCount: number;
-    imageResources: ImageResources;
-    audioResources: AudioResources;
-}
-function resourceLoader(sources: string[], callback: () => void = () => { }, progress: LoadingProgress = {
-    registeredCount: 0,
-    finishedCount: 0,
-    imageResources: new Map(),
-    audioResources: new Map()
-}) {
-    progress.registeredCount += sources.length;
+function resourceLoader(callback: () => void = () => { }) {
+    const progress = {
+        registeredCount: 0,
+        finishedCount: 0,
+        errorCount: 0,
+    }
 
-    sources.forEach(source => {
-        if (source.match(/\.(bmp|png|jpg)$/)) {
-            const image = new Image();
-            image.addEventListener('load', () => {
-                progress.imageResources.set(source, image);
-                progress.finishedCount++;
-                if (progress.registeredCount === progress.finishedCount)
-                    callback();
-            }, false);
-            image.addEventListener("error", () => {
-                //こうしないとロードがいつまでも終わらないことになるので。本当はカウンターを分けるべき？
-                progress.finishedCount++;
-            });
-            image.src = source;
-        }
-        else if (source.match(/\.(wav|ogg|mp3)$/)) {
-            const audio = new Audio();
-            audio.addEventListener('canplaythrough', () => {
-                progress.audioResources.set(source, audio);
-                progress.finishedCount++;
-                if (progress.registeredCount === progress.finishedCount)
-                    callback();
-            }, false);
-            audio.addEventListener("error", () => {
-                progress.finishedCount++;
-            });
-            audio.src = source;
-        }
-        else throw new Error("unknown extension");
-    });
+    return {
+        _progress : progress,
+        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true),
+        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+        terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
+        terrain_condenser_texture: loadStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
+    };
 
-    return progress;
+    function loadImage(source: string): HTMLImageElement {
+        const image = new Image();
+        progress.registeredCount++;
+        image.addEventListener('load', () => {
+            progress.finishedCount++;
+            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+                callback();
+        }, false);
+        image.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        image.src = source;
+        return image;
+    }
+    function loadSound(source: string): HTMLAudioElement {
+        const audio = new Audio();
+        audio.addEventListener('canplaythrough', () => {
+            progress.finishedCount++;
+            if (progress.registeredCount === progress.finishedCount + progress.errorCount)
+                callback();
+        }, false);
+        audio.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        audio.src = source;
+        return audio;
+    }
+
+    // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
+    function loadStaticTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean): Texture {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
+    }
+
+    function loadStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
+    }
+
+    function loadAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, sh:number, useShadowColor: boolean, timeline: number[], loop: boolean): Texture {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
+    }
+
+    function loadAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
+        const startTime = new Date().getTime();
+        const image = loadImage(source);
+        return {
+            draw: (x: number, y: number, renderer: Renderer) => {
+                const elapse = new Date().getTime() - startTime;
+                const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
+
+                let frame = timeline.findIndex(t => phase < t);
+                if (frame === -1) frame = Math.max(0, timeline.length - 1);
+
+                renderer.lightColor.drawImage(
+                    image,
+                    sw * frame, // アニメーションによる横位置
+                    0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
+                    sw, sh,
+                    x - offsetX,
+                    y - offsetY,
+                    sw, sh);
+
+                renderer.shadowColor.drawImage(image,
+                    sw * frame, // アニメーションによる横位置
+                    useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+                    sw, sh,
+                    x - offsetX,
+                    y - offsetY,
+                    sw, sh);
+                
+                volumeLayout.forEach((target, layout) => 
+                    renderer.volumeLayers[target].drawImage(image,
+                        sw * frame, // アニメーションによる横位置
+                        (layout + (useShadowColor ? 2 : 1)) * sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
+                        sw, sh,
+                        x - offsetX,
+                        y - offsetY,
+                        sw, sh)
+                );
+            }
+        };  
+    }
 }
+
+type Resources = ReturnType<typeof resourceLoader>;
 
 interface Renderer {
     lightColor: CanvasRenderingContext2D;
@@ -155,7 +206,7 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
 
 interface Texture {
     // これの実装を色々にしてアニメーションなどを表現する
-    draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => void;
+    draw: (x: number, y: number, renderer: Renderer) => void;
 }
 
 function createEmptyTexture(): Texture {
@@ -167,67 +218,11 @@ function createEmptyTexture(): Texture {
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor: string, width: number, height: number, offsetX: number, offsetY: number, shadowColor: string = lightColor): Texture {
     return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
+        draw: (x: number, y: number, renderer: Renderer) => {
             renderer.lightColor.fillStyle = lightColor;
             renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
             renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
-        }
-    };
-}
-
-// ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean): Texture {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
-}
-
-function createStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
-}
-
-function createAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, sh:number, useShadowColor: boolean, timeline: number[], loop: boolean): Texture {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
-}
-
-function createAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
-    const startTime = new Date().getTime();
-    return {
-        draw: (x: number, y: number, renderer: Renderer, resources: ImageResources) => {
-            const image = resources.get(source);
-            if (image === undefined) { console.log("not loaded yet"); return; }
-
-            const elapse = new Date().getTime() - startTime;
-            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-
-            let frame = timeline.findIndex(t => phase < t);
-            if (frame === -1) frame = Math.max(0, timeline.length - 1);
-
-            renderer.lightColor.drawImage(
-                image,
-                sw * frame, // アニメーションによる横位置
-                0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
-                sw, sh,
-                x - offsetX,
-                y - offsetY,
-                sw, sh);
-
-            renderer.shadowColor.drawImage(image,
-                sw * frame, // アニメーションによる横位置
-                useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
-                sw, sh,
-                x - offsetX,
-                y - offsetY,
-                sw, sh);
-            
-            volumeLayout.forEach((target, layout) => 
-                renderer.volumeLayers[target].drawImage(image,
-                    sw * frame, // アニメーションによる横位置
-                    (layout + (useShadowColor ? 2 : 1)) * sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
-                    sw, sh,
-                    x - offsetX,
-                    y - offsetY,
-                    sw, sh)
-            );
         }
     };
 }
@@ -286,7 +281,7 @@ function createField(): Field {
     let field: Field = {
         terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow)),
         neko: createNeko(),
-        backgroundTexture: createStaticTexture("image/background.png", 200, 200, 400, 400, false)
+        backgroundTexture: resources.background_texture
     };
     for (let i = 0; i < 10; i++) generateRow(field);
     return field;
@@ -313,19 +308,19 @@ function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
             case "ladder":
             return {
                 collision: "ladder",
-                texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
-                texture1: createStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
+                texture0: resources.terrain_wall_texture,
+                texture1: resources.terrain_ladder_texture,
             };
             case "solid":
             return {
                 collision: "solid",
-                texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
-                texture1: createStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
+                texture0: resources.terrain_wall_texture,
+                texture1: resources.terrain_condenser_texture,
             };
             case "air":
             return {
                 collision: "air",
-                texture0: createStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
+                texture0: resources.terrain_wall_texture,
                 texture1: createEmptyTexture()
             };
         }
@@ -552,8 +547,8 @@ function updateCamera(camera: Camera, player: Player, field: Field, renderer: Re
 
 const blockSize = 20;
 
-function drawField(field: Field, camera: Camera, renderer: Renderer, imageResources: ImageResources): void {
-    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer, imageResources);
+function drawField(field: Field, camera: Camera, renderer: Renderer): void {
+    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer);
 
     const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
     const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
@@ -569,7 +564,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer, imageResour
             getBlock(field.terrain, coord).texture0.draw(
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
-                renderer, imageResources);
+                renderer);
         }
     }
 
@@ -580,37 +575,36 @@ function drawField(field: Field, camera: Camera, renderer: Renderer, imageResour
             getBlock(field.terrain, coord).texture1.draw(
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
-                renderer, imageResources);
+                renderer);
         }
     }
 
-    drawGameObject(field.neko, camera, renderer, imageResources);
+    drawGameObject(field.neko, camera, renderer);
 }
-function drawGameObject(gameObject: GameObject, camera: Camera, renderer: Renderer, imageResources: ImageResources) {
-    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
+function drawGameObject(gameObject: GameObject, camera: Camera, renderer: Renderer) {
+    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
 }
 
-function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, loadingProgress: LoadingProgress): void {
-    if (loadingProgress.registeredCount === loadingProgress.finishedCount) {
+function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
+    if (resources._progress.registeredCount === resources._progress.finishedCount + resources._progress.errorCount) {
         updateCamera(camera, player, field, renderer);
 
-        drawField(field, camera, renderer, loadingProgress.imageResources);
-        drawGameObject(player, camera, renderer, loadingProgress.imageResources);
+        drawField(field, camera, renderer);
+        drawGameObject(player, camera, renderer);
 
-        testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
+        resources.testAnimation.draw(40, 40, renderer);
 
         composit(renderer, mainScreen);
     }
     else {
-        console.log("loading " + loadingProgress.finishedCount + "/" + loadingProgress.registeredCount);
+        console.log("loading " + (resources._progress.finishedCount + resources._progress.errorCount)+ "/" + resources._progress.registeredCount);
         mainScreen.fillText("loading", 0, 0);
     }
 
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
+    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
 }
 
-let testAnimation: Texture;
-
+const resources: Resources = resourceLoader();
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))
@@ -619,15 +613,13 @@ window.onload = () => {
     const mainScreen = canvas.getContext("2d");
     if (mainScreen === null)
         throw new Error("context2d not found");
-
+    
     const field: Field = createField();
     const player: Player = createPlayer();
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
-    const loadingProgress = resourceLoader(["test.png", "image/terrain/condenser.png", "image/terrain/ladder.png", "image/terrain/wall.png", "image/background.png"]);
-
-    testAnimation = createAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true);
+    const loadingProgress = resourceLoader();
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
