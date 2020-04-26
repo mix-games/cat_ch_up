@@ -56,11 +56,11 @@ function resourceLoader(callback: () => void = () => { }) {
     }
 
     function loadAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
-        const startTime = new Date().getTime();
         const image = loadImage(source);
         return {
-            draw: (x: number, y: number, renderer: Renderer) => {
-                const elapse = new Date().getTime() - startTime;
+            animationTimestamp: new Date().getTime(),
+            draw: function(x: number, y: number, renderer: Renderer) {
+                const elapse = new Date().getTime() - this.animationTimestamp;
                 const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
 
                 let frame = timeline.findIndex(t => phase < t);
@@ -206,11 +206,13 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
 
 interface Texture {
     // これの実装を色々にしてアニメーションなどを表現する
-    draw: (x: number, y: number, renderer: Renderer) => void;
+    animationTimestamp: number,
+    draw: (this:Texture, x: number, y: number, renderer: Renderer) => void;
 }
 
 function createEmptyTexture(): Texture {
     return {
+        animationTimestamp: new Date().getTime(),
         draw: () => {}
     };
 }
@@ -218,12 +220,20 @@ function createEmptyTexture(): Texture {
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor: string, width: number, height: number, offsetX: number, offsetY: number, shadowColor: string = lightColor): Texture {
     return {
+        animationTimestamp: new Date().getTime(),
         draw: (x: number, y: number, renderer: Renderer) => {
             renderer.lightColor.fillStyle = lightColor;
             renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
             renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
         }
+    };
+}
+
+function cloneAndReplayTexture(texture: Texture): Texture{
+    return {
+        animationTimestamp: new Date().getTime(),
+        draw: texture.draw,
     };
 }
 
@@ -308,19 +318,19 @@ function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
             case "ladder":
             return {
                 collision: "ladder",
-                texture0: resources.terrain_wall_texture,
-                texture1: resources.terrain_ladder_texture,
+                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                texture1: cloneAndReplayTexture(resources.terrain_ladder_texture),
             };
             case "solid":
             return {
                 collision: "solid",
-                texture0: resources.terrain_wall_texture,
-                texture1: resources.terrain_condenser_texture,
+                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                texture1: cloneAndReplayTexture(resources.terrain_condenser_texture),
             };
             case "air":
             return {
                 collision: "air",
-                texture0: resources.terrain_wall_texture,
+                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
                 texture1: createEmptyTexture()
             };
         }

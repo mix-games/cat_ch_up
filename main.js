@@ -51,11 +51,11 @@ function resourceLoader(callback = () => { }) {
         return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
     }
     function loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, volumeLayout) {
-        const startTime = new Date().getTime();
         const image = loadImage(source);
         return {
-            draw: (x, y, renderer) => {
-                const elapse = new Date().getTime() - startTime;
+            animationTimestamp: new Date().getTime(),
+            draw: function (x, y, renderer) {
+                const elapse = new Date().getTime() - this.animationTimestamp;
                 const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
                 let frame = timeline.findIndex(t => phase < t);
                 if (frame === -1)
@@ -153,18 +153,26 @@ function composit(renderer, mainScreen) {
 }
 function createEmptyTexture() {
     return {
+        animationTimestamp: new Date().getTime(),
         draw: () => { }
     };
 }
 // 四角を描画するテクスチャ
 function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowColor = lightColor) {
     return {
+        animationTimestamp: new Date().getTime(),
         draw: (x, y, renderer) => {
             renderer.lightColor.fillStyle = lightColor;
             renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
             renderer.shadowColor.fillStyle = shadowColor;
             renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
         }
+    };
+}
+function cloneAndReplayTexture(texture) {
+    return {
+        animationTimestamp: new Date().getTime(),
+        draw: texture.draw,
     };
 }
 function createCoord(x, y) {
@@ -225,19 +233,19 @@ function assignTexture(protoRow) {
             case "ladder":
                 return {
                     collision: "ladder",
-                    texture0: resources.terrain_wall_texture,
-                    texture1: resources.terrain_ladder_texture,
+                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                    texture1: cloneAndReplayTexture(resources.terrain_ladder_texture),
                 };
             case "solid":
                 return {
                     collision: "solid",
-                    texture0: resources.terrain_wall_texture,
-                    texture1: resources.terrain_condenser_texture,
+                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                    texture1: cloneAndReplayTexture(resources.terrain_condenser_texture),
                 };
             case "air":
                 return {
                     collision: "air",
-                    texture0: resources.terrain_wall_texture,
+                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
                     texture1: createEmptyTexture()
                 };
         }
