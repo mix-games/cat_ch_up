@@ -17,7 +17,7 @@ function loadResources(callback: () => void = () => { }) {
         background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false),
         terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
         terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
-        terrain_condenser_texture: loadStaticVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [0, 1, 2]),
+        terrain_condenser_texture: loadAnimationVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [30, 60, 90], true, [0, 1, 2]),
     } as const;
 
     function loadImage(source: string): HTMLImageElement {
