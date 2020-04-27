@@ -33,7 +33,7 @@ function loadResources(callback = () => { }) {
         image.src = source;
         return image;
     }
-    function loadSound(source) {
+    function loadAudio(source) {
         const audio = new Audio();
         audio.addEventListener('canplaythrough', () => {
             progress.finishedCount++;
