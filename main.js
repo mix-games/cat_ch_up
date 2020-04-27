@@ -59,23 +59,17 @@ function loadResources(callback = () => { }) {
     function loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, volumeLayout) {
         const image = loadImage(source);
         return {
+            type: "image",
+            image,
+            offsetX,
+            offsetY,
+            sw,
+            sh,
+            useShadowColor,
+            timeline,
             animationTimestamp: new Date().getTime(),
-            draw: function (x, y, renderer) {
-                const elapse = new Date().getTime() - this.animationTimestamp;
-                const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-                let frame = timeline.findIndex(t => phase < t);
-                if (frame === -1)
-                    frame = Math.max(0, timeline.length - 1);
-                renderer.lightColor.drawImage(image, sw * frame, // アニメーションによる横位置
-                0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
-                sw, sh, x - offsetX, y - offsetY, sw, sh);
-                renderer.shadowColor.drawImage(image, sw * frame, // アニメーションによる横位置
-                useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
-                sw, sh, x - offsetX, y - offsetY, sw, sh);
-                volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(image, sw * frame, // アニメーションによる横位置
-                (layout + (useShadowColor ? 2 : 1)) * sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
-                sw, sh, x - offsetX, y - offsetY, sw, sh));
-            }
+            loop,
+            volumeLayout,
         };
     }
 }
@@ -159,27 +153,50 @@ function composit(renderer, mainScreen) {
 }
 function createEmptyTexture() {
     return {
-        animationTimestamp: new Date().getTime(),
-        draw: () => { }
+        type: "empty"
     };
 }
-// 四角を描画するテクスチャ
-function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowColor = lightColor) {
+function createRectTexture(color, width, height, offsetX, offsetY) {
     return {
-        animationTimestamp: new Date().getTime(),
-        draw: (x, y, renderer) => {
-            renderer.lightColor.fillStyle = lightColor;
-            renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
-            renderer.shadowColor.fillStyle = shadowColor;
-            renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
-        }
+        type: "rect",
+        color,
+        width,
+        height,
+        offsetX,
+        offsetY,
     };
 }
 function cloneAndReplayTexture(texture) {
-    return {
-        animationTimestamp: new Date().getTime(),
-        draw: texture.draw,
-    };
+    if (texture.type === "image") {
+        return Object.assign({ animationTimestamp: new Date().getTime() }, texture);
+    }
+    // いちおうコピーするけど意味なさそう
+    else
+        return Object.assign({}, texture);
+}
+function drawTexture(texture, x, y, renderer) {
+    if (texture.type === "rect") {
+        renderer.lightColor.fillStyle = texture.color;
+        renderer.lightColor.fillRect(x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        renderer.shadowColor.fillStyle = texture.color;
+        renderer.shadowColor.fillRect(x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+    }
+    if (texture.type === "image") {
+        const elapse = new Date().getTime() - texture.animationTimestamp;
+        const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+        let frame = texture.timeline.findIndex(t => phase < t);
+        if (frame === -1)
+            frame = Math.max(0, texture.timeline.length - 1);
+        renderer.lightColor.drawImage(texture.image, texture.sw * frame, // アニメーションによる横位置
+        0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
+        texture.sw, texture.sh, x - texture.offsetX, y - texture.offsetY, texture.sw, texture.sh);
+        renderer.shadowColor.drawImage(texture.image, texture.sw * frame, // アニメーションによる横位置
+        texture.useShadowColor ? texture.sh : 0, // useShadowColorがfalseのときはlightColorを流用する
+        texture.sw, texture.sh, x - texture.offsetX, y - texture.offsetY, texture.sw, texture.sh);
+        texture.volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(texture.image, texture.sw * frame, // アニメーションによる横位置
+        (layout + (texture.useShadowColor ? 2 : 1)) * texture.sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
+        texture.sw, texture.sh, x - texture.offsetX, y - texture.offsetY, texture.sw, texture.sh));
+    }
 }
 function createCoord(x, y) {
     return { x, y };
@@ -411,7 +428,7 @@ function updateCamera(camera, player, field, renderer) {
 }
 const blockSize = 20;
 function drawField(field, camera, renderer) {
-    field.backgroundTexture.draw(renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer);
+    drawTexture(field.backgroundTexture, renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer);
     const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
     const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;
@@ -423,7 +440,7 @@ function drawField(field, camera, renderer) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            getBlock(field.terrain, coord).texture0.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+            drawTexture(getBlock(field.terrain, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     }
     for (var x = x1; x <= x2; x++) {
@@ -431,20 +448,20 @@ function drawField(field, camera, renderer) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            getBlock(field.terrain, coord).texture1.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+            drawTexture(getBlock(field.terrain, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     }
     drawGameObject(field.neko, camera, renderer);
 }
 function drawGameObject(gameObject, camera, renderer) {
-    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
+    drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
 }
 function animationLoop(field, player, camera, renderer, mainScreen, resources) {
     if (resources._progress.isFinished()) {
         updateCamera(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
-        resources.testAnimation.draw(40, 40, renderer);
+        drawTexture(resources.testAnimation, 40, 40, renderer);
         composit(renderer, mainScreen);
     }
     else {
