@@ -93,8 +93,10 @@ function createRenderer(width, height) {
         volumeLayers,
         compositScreen,
         shadowAccScreens,
-        compositOffsetX: -marginLeft,
-        compositOffsetY: -marginTop,
+        marginLeft,
+        marginTop,
+        width,
+        height,
     };
     function create2dScreen(width, height) {
         let canvas = document.createElement("canvas");
@@ -124,17 +126,17 @@ function composit(renderer, mainScreen) {
         }
         //compositに累積
         renderer.compositScreen.globalCompositeOperation = "source-over";
-        renderer.compositScreen.drawImage(renderer.shadowAccScreens[i].canvas, renderer.compositOffsetX + shadowDirectionX, renderer.compositOffsetY + shadowDirectionY);
+        renderer.compositScreen.drawImage(renderer.shadowAccScreens[i].canvas, -renderer.marginLeft + shadowDirectionX, -renderer.marginTop + shadowDirectionY);
         //見えなくなる部分を隠す
         renderer.compositScreen.globalCompositeOperation = "destination-out";
-        renderer.compositScreen.drawImage(renderer.volumeLayers[i].canvas, renderer.compositOffsetX, renderer.compositOffsetY);
+        renderer.compositScreen.drawImage(renderer.volumeLayers[i].canvas, -renderer.marginLeft, -renderer.marginTop);
     }
     // 影部分が不透明な状態になっているはずなので、影色で上書きする
     renderer.compositScreen.globalCompositeOperation = "source-atop";
-    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
+    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, -renderer.marginLeft, -renderer.marginTop);
     // 残りの部分に光色
     renderer.compositScreen.globalCompositeOperation = "destination-over";
-    renderer.compositScreen.drawImage(renderer.lightColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
+    renderer.compositScreen.drawImage(renderer.lightColor.canvas, -renderer.marginLeft, -renderer.marginTop);
     // メインスクリーン（本番のcanvas）にスムージングなしで拡大
     mainScreen.imageSmoothingEnabled = false;
     mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
@@ -177,9 +179,9 @@ function cloneAndReplayTexture(texture) {
 function drawTexture(texture, x, y, renderer) {
     if (texture.type === "rect") {
         renderer.lightColor.fillStyle = texture.color;
-        renderer.lightColor.fillRect(x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        renderer.lightColor.fillRect(renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
         renderer.shadowColor.fillStyle = texture.color;
-        renderer.shadowColor.fillRect(x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        renderer.shadowColor.fillRect(renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
     }
     if (texture.type === "image") {
         const elapse = new Date().getTime() - texture.animationTimestamp;
@@ -189,13 +191,13 @@ function drawTexture(texture, x, y, renderer) {
             frame = Math.max(0, texture.timeline.length - 1);
         renderer.lightColor.drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
         0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
-        texture.width, texture.height, x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
         renderer.shadowColor.drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
         texture.useShadowColor ? texture.height : 0, // useShadowColorがfalseのときはlightColorを流用する
-        texture.width, texture.height, x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
         texture.volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
         (layout + (texture.useShadowColor ? 2 : 1)) * texture.height, // （色を除いて）上からlayout枚目の画像targetlayerに書く
-        texture.width, texture.height, x - texture.offsetX, y - texture.offsetY, texture.width, texture.height));
+        texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height));
     }
 }
 function createCoord(x, y) {
@@ -423,14 +425,14 @@ function updateCamera(camera, player, field, renderer) {
         Math.max(camera.velocityY * smooth - accel, Math.min(camera.velocityY * smooth + accel, ((targetY - camera.centerY) * (1 - smooth))));
     camera.centerX += camera.velocityX;
     camera.centerY += camera.velocityY;
-    camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
-    camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
+    camera.offsetX = Math.floor(renderer.width / 2 - camera.centerX);
+    camera.offsetY = Math.floor(renderer.height / 2 - camera.centerY);
 }
 const blockSize = 20;
 function drawField(field, camera, renderer) {
-    drawTexture(field.backgroundTexture, renderer.lightColor.canvas.width / 2, renderer.lightColor.canvas.height / 2, renderer);
-    const xRange = Math.ceil(renderer.lightColor.canvas.width / blockSize / 2);
-    const yRange = Math.ceil(renderer.lightColor.canvas.height / blockSize / 2);
+    drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, renderer);
+    const xRange = Math.ceil(renderer.width / blockSize / 2);
+    const yRange = Math.ceil(renderer.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;
     const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
     const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
@@ -451,6 +453,20 @@ function drawField(field, camera, renderer) {
             drawTexture(getBlock(field.terrain, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     }
+    // デバッグ用の赤い点
+    /*
+    for(var x = x1; x <= x2; x++) {
+        for(var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y) continue;
+            const coord = createCoord(x, y);
+            drawTexture(
+                createRectTexture("red", 1, 1, 0, 0),
+                camera.offsetX + coord.x * blockSize,
+                camera.offsetY - coord.y * blockSize,
+                renderer
+            );
+        }
+    }*/
     drawGameObject(field.neko, camera, renderer);
 }
 function drawGameObject(gameObject, camera, renderer) {
@@ -461,7 +477,7 @@ function animationLoop(field, player, camera, renderer, mainScreen, resources) {
         updateCamera(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
-        drawTexture(resources.testAnimation, 40, 40, renderer);
+        drawTexture(resources.testAnimation, 0, 0, renderer);
         composit(renderer, mainScreen);
     }
     else {
