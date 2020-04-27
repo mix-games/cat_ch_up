@@ -47,24 +47,24 @@ function loadResources(callback = () => { }) {
         return audio;
     }
     // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-    function loadStaticTexture(source, offsetX, offsetY, sw, sh, useShadowColor) {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
+    function loadStaticTexture(source, offsetX, offsetY, width, height, useShadowColor) {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, []);
     }
-    function loadStaticVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, volumeLayout) {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
+    function loadStaticVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, volumeLayout) {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, volumeLayout);
     }
-    function loadAnimationTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop) {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
+    function loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop) {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, []);
     }
-    function loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, volumeLayout) {
+    function loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, volumeLayout) {
         const image = loadImage(source);
         return {
             type: "image",
             image,
             offsetX,
             offsetY,
-            sw,
-            sh,
+            width,
+            height,
             useShadowColor,
             timeline,
             animationTimestamp: new Date().getTime(),
@@ -187,15 +187,15 @@ function drawTexture(texture, x, y, renderer) {
         let frame = texture.timeline.findIndex(t => phase < t);
         if (frame === -1)
             frame = Math.max(0, texture.timeline.length - 1);
-        renderer.lightColor.drawImage(texture.image, texture.sw * frame, // アニメーションによる横位置
+        renderer.lightColor.drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
         0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
-        texture.sw, texture.sh, x - texture.offsetX, y - texture.offsetY, texture.sw, texture.sh);
-        renderer.shadowColor.drawImage(texture.image, texture.sw * frame, // アニメーションによる横位置
-        texture.useShadowColor ? texture.sh : 0, // useShadowColorがfalseのときはlightColorを流用する
-        texture.sw, texture.sh, x - texture.offsetX, y - texture.offsetY, texture.sw, texture.sh);
-        texture.volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(texture.image, texture.sw * frame, // アニメーションによる横位置
-        (layout + (texture.useShadowColor ? 2 : 1)) * texture.sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
-        texture.sw, texture.sh, x - texture.offsetX, y - texture.offsetY, texture.sw, texture.sh));
+        texture.width, texture.height, x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        renderer.shadowColor.drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
+        texture.useShadowColor ? texture.height : 0, // useShadowColorがfalseのときはlightColorを流用する
+        texture.width, texture.height, x - texture.offsetX, y - texture.offsetY, texture.width, texture.height);
+        texture.volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
+        (layout + (texture.useShadowColor ? 2 : 1)) * texture.height, // （色を除いて）上からlayout枚目の画像targetlayerに書く
+        texture.width, texture.height, x - texture.offsetX, y - texture.offsetY, texture.width, texture.height));
     }
 }
 function createCoord(x, y) {

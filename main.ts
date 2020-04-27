@@ -49,27 +49,27 @@ function loadResources(callback: () => void = () => { }) {
     }
 
     // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-    function loadStaticTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean): Texture {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, []);
+    function loadStaticTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean): Texture {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, []);
     }
 
-    function loadStaticVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, [], false, volumeLayout);
+    function loadStaticVolumeTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, volumeLayout);
     }
 
-    function loadAnimationTexture(source: string, offsetX: number, offsetY: number, sw: number, sh:number, useShadowColor: boolean, timeline: number[], loop: boolean): Texture {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, sw, sh, useShadowColor, timeline, loop, []);
+    function loadAnimationTexture(source: string, offsetX: number, offsetY: number, width: number, height:number, useShadowColor: boolean, timeline: number[], loop: boolean): Texture {
+        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, []);
     }
 
-    function loadAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, sw: number, sh: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
+    function loadAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
         const image = loadImage(source);
         return {
             type: "image",
             image,
             offsetX,
             offsetY,
-            sw,
-            sh,
+            width,
+            height,
             useShadowColor,
             timeline,
             animationTimestamp: new Date().getTime(),
@@ -202,8 +202,8 @@ interface ImageTexture {
     image: HTMLImageElement;
     offsetX: number;
     offsetY: number;
-    sw: number;
-    sh: number;
+    width: number;
+    height: number;
     useShadowColor: boolean;
     timeline: number[];
     animationTimestamp: number;
@@ -257,30 +257,30 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
 
         renderer.lightColor.drawImage(
             texture.image,
-            texture.sw * frame, // アニメーションによる横位置
+            texture.width * frame, // アニメーションによる横位置
             0,          // どんなテクスチャでも1番目はlightColor（ほんとか？）
-            texture.sw, texture.sh,
+            texture.width, texture.height,
             x - texture.offsetX,
             y - texture.offsetY,
-            texture.sw, texture.sh);
+            texture.width, texture.height);
 
         renderer.shadowColor.drawImage(
             texture.image,
-            texture.sw * frame, // アニメーションによる横位置
-            texture.useShadowColor ? texture.sh : 0, // useShadowColorがfalseのときはlightColorを流用する
-            texture.sw, texture.sh,
+            texture.width * frame, // アニメーションによる横位置
+            texture.useShadowColor ? texture.height : 0, // useShadowColorがfalseのときはlightColorを流用する
+            texture.width, texture.height,
             x - texture.offsetX,
             y - texture.offsetY,
-            texture.sw, texture.sh);
+            texture.width, texture.height);
         
             texture.volumeLayout.forEach((target, layout) => 
             renderer.volumeLayers[target].drawImage(texture.image,
-                texture.sw * frame, // アニメーションによる横位置
-                (layout + (texture.useShadowColor ? 2 : 1)) * texture.sh,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
-                texture.sw, texture.sh,
+                texture.width * frame, // アニメーションによる横位置
+                (layout + (texture.useShadowColor ? 2 : 1)) * texture.height,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
+                texture.width, texture.height,
                 x - texture.offsetX,
                 y - texture.offsetY,
-                texture.sw, texture.sh)
+                texture.width, texture.height)
         );
     }
 }
