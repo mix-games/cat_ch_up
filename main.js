@@ -13,11 +13,11 @@ function loadResources(callback = () => { }) {
     };
     return {
         _progress: progress,
-        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true),
-        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true),
-        terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, [0, 1, 2]),
-        terrain_condenser_texture: loadAnimationVolumeTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, [0, 1, 2]),
+        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
+        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, 0),
     };
     function loadImage(source) {
         const image = new Image();
@@ -46,17 +46,10 @@ function loadResources(callback = () => { }) {
         audio.src = source;
         return audio;
     }
-    // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-    function loadStaticTexture(source, offsetX, offsetY, width, height, useShadowColor) {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, []);
+    function loadStaticTexture(source, offsetX, offsetY, width, height, useShadowColor, depthOffset) {
+        return loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, depthOffset);
     }
-    function loadStaticVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, volumeLayout) {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, volumeLayout);
-    }
-    function loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop) {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, []);
-    }
-    function loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, volumeLayout) {
+    function loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, depthOffset) {
         const image = loadImage(source);
         return {
             type: "image",
@@ -69,7 +62,7 @@ function loadResources(callback = () => { }) {
             timeline,
             animationTimestamp: new Date().getTime(),
             loop,
-            volumeLayout,
+            depthOffset,
         };
     }
 }
@@ -195,9 +188,10 @@ function drawTexture(texture, x, y, renderer) {
         renderer.shadowColor.drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
         texture.useShadowColor ? texture.height : 0, // useShadowColorがfalseのときはlightColorを流用する
         texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-        texture.volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
-        (layout + (texture.useShadowColor ? 2 : 1)) * texture.height, // （色を除いて）上からlayout枚目の画像targetlayerに書く
-        texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height));
+        for (let i = 0; (i + (texture.useShadowColor ? 2 : 1) + 1) * texture.height <= texture.image.height; i++)
+            renderer.volumeLayers[i + texture.depthOffset].drawImage(texture.image, texture.width * frame, // アニメーションによる横位置
+            (i + (texture.useShadowColor ? 2 : 1)) * texture.height, // （色を除いて）上からlayout枚目の画像targetlayerに書く
+            texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
     }
 }
 function createCoord(x, y) {

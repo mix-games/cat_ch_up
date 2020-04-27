@@ -13,11 +13,11 @@ function loadResources(callback: () => void = () => { }) {
 
     return {
         _progress : progress,
-        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true),
-        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true),
-        terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, [0, 1, 2]),
-        terrain_condenser_texture: loadAnimationVolumeTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, [0, 1, 2]),
+        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
+        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, 0),
     } as const;
 
     function loadImage(source: string): HTMLImageElement {
@@ -48,20 +48,12 @@ function loadResources(callback: () => void = () => { }) {
         return audio;
     }
 
-    // ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-    function loadStaticTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean): Texture {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, []);
+
+    function loadStaticTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, depthOffset: number): Texture {
+        return loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, depthOffset);
     }
 
-    function loadStaticVolumeTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, volumeLayout: number[]): Texture {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, volumeLayout);
-    }
-
-    function loadAnimationTexture(source: string, offsetX: number, offsetY: number, width: number, height:number, useShadowColor: boolean, timeline: number[], loop: boolean): Texture {
-        return loadAnimationVolumeTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, []);
-    }
-
-    function loadAnimationVolumeTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, timeline: number[], loop: boolean, volumeLayout: number[]): Texture {
+    function loadAnimationTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, timeline: number[], loop: boolean, depthOffset: number): Texture {
         const image = loadImage(source);
         return {
             type: "image",
@@ -74,7 +66,7 @@ function loadResources(callback: () => void = () => { }) {
             timeline,
             animationTimestamp: new Date().getTime(),
             loop,
-            volumeLayout,            
+            depthOffset,
         };
     }
 }
@@ -214,7 +206,7 @@ interface ImageTexture {
     timeline: number[];
     animationTimestamp: number;
     loop: boolean;
-    volumeLayout: number[];
+    depthOffset: number;
 }
 
 type Texture = EmptyTexture | RectTexture | ImageTexture;
@@ -285,15 +277,15 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
             renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
         
-            texture.volumeLayout.forEach((target, layout) => 
-            renderer.volumeLayers[target].drawImage(texture.image,
+        
+        for(let i = 0; (i + (texture.useShadowColor ? 2 : 1) + 1) * texture.height <= texture.image.height; i++)
+            renderer.volumeLayers[i + texture.depthOffset].drawImage(texture.image,
                 texture.width * frame, // アニメーションによる横位置
-                (layout + (texture.useShadowColor ? 2 : 1)) * texture.height,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
+                (i + (texture.useShadowColor ? 2 : 1)) * texture.height,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
                 texture.width, texture.height,
                 renderer.marginLeft + x - texture.offsetX,
                 renderer.marginTop + y - texture.offsetY,
-                texture.width, texture.height)
-        );
+                texture.width, texture.height);
     }
 }
 
