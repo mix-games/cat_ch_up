@@ -278,7 +278,7 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
             texture.width, texture.height);
         
         
-        for(let i = 0; (i + (texture.useShadowColor ? 2 : 1) + 1) * texture.height <= texture.image.height; i++)
+        for(let i = 0; (i + (texture.useShadowColor ? 2 : 1) + 1) * texture.height <= texture.image.height && (i + texture.depthOffset) < renderer.volumeLayers.length; i++)
             renderer.volumeLayers[i + texture.depthOffset].drawImage(texture.image,
                 texture.width * frame, // アニメーションによる横位置
                 (i + (texture.useShadowColor ? 2 : 1)) * texture.height,　// （色を除いて）上からlayout枚目の画像targetlayerに書く
