@@ -15,9 +15,9 @@ function loadResources(callback = () => { }) {
         _progress: progress,
         testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true),
         background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 10, 20, 20, true),
-        terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 10, 32, 20, true, [0, 1, 2]),
-        terrain_condenser_texture: loadAnimationVolumeTexture("image/terrain/condenser.png", 14, 10, 32, 20, true, [30, 60, 90], true, [0, 1, 2]),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true),
+        terrain_ladder_texture: loadStaticVolumeTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, [0, 1, 2]),
+        terrain_condenser_texture: loadAnimationVolumeTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, [0, 1, 2]),
     };
     function loadImage(source) {
         const image = new Image();
@@ -291,7 +291,7 @@ function createPlayer() {
     return {
         coord: createCoord(0, 0),
         isSmall: false,
-        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
+        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize / 2 - 2, blockSize - 4)
     };
 }
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
@@ -384,7 +384,7 @@ function turn(field, player) {
 function createNeko() {
     return {
         coord: createCoord(0, 5),
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, -2)
     };
 }
 function controlNeko(neko, field, player) {
@@ -393,7 +393,7 @@ function controlNeko(neko, field, player) {
 function createCamera() {
     const clearanceX = 4;
     const clearanceY = 2;
-    const initialY = 5;
+    const initialY = 4;
     return {
         // ヒステリシスゆとり幅
         clearanceX,
