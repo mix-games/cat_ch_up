@@ -130,6 +130,124 @@ function loadResources() {
 
 type Resources = ReturnType<typeof loadResources>;
 
+interface EmptyTexture {
+    type: "empty";
+}
+interface RectTexture {
+    type: "rect";
+    color: string;
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+}
+interface ImageTexture {
+    type: "image";
+
+    lightColor: HTMLCanvasElement;
+    shadowColor: HTMLCanvasElement;
+
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    height: number;
+    depth: number;
+    timeline: number[];
+    animationTimestamp: number;
+    loop: boolean;
+    depthOffset: number;
+}
+
+type Texture = EmptyTexture | RectTexture | ImageTexture;
+
+function createEmptyTexture(): EmptyTexture {
+    return {
+        type: "empty"
+    };
+}
+
+function createRectTexture(color: string, width: number, height: number, offsetX: number, offsetY: number): RectTexture {
+    return {
+        type: "rect",
+        color,
+        width,
+        height,
+        offsetX,
+        offsetY,
+    };
+}
+
+function cloneAndReplayTexture(texture: Texture): Texture {
+    if (texture.type === "image") {
+        return {
+            animationTimestamp: new Date().getTime(),
+            ...texture
+        }
+    }
+    // いちおうコピーするけど意味なさそう
+    else return {...texture};
+}
+
+function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer): void {
+    if(texture.type === "rect") {
+        renderer.lightColor.fillStyle = texture.color;
+        renderer.lightColor.fillRect(
+            renderer.marginLeft + x - texture.offsetX,
+            renderer.marginTop + y - texture.offsetY,
+            texture.width, texture.height);
+        renderer.shadowColor.fillStyle = texture.color;
+        renderer.shadowColor.fillRect(
+            renderer.marginLeft + x - texture.offsetX,
+            renderer.marginTop + y - texture.offsetY,
+            texture.width, texture.height);
+    }
+    if(texture.type === "image") {
+        const elapse = new Date().getTime() - texture.animationTimestamp;
+        const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+
+        let frame = texture.timeline.findIndex(t => phase < t);
+        if (frame === -1) frame = Math.max(0, texture.timeline.length - 1);
+
+        renderer.lightColor.drawImage(
+            texture.lightColor,
+            texture.width * frame, // アニメーションによる横位置
+            0,
+            texture.width, texture.height,
+            renderer.marginLeft + x - texture.offsetX,
+            renderer.marginTop + y - texture.offsetY,
+            texture.width, texture.height);
+
+        renderer.shadowColor.drawImage(
+            texture.shadowColor,
+            texture.width * frame, // アニメーションによる横位置
+            0,
+            texture.width, texture.height,
+            renderer.marginLeft + x - texture.offsetX,
+            renderer.marginTop + y - texture.offsetY,
+            texture.width, texture.height);
+        
+        for(let i = 0; i < texture.depth; i++) {
+            renderer.lightLayers[i + texture.depthOffset].drawImage(
+                texture.lightColor,
+                texture.width * frame, // アニメーションによる横位置
+                (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
+                texture.width, texture.height,
+                renderer.marginLeft + x - texture.offsetX,
+                renderer.marginTop + y - texture.offsetY,
+                texture.width, texture.height);
+            
+            renderer.shadowLayers[i + texture.depthOffset].drawImage(
+                texture.shadowColor,
+                texture.width * frame, // アニメーションによる横位置
+                (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
+                texture.width, texture.height,
+                renderer.marginLeft + x - texture.offsetX,
+                renderer.marginTop + y - texture.offsetY,
+                texture.width, texture.height);
+        }
+    }
+}
+
 interface Renderer {
     lightColor: CanvasRenderingContext2D;
     shadowColor: CanvasRenderingContext2D;
@@ -246,124 +364,6 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
     function clearScreen(screen: CanvasRenderingContext2D): void {
         screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
         screen.globalCompositeOperation = "source-over";
-    }
-}
-
-interface EmptyTexture {
-    type: "empty";
-}
-interface RectTexture {
-    type: "rect";
-    color: string;
-    width: number;
-    height: number;
-    offsetX: number;
-    offsetY: number;
-}
-interface ImageTexture {
-    type: "image";
-
-    lightColor: HTMLCanvasElement;
-    shadowColor: HTMLCanvasElement;
-
-    offsetX: number;
-    offsetY: number;
-    width: number;
-    height: number;
-    depth: number;
-    timeline: number[];
-    animationTimestamp: number;
-    loop: boolean;
-    depthOffset: number;
-}
-
-type Texture = EmptyTexture | RectTexture | ImageTexture;
-
-function createEmptyTexture(): EmptyTexture {
-    return {
-        type: "empty"
-    };
-}
-
-function createRectTexture(color: string, width: number, height: number, offsetX: number, offsetY: number): RectTexture {
-    return {
-        type: "rect",
-        color,
-        width,
-        height,
-        offsetX,
-        offsetY,
-    };
-}
-
-function cloneAndReplayTexture(texture: Texture): Texture {
-    if (texture.type === "image") {
-        return {
-            animationTimestamp: new Date().getTime(),
-            ...texture
-        }
-    }
-    // いちおうコピーするけど意味なさそう
-    else return {...texture};
-}
-
-function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer): void {
-    if(texture.type === "rect") {
-        renderer.lightColor.fillStyle = texture.color;
-        renderer.lightColor.fillRect(
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
-            texture.width, texture.height);
-        renderer.shadowColor.fillStyle = texture.color;
-        renderer.shadowColor.fillRect(
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
-            texture.width, texture.height);
-    }
-    if(texture.type === "image") {
-        const elapse = new Date().getTime() - texture.animationTimestamp;
-        const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
-
-        let frame = texture.timeline.findIndex(t => phase < t);
-        if (frame === -1) frame = Math.max(0, texture.timeline.length - 1);
-
-        renderer.lightColor.drawImage(
-            texture.lightColor,
-            texture.width * frame, // アニメーションによる横位置
-            0,
-            texture.width, texture.height,
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
-            texture.width, texture.height);
-
-        renderer.shadowColor.drawImage(
-            texture.shadowColor,
-            texture.width * frame, // アニメーションによる横位置
-            0,
-            texture.width, texture.height,
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
-            texture.width, texture.height);
-        
-        for(let i = 0; i < texture.depth; i++) {
-            renderer.lightLayers[i + texture.depthOffset].drawImage(
-                texture.lightColor,
-                texture.width * frame, // アニメーションによる横位置
-                (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
-                texture.width, texture.height,
-                renderer.marginLeft + x - texture.offsetX,
-                renderer.marginTop + y - texture.offsetY,
-                texture.width, texture.height);
-            
-            renderer.shadowLayers[i + texture.depthOffset].drawImage(
-                texture.shadowColor,
-                texture.width * frame, // アニメーションによる横位置
-                (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
-                texture.width, texture.height,
-                renderer.marginLeft + x - texture.offsetX,
-                renderer.marginTop + y - texture.offsetY,
-                texture.width, texture.height);
-        }
     }
 }
 
