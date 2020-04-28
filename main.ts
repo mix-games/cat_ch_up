@@ -132,6 +132,7 @@ interface Renderer {
     shadowColor: CanvasRenderingContext2D;
     lightLayers: CanvasRenderingContext2D[];
     shadowLayers: CanvasRenderingContext2D[];
+    layerNum: number;
 
     compositScreen: CanvasRenderingContext2D;
 
@@ -166,6 +167,7 @@ function createRenderer(width: number, height: number): Renderer {
         shadowColor,
         lightLayers,
         shadowLayers,
+        layerNum,
 
         compositScreen,
 
@@ -190,18 +192,18 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
     const shadowDirectionX = 3;
     const shadowDirectionY = 2;
 
-    for (let i = 0; i < renderer.lightLayers.length; i++) 
+    for (let i = 0; i < renderer.layerNum; i++) 
         renderer.lightColor.drawImage(renderer.lightLayers[i].canvas, 0, 0);
         
-    for (let i = 0; i < renderer.shadowLayers.length; i++) 
+    for (let i = 0; i < renderer.layerNum; i++) 
         renderer.shadowColor.drawImage(renderer.shadowLayers[i].canvas, 0, 0);
 
     // shadowLayersを斜め累積
-    for (let i = renderer.shadowLayers.length - 2; 0 <= i; i--) {
+    for (let i = renderer.layerNum - 2; 0 <= i; i--) {
         renderer.shadowLayers[i].drawImage(renderer.shadowLayers[i + 1].canvas, shadowDirectionX, shadowDirectionY);
     }
 
-    for (let i = 0; i < renderer.shadowLayers.length; i++) {
+    for (let i = 0; i < renderer.layerNum; i++) {
         //i-1層目の形で打ち抜く
         if (i !== 0) {
             renderer.shadowLayers[i].globalCompositeOperation = "source-in";
@@ -232,7 +234,7 @@ function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): voi
     //次フレームの描画に備えてレイヤーを消去
     clearScreen(renderer.lightColor);
     clearScreen(renderer.shadowColor);
-    for (var i = 0; i < renderer.shadowLayers.length; i++) {
+    for (var i = 0; i < renderer.layerNum; i++) {
         clearScreen(renderer.lightLayers[i]);
         clearScreen(renderer.shadowLayers[i]);
     }
