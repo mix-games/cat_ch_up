@@ -79,7 +79,7 @@ function loadResources() {
             shadowColor.width = image.width;
             shadowColor.height = useShadowColor ? (image.height - height) : image.height;
 
-            texture.depth = Math.floor(image.height / height - (useShadowColor ? 1 : 0))
+            texture.depth = Math.floor(image.height / height - (useShadowColor ? 2 : 1))
 
             lightColorScreen.drawImage(
                 image,

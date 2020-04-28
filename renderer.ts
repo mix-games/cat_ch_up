@@ -60,8 +60,8 @@ function createRenderer(width: number, height: number): Renderer {
 }
 
 function composit(renderer: Renderer, mainScreen: CanvasRenderingContext2D): void {
-    const shadowDirectionX = 3;
-    const shadowDirectionY = 2;
+    const shadowDirectionX = 2;
+    const shadowDirectionY = 3;
 
     for (let i = 0; i < renderer.layerNum; i++) 
         renderer.lightColor.drawImage(renderer.lightLayers[i].canvas, 0, 0);
