@@ -29,11 +29,11 @@ function loadResources() {
     };
     return {
         _progress: progress,
-        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
-        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false, 0),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 24, 24, true, 0),
-        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 24, 24, true, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 36, 24, true, [30, 60, 90], true, 0),
+        testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
+        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 14, 0, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 14, 0, true, [30, 60, 90], true, 0),
     };
     function loadImage(source, onload = () => { }) {
         const image = new Image();
@@ -60,10 +60,10 @@ function loadResources() {
         audio.src = source;
         return audio;
     }
-    function loadStaticTexture(source, offsetX, offsetY, width, height, useShadowColor, depthOffset) {
-        return loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, depthOffset);
+    function loadStaticTexture(source, width, height, offsetX, offsetY, useShadowColor, depthOffset) {
+        return loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, [], false, depthOffset);
     }
-    function loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, depthOffset) {
+    function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depthOffset) {
         const lightColor = document.createElement("canvas");
         const shadowColor = document.createElement("canvas");
         const texture = {
@@ -259,19 +259,15 @@ function drawField(field, camera, renderer) {
         }
     }
     // デバッグ用の赤い点
-    /*
-    for(var x = x1; x <= x2; x++) {
-        for(var y = y1; y <= y2; y++) {
-            if (field.terrain.length <= y) continue;
+    //*
+    for (var x = x1; x <= x2; x++) {
+        for (var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y)
+                continue;
             const coord = createCoord(x, y);
-            drawTexture(
-                createRectTexture("red", 1, 1, 0, 0),
-                camera.offsetX + coord.x * blockSize,
-                camera.offsetY - coord.y * blockSize,
-                renderer
-            );
+            drawTexture(createRectTexture("red", 1, 1, 0, 0), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
-    }*/
+    } //*/
     drawGameObject(field.neko, camera, renderer);
 }
 /// <reference path="./resources.ts" />

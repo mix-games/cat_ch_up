@@ -135,7 +135,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
     }
 
     // デバッグ用の赤い点
-    /*
+    //*
     for(var x = x1; x <= x2; x++) {
         for(var y = y1; y <= y2; y++) {
             if (field.terrain.length <= y) continue;
@@ -147,7 +147,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
                 renderer
             );
         }
-    }*/
+    }//*/
 
     drawGameObject(field.neko, camera, renderer);
 }

@@ -13,11 +13,11 @@ function loadResources() {
 
     return {
         _progress : progress,
-        testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
-        background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false, 0),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 24, 24, true, 0),
-        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 24, 24, true, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 36, 24, true, [30, 60, 90], true, 0),
+        testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
+        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 14, 0, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 14, 0, true, [30, 60, 90], true, 0),
     } as const;
 
     function loadImage(source: string, onload: ()=>void = () => {}): HTMLImageElement {
@@ -47,11 +47,11 @@ function loadResources() {
     }
 
 
-    function loadStaticTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, depthOffset: number): ImageTexture {
-        return loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, [], false, depthOffset);
+    function loadStaticTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, depthOffset: number): ImageTexture {
+        return loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, [], false, depthOffset);
     }
 
-    function loadAnimationTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, timeline: number[], loop: boolean, depthOffset: number): ImageTexture {
+    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depthOffset: number): ImageTexture {
         const lightColor = document.createElement("canvas");
         const shadowColor = document.createElement("canvas");
         const texture = {
