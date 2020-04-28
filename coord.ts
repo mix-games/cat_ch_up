@@ -19,4 +19,4 @@ function rightCoord(coord: Coord): Coord {
     return createCoord(coord.x + 1, coord.y);
 }
 
-const blockSize = 20;
+const blockSize = 24;

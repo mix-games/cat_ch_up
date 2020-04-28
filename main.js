@@ -14,7 +14,7 @@ function leftCoord(coord) {
 function rightCoord(coord) {
     return createCoord(coord.x + 1, coord.y);
 }
-const blockSize = 20;
+const blockSize = 24;
 function loadResources() {
     const progress = {
         registeredCount: 0,
@@ -31,9 +31,9 @@ function loadResources() {
         _progress: progress,
         testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
         background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false, 0),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true, 0),
-        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 24, 24, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 24, 24, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 36, 24, true, [30, 60, 90], true, 0),
     };
     function loadImage(source, onload = () => { }) {
         const image = new Image();
@@ -91,7 +91,7 @@ function loadResources() {
             lightColor.height = useShadowColor ? (image.height - height) : image.height;
             shadowColor.width = image.width;
             shadowColor.height = useShadowColor ? (image.height - height) : image.height;
-            texture.depth = Math.floor(image.height / height - (useShadowColor ? 1 : 0));
+            texture.depth = Math.floor(image.height / height - (useShadowColor ? 2 : 1));
             lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, 0, image.width, height);
             lightColorScreen.drawImage(image, 0, useShadowColor ? (height * 2) : height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             lightColorScreen.globalCompositeOperation = "source-atop";
@@ -421,8 +421,8 @@ function createRenderer(width, height) {
     }
 }
 function composit(renderer, mainScreen) {
-    const shadowDirectionX = 3;
-    const shadowDirectionY = 2;
+    const shadowDirectionX = 2;
+    const shadowDirectionY = 3;
     for (let i = 0; i < renderer.layerNum; i++)
         renderer.lightColor.drawImage(renderer.lightLayers[i].canvas, 0, 0);
     for (let i = 0; i < renderer.layerNum; i++)

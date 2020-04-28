@@ -15,9 +15,9 @@ function loadResources() {
         _progress : progress,
         testAnimation: loadAnimationTexture("test.png", 0, 0, 32, 32, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
         background_texture: loadStaticTexture("image/background.png", 200, 200, 400, 400, false, 0),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 20, 20, true, 0),
-        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 32, 20, true, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 32, 20, true, [30, 60, 90], true, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 10, 0, 24, 24, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 14, 0, 24, 24, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 14, 0, 36, 24, true, [30, 60, 90], true, 0),
     } as const;
 
     function loadImage(source: string, onload: ()=>void = () => {}): HTMLImageElement {
