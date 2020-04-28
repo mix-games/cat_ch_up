@@ -54,6 +54,20 @@ function loadResources() {
     function loadAnimationTexture(source: string, offsetX: number, offsetY: number, width: number, height: number, useShadowColor: boolean, timeline: number[], loop: boolean, depthOffset: number): ImageTexture {
         const lightColor = document.createElement("canvas");
         const shadowColor = document.createElement("canvas");
+        const texture = {
+            type: "image" as const,
+            lightColor: lightColor,
+            shadowColor: shadowColor,
+            offsetX,
+            offsetY,
+            width,
+            height,
+            depth: 0,
+            timeline,
+            animationTimestamp: new Date().getTime(),
+            loop,
+            depthOffset,
+        };
         const image = loadImage(source, () => {
             const lightColorScreen = lightColor.getContext("2d");
             if (lightColorScreen === null) throw new Error("failed to get context-2d");
@@ -64,6 +78,8 @@ function loadResources() {
             lightColor.height = useShadowColor ? (image.height - height) : image.height;
             shadowColor.width = image.width;
             shadowColor.height = useShadowColor ? (image.height - height) : image.height;
+
+            texture.depth = Math.floor(image.height / height - (useShadowColor ? 1 : 0))
 
             lightColorScreen.drawImage(
                 image,
@@ -78,7 +94,7 @@ function loadResources() {
                 0, height,
                 image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             lightColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; height * (i + 1) < image.height; i++) {
+            for (var i = 0; i < texture.depth; i++) {
                 lightColorScreen.drawImage(
                     image,
                     0, 0,
@@ -99,7 +115,7 @@ function loadResources() {
                 0, height,
                 image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             shadowColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; height * (i + 1) < image.height; i++) {
+            for (var i = 0; i < texture.depth; i++) {
                 shadowColorScreen.drawImage(
                     image,
                     0, height,
@@ -108,20 +124,7 @@ function loadResources() {
                     image.width, height);    
             }
         });
-        return {
-            type: "image",
-            image,
-            lightColor: lightColor,
-            shadowColor: shadowColor,
-            offsetX,
-            offsetY,
-            width,
-            height,
-            timeline,
-            animationTimestamp: new Date().getTime(),
-            loop,
-            depthOffset,
-        };
+        return texture;
     }
 }
 
@@ -259,7 +262,6 @@ interface RectTexture {
 }
 interface ImageTexture {
     type: "image";
-    image: HTMLImageElement;
 
     lightColor: HTMLCanvasElement;
     shadowColor: HTMLCanvasElement;
@@ -268,6 +270,7 @@ interface ImageTexture {
     offsetY: number;
     width: number;
     height: number;
+    depth: number;
     timeline: number[];
     animationTimestamp: number;
     loop: boolean;
@@ -342,7 +345,7 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
             renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
         
-        for(let i = 0; (i + 1) * texture.height <= texture.lightColor.height; i++) {
+        for(let i = 0; i < texture.depth; i++) {
             renderer.lightLayers[i + texture.depthOffset].drawImage(
                 texture.lightColor,
                 texture.width * frame, // アニメーションによる横位置
@@ -811,10 +814,6 @@ window.onload = () => {
 
         console.log(player.coord);
     }, false);
-
-    document.body.appendChild(resources.terrain_condenser_texture.lightColor);
-    document.body.appendChild(renderer.lightColor.canvas);
-    document.body.appendChild(renderer.shadowLayers[0].canvas);
 
     animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
 };

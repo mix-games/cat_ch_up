@@ -50,6 +50,20 @@ function loadResources() {
     function loadAnimationTexture(source, offsetX, offsetY, width, height, useShadowColor, timeline, loop, depthOffset) {
         const lightColor = document.createElement("canvas");
         const shadowColor = document.createElement("canvas");
+        const texture = {
+            type: "image",
+            lightColor: lightColor,
+            shadowColor: shadowColor,
+            offsetX,
+            offsetY,
+            width,
+            height,
+            depth: 0,
+            timeline,
+            animationTimestamp: new Date().getTime(),
+            loop,
+            depthOffset,
+        };
         const image = loadImage(source, () => {
             const lightColorScreen = lightColor.getContext("2d");
             if (lightColorScreen === null)
@@ -61,33 +75,21 @@ function loadResources() {
             lightColor.height = useShadowColor ? (image.height - height) : image.height;
             shadowColor.width = image.width;
             shadowColor.height = useShadowColor ? (image.height - height) : image.height;
+            texture.depth = Math.floor(image.height / height - (useShadowColor ? 1 : 0));
             lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, 0, image.width, height);
             lightColorScreen.drawImage(image, 0, useShadowColor ? (height * 2) : height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             lightColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; height * (i + 1) < image.height; i++) {
+            for (var i = 0; i < texture.depth; i++) {
                 lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, height * (i + 1), image.width, height);
             }
             shadowColorScreen.drawImage(image, 0, useShadowColor ? height : 0, image.width, height, 0, 0, image.width, height);
             shadowColorScreen.drawImage(image, 0, height * 2, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             shadowColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; height * (i + 1) < image.height; i++) {
+            for (var i = 0; i < texture.depth; i++) {
                 shadowColorScreen.drawImage(image, 0, height, image.width, height, 0, height * (i + 1), image.width, height);
             }
         });
-        return {
-            type: "image",
-            image,
-            lightColor: lightColor,
-            shadowColor: shadowColor,
-            offsetX,
-            offsetY,
-            width,
-            height,
-            timeline,
-            animationTimestamp: new Date().getTime(),
-            loop,
-            depthOffset,
-        };
+        return texture;
     }
 }
 function createRenderer(width, height) {
@@ -214,7 +216,7 @@ function drawTexture(texture, x, y, renderer) {
         0, texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
         renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
         0, texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-        for (let i = 0; (i + 1) * texture.height <= texture.lightColor.height; i++) {
+        for (let i = 0; i < texture.depth; i++) {
             renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
             (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
             texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
@@ -552,8 +554,5 @@ window.onload = () => {
             movePlayer(player, field, "down");
         console.log(player.coord);
     }, false);
-    document.body.appendChild(resources.terrain_condenser_texture.lightColor);
-    document.body.appendChild(renderer.lightColor.canvas);
-    document.body.appendChild(renderer.shadowLayers[0].canvas);
     animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
 };
