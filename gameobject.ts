@@ -15,7 +15,7 @@ function createPlayer(): Player {
     return {
         coord: createCoord(0, 0),
         isSmall: false,
-        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize / 2 - 2, blockSize - 4)
+        texture: resources.player_wait_texture,
     };
 }
 
