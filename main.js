@@ -67,7 +67,7 @@ function loadResources() {
             for (var i = 0; height * (i + 1) < image.height; i++) {
                 lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, height * (i + 1), image.width, height);
             }
-            shadowColorScreen.drawImage(image, 0, height, image.width, height, 0, 0, image.width, height);
+            shadowColorScreen.drawImage(image, 0, useShadowColor ? height : 0, image.width, height, 0, 0, image.width, height);
             shadowColorScreen.drawImage(image, 0, height * 2, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             shadowColorScreen.globalCompositeOperation = "source-atop";
             for (var i = 0; height * (i + 1) < image.height; i++) {
@@ -454,12 +454,7 @@ function updateCamera(camera, player, field, renderer) {
 }
 const blockSize = 20;
 function drawField(field, camera, renderer) {
-    /*drawTexture(
-        field.backgroundTexture,
-        renderer.width / 2,
-        renderer.height / 2,
-        renderer
-    );*/
+    drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, renderer);
     const xRange = Math.ceil(renderer.width / blockSize / 2);
     const yRange = Math.ceil(renderer.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;

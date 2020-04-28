@@ -88,7 +88,7 @@ function loadResources() {
             }
             shadowColorScreen.drawImage(
                 image,
-                0, height,
+                0, useShadowColor ? height : 0,
                 image.width, height,
                 0, 0,
                 image.width, height);
@@ -685,12 +685,12 @@ function updateCamera(camera: Camera, player: Player, field: Field, renderer: Re
 const blockSize = 20;
 
 function drawField(field: Field, camera: Camera, renderer: Renderer): void {
-    /*drawTexture(
+    drawTexture(
         field.backgroundTexture,
         renderer.width / 2,
         renderer.height / 2,
         renderer
-    );*/
+    );
 
     const xRange = Math.ceil(renderer.width / blockSize / 2);
     const yRange = Math.ceil(renderer.height / blockSize / 2);
