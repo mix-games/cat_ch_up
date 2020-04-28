@@ -19,6 +19,8 @@ function loadResources() {
         terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 0),
         terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 0),
         player_wait_texture: loadStaticTexture("image/player/wait.png", 24, 48, 12, 24, true, 3),
+        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [30, 60, 90, 120], false, 3),
     } as const;
 
     function loadImage(source: string, onload: ()=>void = () => {}): HTMLImageElement {
@@ -181,8 +183,8 @@ function createRectTexture(color: string, width: number, height: number, offsetX
 function cloneAndReplayTexture(texture: Texture): Texture {
     if (texture.type === "image") {
         return {
-            animationTimestamp: new Date().getTime(),
-            ...texture
+            ...texture,
+            animationTimestamp: new Date().getTime()
         }
     }
     // いちおうコピーするけど意味なさそう

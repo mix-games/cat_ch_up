@@ -7,7 +7,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
 
-        drawTexture(resources.testAnimation, 0, 0, renderer);
+        drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
 
         composit(renderer, mainScreen);
     }

@@ -15,7 +15,7 @@ function createPlayer(): Player {
     return {
         coord: createCoord(0, 0),
         isSmall: false,
-        texture: resources.player_wait_texture,
+        texture: cloneAndReplayTexture(resources.player_wait_texture),
     };
 }
 
@@ -45,26 +45,26 @@ function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
 
 type Direction = "left" | "right" | "up" | "down";
 type ActionType = "walk" | "climb" | "drop";
-type MoveResult = null | { coord: Coord, actionType: ActionType; };
+type MoveResult = null | { coord: Coord; actionType: ActionType; texture: Texture };
 
 function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 左が空いているならそこ
     if (canEnter(leftCoord(coord), terrain, isSmall))
-        return { coord: leftCoord(coord), actionType: "walk" };
+        return { coord: leftCoord(coord), actionType: "walk", texture: resources.player_walk_left_texture};
     // 上がふさがってなくて左上が空いているならそこ
     if (canEnter(upCoord(coord), terrain, isSmall)
         && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: leftCoord(upCoord(coord)), actionType: "climb" };
+        return { coord: leftCoord(upCoord(coord)), actionType: "climb", texture: resources.player_walk_left_texture};
     return null;
 }
 function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 右が空いているならそこ
     if (canEnter(rightCoord(coord), terrain, isSmall))
-        return { coord: rightCoord(coord), actionType: "walk" };
+        return { coord: rightCoord(coord), actionType: "walk", texture: resources.player_walk_right_texture };
     // 上がふさがってなくて右上が空いているならそこ
     if (canEnter(upCoord(coord), terrain, isSmall)
         && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: rightCoord(upCoord(coord)), actionType: "climb" };
+        return { coord: rightCoord(upCoord(coord)), actionType: "climb", texture: resources.player_walk_right_texture };
     return null;
 }
 function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
@@ -72,13 +72,13 @@ function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     if ((getBlock(terrain, coord).collision === "ladder" ||
         getBlock(terrain, upCoord(coord)).collision === "ladder") &&
         canStand(upCoord(coord), terrain, isSmall))
-        return { coord: upCoord(coord), actionType: "climb" };
+        return { coord: upCoord(coord), actionType: "climb", texture: resources.player_wait_texture };
     return null;
 }
 function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 真下が空いてるなら（飛び）下りる？
     if (canEnter(downCoord(coord), terrain, isSmall))
-        return { coord: downCoord(coord), actionType: "climb" };
+        return { coord: downCoord(coord), actionType: "climb", texture: resources.player_wait_texture };
     return null;
 }
 
@@ -100,6 +100,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
         result.coord = downCoord(result.coord);
     }
     player.coord = result.coord;
+    player.texture = cloneAndReplayTexture(result.texture);
 
     console.log(direction + " " + result.actionType);
 
