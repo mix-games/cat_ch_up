@@ -1,5 +1,5 @@
 /// <reference path="./coord.ts" />
-/// <reference path="./gameobject.ts" />
+/// <reference path="./player.ts" />
 /// <reference path="./field.ts" />
 /// <reference path="./renderer.ts" />
 

@@ -15,6 +15,188 @@ function rightCoord(coord) {
     return createCoord(coord.x + 1, coord.y);
 }
 const blockSize = 24;
+function createPlayer() {
+    return {
+        coord: createCoord(0, 0),
+        smallCount: 0,
+        texture: cloneAndReplayTexture(resources.player_stand_right_texture),
+    };
+}
+//そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
+function canEnter(coord, terrain, isSmall) {
+    if (isSmall)
+        return getBlock(terrain, coord).collision !== "solid";
+    return getBlock(terrain, coord).collision !== "solid"
+        && getBlock(terrain, upCoord(coord)).collision !== "solid";
+}
+//その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
+function canStand(coord, terrain, isSmall) {
+    if (!canEnter(coord, terrain, isSmall))
+        return false;
+    if (isSmall && getBlock(terrain, coord).collision === "ladder")
+        return true;
+    if (getBlock(terrain, coord).collision === "ladder"
+        || getBlock(terrain, upCoord(coord)).collision === "ladder"
+        || getBlock(terrain, downCoord(coord)).collision === "ladder")
+        return true;
+    return getBlock(terrain, downCoord(coord)).collision === "solid";
+}
+function checkLeft(coord, terrain, isSmall) {
+    // 左が空いているならそこ
+    if (canEnter(leftCoord(coord), terrain, isSmall))
+        return { coord: leftCoord(coord), actionType: "walk", texture: isSmall ? resources.player_small_walk_left_texture : resources.player_walk_left_texture };
+    // 上がふさがってなくて左上が空いているならそこ
+    if (canEnter(upCoord(coord), terrain, isSmall)
+        && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
+        return { coord: leftCoord(upCoord(coord)), actionType: "climb", texture: isSmall ? resources.player_small_climb_left_texture : resources.player_climb_left_texture };
+    return null;
+}
+function checkRight(coord, terrain, isSmall) {
+    // 右が空いているならそこ
+    if (canEnter(rightCoord(coord), terrain, isSmall))
+        return { coord: rightCoord(coord), actionType: "walk", texture: isSmall ? resources.player_small_walk_right_texture : resources.player_walk_right_texture };
+    // 上がふさがってなくて右上が空いているならそこ
+    if (canEnter(upCoord(coord), terrain, isSmall)
+        && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
+        return { coord: rightCoord(upCoord(coord)), actionType: "climb", texture: isSmall ? resources.player_small_climb_right_texture : resources.player_climb_right_texture };
+    return null;
+}
+function checkUp(coord, terrain, isSmall) {
+    // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
+    if ((getBlock(terrain, coord).collision === "ladder" ||
+        getBlock(terrain, upCoord(coord)).collision === "ladder") &&
+        canStand(upCoord(coord), terrain, isSmall))
+        return { coord: upCoord(coord), actionType: "climb", texture: isSmall ? resources.player_small_climb_up_texture : resources.player_climb_up_texture };
+    return null;
+}
+function checkDown(coord, terrain, isSmall) {
+    // 真下が空いてるなら（飛び）下りる？
+    if (canEnter(downCoord(coord), terrain, isSmall))
+        return { coord: downCoord(coord), actionType: "climb", texture: isSmall ? resources.player_small_climb_down_texture : resources.player_climb_down_texture };
+    return null;
+}
+//プレイヤーを直接動かす。落とす処理もする。
+function movePlayer(player, field, direction) {
+    let result = null;
+    switch (direction) {
+        case "left":
+            result = checkLeft(player.coord, field.terrain, 0 < player.smallCount);
+            break;
+        case "right":
+            result = checkRight(player.coord, field.terrain, 0 < player.smallCount);
+            break;
+        case "up":
+            result = checkUp(player.coord, field.terrain, 0 < player.smallCount);
+            break;
+        case "down":
+            result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
+            break;
+    }
+    if (result === null)
+        return null;
+    // 立てる場所まで落とす
+    while (!canStand(result.coord, field.terrain, 0 < player.smallCount)) {
+        result.actionType = "drop";
+        result.coord = downCoord(result.coord);
+    }
+    player.coord = result.coord;
+    player.texture = cloneAndReplayTexture(result.texture);
+    if (0 < player.smallCount)
+        player.smallCount--;
+    console.log(direction + " " + result.actionType);
+    turn(field, player);
+}
+function turn(field, player) {
+    //敵などのターン処理はここ
+    controlNeko(field.neko, field, player);
+    while (field.terrain.length - 5 < player.coord.y || field.terrain.length - 5 < field.neko.coord.y)
+        generateRow(field);
+}
+function createRenderer(width, height) {
+    const marginTop = 28;
+    const marginLeft = 28;
+    const marginRignt = 0;
+    const marginBottom = 0;
+    const layerNum = 6;
+    const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
+    const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
+    const lightLayers = [];
+    for (let i = 0; i < layerNum; i++)
+        lightLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
+    const shadowLayers = [];
+    for (let i = 0; i < layerNum; i++)
+        shadowLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
+    const compositScreen = create2dScreen(width, height);
+    return {
+        lightColor,
+        shadowColor,
+        lightLayers,
+        shadowLayers,
+        layerNum,
+        compositScreen,
+        marginLeft,
+        marginTop,
+        width,
+        height,
+    };
+    function create2dScreen(width, height) {
+        let canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        let context = canvas.getContext("2d");
+        if (context === null)
+            throw new Error("failed to get 2D context");
+        return context;
+    }
+}
+function composit(renderer, mainScreen) {
+    const shadowDirectionX = 2;
+    const shadowDirectionY = 3;
+    for (let i = 0; i < renderer.layerNum; i++)
+        renderer.lightColor.drawImage(renderer.lightLayers[i].canvas, 0, 0);
+    for (let i = 0; i < renderer.layerNum; i++)
+        renderer.shadowColor.drawImage(renderer.shadowLayers[i].canvas, 0, 0);
+    // shadowLayersを斜め累積
+    for (let i = renderer.layerNum - 2; 0 <= i; i--) {
+        renderer.shadowLayers[i].drawImage(renderer.shadowLayers[i + 1].canvas, shadowDirectionX, shadowDirectionY);
+    }
+    for (let i = 0; i < renderer.layerNum; i++) {
+        //i-1層目の形で打ち抜く
+        if (i !== 0) {
+            renderer.shadowLayers[i].globalCompositeOperation = "source-in";
+            renderer.shadowLayers[i].drawImage(renderer.lightLayers[i - 1].canvas, -shadowDirectionX, -shadowDirectionY);
+        }
+        //compositに累積
+        renderer.compositScreen.globalCompositeOperation = "source-over";
+        renderer.compositScreen.drawImage(renderer.shadowLayers[i].canvas, -renderer.marginLeft + shadowDirectionX, -renderer.marginTop + shadowDirectionY);
+        //見えなくなる部分を隠す
+        renderer.compositScreen.globalCompositeOperation = "destination-out";
+        renderer.compositScreen.drawImage(renderer.lightLayers[i].canvas, -renderer.marginLeft, -renderer.marginTop);
+    }
+    // 影部分が不透明な状態になっているはずなので、影色で上書きする
+    renderer.compositScreen.globalCompositeOperation = "source-atop";
+    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, -renderer.marginLeft, -renderer.marginTop);
+    // 残りの部分に光色
+    renderer.compositScreen.globalCompositeOperation = "destination-over";
+    renderer.compositScreen.drawImage(renderer.lightColor.canvas, -renderer.marginLeft, -renderer.marginTop);
+    // メインスクリーン（本番のcanvas）にスムージングなしで拡大
+    mainScreen.imageSmoothingEnabled = false;
+    mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+    mainScreen.drawImage(renderer.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+    //次フレームの描画に備えてレイヤーを消去
+    clearScreen(renderer.lightColor);
+    clearScreen(renderer.shadowColor);
+    for (var i = 0; i < renderer.layerNum; i++) {
+        clearScreen(renderer.lightLayers[i]);
+        clearScreen(renderer.shadowLayers[i]);
+    }
+    clearScreen(renderer.compositScreen);
+    function clearScreen(screen) {
+        screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
+        screen.globalCompositeOperation = "source-over";
+    }
+}
+/// <reference path="./renderer.ts" />
 function loadResources() {
     const progress = {
         registeredCount: 0,
@@ -179,7 +361,42 @@ function drawTexture(texture, x, y, renderer) {
 const resources = loadResources();
 /// <reference path="./resources.ts" />
 /// <reference path="./coord.ts" />
+/// <reference path="./camera.ts" />
+function drawGameObject(gameObject, camera, renderer) {
+    drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
+}
+/// <reference path="./resources.ts" />
 /// <reference path="./gameobject.ts" />
+/// <reference path="./field.ts" />
+function createNeko() {
+    return {
+        type: "neko",
+        coord: createCoord(0, 5),
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, -2)
+    };
+}
+function canNekoEnter(coord, terrain) {
+    return !(getBlock(terrain, coord).collision === "solid");
+}
+function canNekoStand(coord, terrain) {
+    return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid";
+}
+function controlNeko(neko, field, player) {
+    // 近づいたら
+    if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 2) {
+        //動く
+        neko.coord = rightCoord(neko.coord);
+    }
+}
+function controlEntity(entity, field, player) {
+    if (entity.type === "neko") {
+        controlNeko(entity, field, player);
+    }
+}
+/// <reference path="./resources.ts" />
+/// <reference path="./coord.ts" />
+/// <reference path="./player.ts" />
+/// <reference path="./entity.ts" />
 function createField() {
     const protoTerrain = [[], []];
     for (let x = 0; x < fieldWidth; x++) {
@@ -196,7 +413,7 @@ function createField() {
     }
     let field = {
         terrain: protoTerrain.map((protoRow) => assignTexture(protoRow)),
-        neko: createNeko(),
+        entities: [createNeko()],
         backgroundTexture: resources.background_texture
     };
     for (let i = 0; i < 10; i++)
@@ -286,216 +503,18 @@ function drawField(field, camera, renderer) {
             drawTexture(createRectTexture("red", 1, 1, 0, 0), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     } //*/
-    drawGameObject(field.neko, camera, renderer);
+    field.entities.forEach(e => drawGameObject(e, camera, renderer));
 }
-/// <reference path="./resources.ts" />
-/// <reference path="./coord.ts" />
-/// <reference path="./field.ts" />
-function createPlayer() {
-    return {
-        coord: createCoord(0, 0),
-        smallCount: 0,
-        texture: cloneAndReplayTexture(resources.player_stand_right_texture),
-    };
-}
-//そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
-function canEnter(coord, terrain, isSmall) {
-    if (isSmall)
-        return getBlock(terrain, coord).collision !== "solid";
-    return getBlock(terrain, coord).collision !== "solid"
-        && getBlock(terrain, upCoord(coord)).collision !== "solid";
-}
-//その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-function canStand(coord, terrain, isSmall) {
-    if (!canEnter(coord, terrain, isSmall))
-        return false;
-    if (isSmall && getBlock(terrain, coord).collision === "ladder")
-        return true;
-    if (getBlock(terrain, coord).collision === "ladder"
-        || getBlock(terrain, upCoord(coord)).collision === "ladder"
-        || getBlock(terrain, downCoord(coord)).collision === "ladder")
-        return true;
-    return getBlock(terrain, downCoord(coord)).collision === "solid";
-}
-function checkLeft(coord, terrain, isSmall) {
-    // 左が空いているならそこ
-    if (canEnter(leftCoord(coord), terrain, isSmall))
-        return { coord: leftCoord(coord), actionType: "walk", texture: isSmall ? resources.player_small_walk_left_texture : resources.player_walk_left_texture };
-    // 上がふさがってなくて左上が空いているならそこ
-    if (canEnter(upCoord(coord), terrain, isSmall)
-        && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: leftCoord(upCoord(coord)), actionType: "climb", texture: isSmall ? resources.player_small_climb_left_texture : resources.player_climb_left_texture };
-    return null;
-}
-function checkRight(coord, terrain, isSmall) {
-    // 右が空いているならそこ
-    if (canEnter(rightCoord(coord), terrain, isSmall))
-        return { coord: rightCoord(coord), actionType: "walk", texture: isSmall ? resources.player_small_walk_right_texture : resources.player_walk_right_texture };
-    // 上がふさがってなくて右上が空いているならそこ
-    if (canEnter(upCoord(coord), terrain, isSmall)
-        && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: rightCoord(upCoord(coord)), actionType: "climb", texture: isSmall ? resources.player_small_climb_right_texture : resources.player_climb_right_texture };
-    return null;
-}
-function checkUp(coord, terrain, isSmall) {
-    // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
-    if ((getBlock(terrain, coord).collision === "ladder" ||
-        getBlock(terrain, upCoord(coord)).collision === "ladder") &&
-        canStand(upCoord(coord), terrain, isSmall))
-        return { coord: upCoord(coord), actionType: "climb", texture: isSmall ? resources.player_small_climb_up_texture : resources.player_climb_up_texture };
-    return null;
-}
-function checkDown(coord, terrain, isSmall) {
-    // 真下が空いてるなら（飛び）下りる？
-    if (canEnter(downCoord(coord), terrain, isSmall))
-        return { coord: downCoord(coord), actionType: "climb", texture: isSmall ? resources.player_small_climb_down_texture : resources.player_climb_down_texture };
-    return null;
-}
-//プレイヤーを直接動かす。落とす処理もする。
-function movePlayer(player, field, direction) {
-    let result = null;
-    switch (direction) {
-        case "left":
-            result = checkLeft(player.coord, field.terrain, 0 < player.smallCount);
-            break;
-        case "right":
-            result = checkRight(player.coord, field.terrain, 0 < player.smallCount);
-            break;
-        case "up":
-            result = checkUp(player.coord, field.terrain, 0 < player.smallCount);
-            break;
-        case "down":
-            result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
-            break;
-    }
-    if (result === null)
-        return null;
-    // 立てる場所まで落とす
-    while (!canStand(result.coord, field.terrain, 0 < player.smallCount)) {
-        result.actionType = "drop";
-        result.coord = downCoord(result.coord);
-    }
-    player.coord = result.coord;
-    player.texture = cloneAndReplayTexture(result.texture);
-    if (0 < player.smallCount)
-        player.smallCount--;
-    console.log(direction + " " + result.actionType);
-    turn(field, player);
-}
+//プレイヤーの行動後に呼ばれる
 function turn(field, player) {
     //敵などのターン処理はここ
-    controlNeko(field.neko, field, player);
-    while (field.terrain.length - 5 < player.coord.y || field.terrain.length - 5 < field.neko.coord.y)
+    field.entities.forEach(e => controlEntity(e, field, player));
+    while (field.terrain.length - 5 < player.coord.y ||
+        field.terrain.length - 5 < Math.max(...field.entities.map(e => e.coord.y)))
         generateRow(field);
 }
-function createNeko() {
-    return {
-        coord: createCoord(0, 5),
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, -2)
-    };
-}
-function canNekoEnter(coord, terrain) {
-    return !(getBlock(terrain, coord).collision === "solid");
-}
-function canNekoStand(coord, terrain) {
-    return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid";
-}
-function controlNeko(neko, field, player) {
-    // 近づいたら
-    if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 2) {
-        //動く
-        neko.coord = rightCoord(neko.coord);
-    }
-}
-function drawGameObject(gameObject, camera, renderer) {
-    drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
-}
-function createRenderer(width, height) {
-    const marginTop = 28;
-    const marginLeft = 28;
-    const marginRignt = 0;
-    const marginBottom = 0;
-    const layerNum = 6;
-    const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
-    const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
-    const lightLayers = [];
-    for (let i = 0; i < layerNum; i++)
-        lightLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
-    const shadowLayers = [];
-    for (let i = 0; i < layerNum; i++)
-        shadowLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
-    const compositScreen = create2dScreen(width, height);
-    return {
-        lightColor,
-        shadowColor,
-        lightLayers,
-        shadowLayers,
-        layerNum,
-        compositScreen,
-        marginLeft,
-        marginTop,
-        width,
-        height,
-    };
-    function create2dScreen(width, height) {
-        let canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        let context = canvas.getContext("2d");
-        if (context === null)
-            throw new Error("failed to get 2D context");
-        return context;
-    }
-}
-function composit(renderer, mainScreen) {
-    const shadowDirectionX = 2;
-    const shadowDirectionY = 3;
-    for (let i = 0; i < renderer.layerNum; i++)
-        renderer.lightColor.drawImage(renderer.lightLayers[i].canvas, 0, 0);
-    for (let i = 0; i < renderer.layerNum; i++)
-        renderer.shadowColor.drawImage(renderer.shadowLayers[i].canvas, 0, 0);
-    // shadowLayersを斜め累積
-    for (let i = renderer.layerNum - 2; 0 <= i; i--) {
-        renderer.shadowLayers[i].drawImage(renderer.shadowLayers[i + 1].canvas, shadowDirectionX, shadowDirectionY);
-    }
-    for (let i = 0; i < renderer.layerNum; i++) {
-        //i-1層目の形で打ち抜く
-        if (i !== 0) {
-            renderer.shadowLayers[i].globalCompositeOperation = "source-in";
-            renderer.shadowLayers[i].drawImage(renderer.lightLayers[i - 1].canvas, -shadowDirectionX, -shadowDirectionY);
-        }
-        //compositに累積
-        renderer.compositScreen.globalCompositeOperation = "source-over";
-        renderer.compositScreen.drawImage(renderer.shadowLayers[i].canvas, -renderer.marginLeft + shadowDirectionX, -renderer.marginTop + shadowDirectionY);
-        //見えなくなる部分を隠す
-        renderer.compositScreen.globalCompositeOperation = "destination-out";
-        renderer.compositScreen.drawImage(renderer.lightLayers[i].canvas, -renderer.marginLeft, -renderer.marginTop);
-    }
-    // 影部分が不透明な状態になっているはずなので、影色で上書きする
-    renderer.compositScreen.globalCompositeOperation = "source-atop";
-    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, -renderer.marginLeft, -renderer.marginTop);
-    // 残りの部分に光色
-    renderer.compositScreen.globalCompositeOperation = "destination-over";
-    renderer.compositScreen.drawImage(renderer.lightColor.canvas, -renderer.marginLeft, -renderer.marginTop);
-    // メインスクリーン（本番のcanvas）にスムージングなしで拡大
-    mainScreen.imageSmoothingEnabled = false;
-    mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
-    mainScreen.drawImage(renderer.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
-    //次フレームの描画に備えてレイヤーを消去
-    clearScreen(renderer.lightColor);
-    clearScreen(renderer.shadowColor);
-    for (var i = 0; i < renderer.layerNum; i++) {
-        clearScreen(renderer.lightLayers[i]);
-        clearScreen(renderer.shadowLayers[i]);
-    }
-    clearScreen(renderer.compositScreen);
-    function clearScreen(screen) {
-        screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
-        screen.globalCompositeOperation = "source-over";
-    }
-}
 /// <reference path="./coord.ts" />
-/// <reference path="./gameobject.ts" />
+/// <reference path="./player.ts" />
 /// <reference path="./field.ts" />
 /// <reference path="./renderer.ts" />
 function createCamera() {

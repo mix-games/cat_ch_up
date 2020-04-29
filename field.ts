@@ -1,6 +1,7 @@
 /// <reference path="./resources.ts" />
 /// <reference path="./coord.ts" />
-/// <reference path="./gameobject.ts" />
+/// <reference path="./player.ts" />
+/// <reference path="./entity.ts" />
 
 interface BlockWithoutTexture {
     collision: "ladder" | "solid" | "air";
@@ -13,7 +14,7 @@ interface Block {
 type Terrain = Block[][];
 interface Field {
     terrain: Terrain;
-    neko: Neko;
+    entities: Entity[];
     backgroundTexture: Texture;
 }
 
@@ -34,7 +35,7 @@ function createField(): Field {
 
     let field: Field = {
         terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow)),
-        neko: createNeko(),
+        entities: [createNeko()],
         backgroundTexture: resources.background_texture
     };
     for (let i = 0; i < 10; i++) generateRow(field);
@@ -149,5 +150,17 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
         }
     }//*/
 
-    drawGameObject(field.neko, camera, renderer);
+    field.entities.forEach(e => drawGameObject(e, camera, renderer));
+}
+
+//プレイヤーの行動後に呼ばれる
+function turn(field: Field, player: Player) {
+    //敵などのターン処理はここ
+
+    field.entities.forEach(e => controlEntity(e, field, player))
+
+    while (
+        field.terrain.length - 5 < player.coord.y ||
+        field.terrain.length - 5 < Math.max(...field.entities.map(e => e.coord.y)))
+        generateRow(field);
 }

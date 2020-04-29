@@ -1,3 +1,5 @@
+/// <reference path="./renderer.ts" />
+
 function loadResources() {
     const progress = {
         registeredCount: 0,
