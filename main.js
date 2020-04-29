@@ -34,9 +34,15 @@ function loadResources() {
         terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0),
         terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 0),
         terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 0),
-        player_wait_texture: loadStaticTexture("image/player/wait.png", 24, 48, 12, 24, true, 3),
-        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_stand_right_texture: loadStaticTexture("image/player/stand_right.png", 24, 48, 12, 24, true, 3),
+        player_stand_left_texture: loadStaticTexture("image/player/stand_left.png", 24, 48, 12, 24, true, 3),
+        player_hold_texture: loadStaticTexture("image/player/hold.png", 24, 48, 12, 24, true, 3),
         player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [30, 60, 90, 120], false, 3),
+        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_right_texture: loadAnimationTexture("image/player/climb_right.png", 48, 72, 36, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
     };
     function loadImage(source, onload = () => { }) {
         const image = new Image();
@@ -280,7 +286,7 @@ function createPlayer() {
     return {
         coord: createCoord(0, 0),
         isSmall: false,
-        texture: cloneAndReplayTexture(resources.player_wait_texture),
+        texture: cloneAndReplayTexture(resources.player_stand_right_texture),
     };
 }
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
@@ -309,7 +315,7 @@ function checkLeft(coord, terrain, isSmall) {
     // 上がふさがってなくて左上が空いているならそこ
     if (canEnter(upCoord(coord), terrain, isSmall)
         && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: leftCoord(upCoord(coord)), actionType: "climb", texture: resources.player_walk_left_texture };
+        return { coord: leftCoord(upCoord(coord)), actionType: "climb", texture: resources.player_climb_left_texture };
     return null;
 }
 function checkRight(coord, terrain, isSmall) {
@@ -319,7 +325,7 @@ function checkRight(coord, terrain, isSmall) {
     // 上がふさがってなくて右上が空いているならそこ
     if (canEnter(upCoord(coord), terrain, isSmall)
         && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: rightCoord(upCoord(coord)), actionType: "climb", texture: resources.player_walk_right_texture };
+        return { coord: rightCoord(upCoord(coord)), actionType: "climb", texture: resources.player_climb_right_texture };
     return null;
 }
 function checkUp(coord, terrain, isSmall) {
@@ -327,13 +333,13 @@ function checkUp(coord, terrain, isSmall) {
     if ((getBlock(terrain, coord).collision === "ladder" ||
         getBlock(terrain, upCoord(coord)).collision === "ladder") &&
         canStand(upCoord(coord), terrain, isSmall))
-        return { coord: upCoord(coord), actionType: "climb", texture: resources.player_wait_texture };
+        return { coord: upCoord(coord), actionType: "climb", texture: resources.player_climb_up_texture };
     return null;
 }
 function checkDown(coord, terrain, isSmall) {
     // 真下が空いてるなら（飛び）下りる？
     if (canEnter(downCoord(coord), terrain, isSmall))
-        return { coord: downCoord(coord), actionType: "climb", texture: resources.player_wait_texture };
+        return { coord: downCoord(coord), actionType: "climb", texture: resources.player_climb_down_texture };
     return null;
 }
 //プレイヤーを直接動かす。落とす処理もする。
