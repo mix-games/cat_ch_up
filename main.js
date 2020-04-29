@@ -394,8 +394,18 @@ function createNeko() {
         texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, -2)
     };
 }
+function canNekoEnter(coord, terrain) {
+    return !(getBlock(terrain, coord).collision === "solid");
+}
+function canNekoStand(coord, terrain) {
+    return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid";
+}
 function controlNeko(neko, field, player) {
-    neko.coord = rightCoord(neko.coord);
+    // 近づいたら
+    if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 2) {
+        //動く
+        neko.coord = rightCoord(neko.coord);
+    }
 }
 function drawGameObject(gameObject, camera, renderer) {
     drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
