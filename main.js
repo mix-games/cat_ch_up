@@ -22,24 +22,46 @@ function createPlayer() {
         texture: cloneAndReplayTexture(resources.player_stand_right_texture),
     };
 }
+// その場所でプレイヤーがどのようにあるべきか
+function checkPlayerState(coord, terrain, isSmall) {
+    if (isSmall) {
+        const ground = getBlock(terrain, downCoord(coord)).collision;
+        const body = getBlock(terrain, coord).collision;
+        if (body === "solid")
+            return "interfere";
+        if (ground === "solid")
+            return "stand";
+        if (body === "ladder")
+            return "ladder";
+        if (body === "air")
+            return "drop";
+        //意味わからんけど網羅チェックとして機能するらしい
+        return body;
+    }
+    else {
+        const ground = getBlock(terrain, downCoord(coord)).collision;
+        const foot = getBlock(terrain, coord).collision;
+        const head = getBlock(terrain, upCoord(coord)).collision;
+        if (head === "solid" || foot === "solid")
+            return "interfere";
+        if (ground === "solid")
+            return "stand";
+        if (head === "ladder")
+            return "ladder";
+        if (head === "air")
+            return "drop";
+        //意味わからんけど網羅チェックとして機能するらしい
+        return head;
+    }
+}
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
 function canEnter(coord, terrain, isSmall) {
-    if (isSmall)
-        return getBlock(terrain, coord).collision !== "solid";
-    return getBlock(terrain, coord).collision !== "solid"
-        && getBlock(terrain, upCoord(coord)).collision !== "solid";
+    return checkPlayerState(coord, terrain, isSmall) !== "interfere";
 }
 //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
 function canStand(coord, terrain, isSmall) {
-    if (!canEnter(coord, terrain, isSmall))
-        return false;
-    if (isSmall && getBlock(terrain, coord).collision === "ladder")
-        return true;
-    if (getBlock(terrain, coord).collision === "ladder"
-        || getBlock(terrain, upCoord(coord)).collision === "ladder"
-        || getBlock(terrain, downCoord(coord)).collision === "ladder")
-        return true;
-    return getBlock(terrain, downCoord(coord)).collision === "solid";
+    return checkPlayerState(coord, terrain, isSmall) === "stand"
+        || checkPlayerState(coord, terrain, isSmall) === "ladder";
 }
 function checkLeft(coord, terrain, isSmall) {
     // 左が空いているならそこ
@@ -105,12 +127,6 @@ function movePlayer(player, field, direction) {
         player.smallCount--;
     console.log(direction + " " + result.actionType);
     turn(field, player);
-}
-function turn(field, player) {
-    //敵などのターン処理はここ
-    controlNeko(field.neko, field, player);
-    while (field.terrain.length - 5 < player.coord.y || field.terrain.length - 5 < field.neko.coord.y)
-        generateRow(field);
 }
 function createRenderer(width, height) {
     const marginTop = 28;

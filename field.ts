@@ -3,11 +3,13 @@
 /// <reference path="./player.ts" />
 /// <reference path="./entity.ts" />
 
+type Collision = "ladder" | "solid" | "air";
+
 interface BlockWithoutTexture {
-    collision: "ladder" | "solid" | "air";
+    collision: Collision;
 }
 interface Block {
-    collision: "ladder" | "solid" | "air";
+    collision: Collision;
     texture0: Texture;
     texture1: Texture;
 }
