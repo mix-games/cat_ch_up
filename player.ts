@@ -1,10 +1,12 @@
 
 interface Player extends GameObject {
+    state: PlayerState;
     smallCount: number;
 }
 
 function createPlayer(): Player {
     return {
+        state: "stand",
         coord: createCoord(0, 0),
         smallCount: 0,
         texture: cloneAndReplayTexture(resources.player_stand_right_texture),
@@ -12,14 +14,14 @@ function createPlayer(): Player {
 }
 
 
-type PlayerState = "stand" | "ladder" | "drop" | "interfere";
+type PlayerState = "stand" | "ladder" | "drop";
 // その場所でプレイヤーがどのようにあるべきか
-function checkPlayerState(coord: Coord, terrain: Terrain, isSmall: boolean): PlayerState {
+function checkPlayerState(coord: Coord, terrain: Terrain, isSmall: boolean): PlayerState | null {
     if (isSmall) {
         const ground = getBlock(terrain, downCoord(coord)).collision;
         const body = getBlock(terrain, coord).collision;
 
-        if (body === "solid") return "interfere";
+        if (body === "solid") return null;
         if (ground === "solid") return "stand";
         if (body === "ladder") return "ladder";
         if (body === "air") return "drop";
@@ -32,7 +34,7 @@ function checkPlayerState(coord: Coord, terrain: Terrain, isSmall: boolean): Pla
         const foot = getBlock(terrain, coord).collision;
         const head = getBlock(terrain, upCoord(coord)).collision;
         
-        if (head === "solid" || foot === "solid") return "interfere";
+        if (head === "solid" || foot === "solid") return null;
         if (ground === "solid") return "stand";
         if (head === "ladder") return "ladder";
         if (head === "air") return "drop";
@@ -44,51 +46,139 @@ function checkPlayerState(coord: Coord, terrain: Terrain, isSmall: boolean): Pla
 
 //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
 function canEnter(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
-    return checkPlayerState(coord, terrain, isSmall) !== "interfere";
+    return checkPlayerState(coord, terrain, isSmall) !== null;
 }
 //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
 function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
-    return checkPlayerState(coord, terrain, isSmall) === "stand"
-        || checkPlayerState(coord, terrain, isSmall) === "ladder";
+    return checkPlayerState(coord, terrain, isSmall) !== null
+        && checkPlayerState(coord, terrain, isSmall) !== "drop";
 }
 
 type Direction = "left" | "right" | "up" | "down";
-type ActionType = "walk" | "climb" | "drop";
-type MoveResult = null | { coord: Coord; actionType: ActionType; texture: Texture };
+type MoveDirection = "left" | "right" | "up" | "down" | "left_up" | "right_up";
+type MoveResult = null | { coord: Coord; state: PlayerState, moveDirection: MoveDirection };
 
 function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 左が空いているならそこ
-    if (canEnter(leftCoord(coord), terrain, isSmall))
-        return { coord: leftCoord(coord), actionType: "walk", texture: isSmall ? resources.player_small_walk_left_texture : resources.player_walk_left_texture};
-    // 上がふさがってなくて左上が空いているならそこ
-    if (canEnter(upCoord(coord), terrain, isSmall)
-        && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: leftCoord(upCoord(coord)), actionType: "climb", texture: isSmall ? resources.player_small_climb_left_texture : resources.player_climb_left_texture};
+    const leftState = checkPlayerState(leftCoord(coord), terrain, isSmall);
+    if (leftState !== null) {
+        return {
+            coord: leftCoord(coord),
+            state: leftState,
+            moveDirection: "left",
+        };
+    }
+    // 上がふさがってなくて左上に立てるならそこ
+    if (checkPlayerState(upCoord(coord), terrain, isSmall) !== null
+    && checkPlayerState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
+        return { 
+            coord: leftCoord(upCoord(coord)),
+            state: "stand",
+            moveDirection: "left_up", 
+        };
     return null;
 }
 function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 右が空いているならそこ
-    if (canEnter(rightCoord(coord), terrain, isSmall))
-        return { coord: rightCoord(coord), actionType: "walk", texture: isSmall ? resources.player_small_walk_right_texture : resources.player_walk_right_texture };
-    // 上がふさがってなくて右上が空いているならそこ
-    if (canEnter(upCoord(coord), terrain, isSmall)
-        && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: rightCoord(upCoord(coord)), actionType: "climb", texture: isSmall ? resources.player_small_climb_right_texture : resources.player_climb_right_texture };
+    const rightState = checkPlayerState(rightCoord(coord), terrain, isSmall);
+    if (rightState !== null) {
+        return {
+            coord: rightCoord(coord),
+            state: rightState,
+            moveDirection: "right",
+        };
+    }
+    // 上がふさがってなくて右上に立てるならそこ
+    if (checkPlayerState(upCoord(coord), terrain, isSmall) !== null
+    && checkPlayerState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+        return { 
+            coord: rightCoord(upCoord(coord)),
+            state: "stand",
+            moveDirection: "right_up", 
+        };
     return null;
 }
 function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
-    // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
-    if ((getBlock(terrain, coord).collision === "ladder" ||
-        getBlock(terrain, upCoord(coord)).collision === "ladder") &&
+    // 上半身が梯子で、かつ真上に留まれるなら登る？
+    if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder" &&
         canStand(upCoord(coord), terrain, isSmall))
-        return { coord: upCoord(coord), actionType: "climb", texture: isSmall ? resources.player_small_climb_up_texture : resources.player_climb_up_texture };
+        return {
+            coord: upCoord(coord),
+            state: "ladder",
+            moveDirection: "up",
+        };
     return null;
 }
 function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 真下が空いてるなら（飛び）下りる？
-    if (canEnter(downCoord(coord), terrain, isSmall))
-        return { coord: downCoord(coord), actionType: "climb", texture: isSmall ? resources.player_small_climb_down_texture : resources.player_climb_down_texture };
+    const downstate = checkPlayerState(downCoord(coord), terrain, isSmall);
+    if (downstate !== null)
+        return {
+            coord: downCoord(coord),
+            state: downstate,
+            moveDirection: "down",
+        };
     return null;
+}
+
+function getPlayerTexture(state: PlayerState, oldState: PlayerState, moveDirection: MoveDirection, isSmall: boolean): Texture {
+    switch (moveDirection) {
+        case "left": {
+            if (isSmall) {
+                return cloneAndReplayTexture(resources.player_small_walk_left_texture);
+            }
+            else {
+                return cloneAndReplayTexture(resources.player_walk_left_texture);
+            }
+        } break;
+        case "right": {
+            if (isSmall) {
+                return cloneAndReplayTexture(resources.player_small_walk_right_texture);
+            }
+            else {
+                return cloneAndReplayTexture(resources.player_walk_right_texture);
+            }
+        } break;
+        case "up": {
+            if (isSmall) {
+                return cloneAndReplayTexture(resources.player_small_climb_up_texture);
+            }
+            else {
+                return cloneAndReplayTexture(resources.player_climb_up_texture);
+            }
+        } break;
+        case "down": {
+            if (isSmall) {
+                return cloneAndReplayTexture(resources.player_small_climb_up_texture);
+            }
+            else {
+                return cloneAndReplayTexture(resources.player_climb_up_texture);
+            }
+        } break;
+        case "left_up": {
+            if (isSmall) {
+                return cloneAndReplayTexture(resources.player_small_climb_left_texture);
+            }
+            else {
+                return cloneAndReplayTexture(resources.player_climb_left_texture);
+            }
+        } break;
+        case "right_up": {
+            if (isSmall) {
+                return cloneAndReplayTexture(resources.player_small_climb_right_texture);
+            }
+            else {
+                return cloneAndReplayTexture(resources.player_climb_right_texture);
+            }
+        } break;
+        default: {
+            //網羅チェック
+            const never:never = moveDirection;
+        }
+    }
+
+    //網羅チェックになるらしい
+    return moveDirection;
 }
 
 //プレイヤーを直接動かす。落とす処理もする。
@@ -105,16 +195,14 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
 
     // 立てる場所まで落とす
     while (!canStand(result.coord, field.terrain, 0 < player.smallCount)) {
-        result.actionType = "drop";
         result.coord = downCoord(result.coord);
     }
+    player.texture = getPlayerTexture(result.state, player.state, result.moveDirection, 0 < player.smallCount);
+    player.state = result.state;
     player.coord = result.coord;
-    player.texture = cloneAndReplayTexture(result.texture);
 
     if(0 < player.smallCount)
         player.smallCount--;
-
-    console.log(direction + " " + result.actionType);
 
     turn(field, player);
 }
