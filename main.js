@@ -19,6 +19,7 @@ function createPlayer() {
     return {
         state: "stand",
         coord: createCoord(0, 0),
+        facingDirection: "left",
         smallCount: 0,
         texture: cloneAndReplayTexture(resources.player_stand_right_texture),
     };
@@ -126,78 +127,10 @@ function checkDown(coord, terrain, isSmall) {
         };
     return null;
 }
-function getPlayerTexture(state, oldState, moveDirection, isSmall) {
-    switch (moveDirection) {
-        case "left":
-            {
-                if (isSmall) {
-                    return cloneAndReplayTexture(resources.player_small_walk_left_texture);
-                }
-                else {
-                    return cloneAndReplayTexture(resources.player_walk_left_texture);
-                }
-            }
-            break;
-        case "right":
-            {
-                if (isSmall) {
-                    return cloneAndReplayTexture(resources.player_small_walk_right_texture);
-                }
-                else {
-                    return cloneAndReplayTexture(resources.player_walk_right_texture);
-                }
-            }
-            break;
-        case "up":
-            {
-                if (isSmall) {
-                    return cloneAndReplayTexture(resources.player_small_climb_up_texture);
-                }
-                else {
-                    return cloneAndReplayTexture(resources.player_climb_up_texture);
-                }
-            }
-            break;
-        case "down":
-            {
-                if (isSmall) {
-                    return cloneAndReplayTexture(resources.player_small_climb_up_texture);
-                }
-                else {
-                    return cloneAndReplayTexture(resources.player_climb_up_texture);
-                }
-            }
-            break;
-        case "left_up":
-            {
-                if (isSmall) {
-                    return cloneAndReplayTexture(resources.player_small_climb_left_texture);
-                }
-                else {
-                    return cloneAndReplayTexture(resources.player_climb_left_texture);
-                }
-            }
-            break;
-        case "right_up":
-            {
-                if (isSmall) {
-                    return cloneAndReplayTexture(resources.player_small_climb_right_texture);
-                }
-                else {
-                    return cloneAndReplayTexture(resources.player_climb_right_texture);
-                }
-            }
-            break;
-        default: {
-            //網羅チェック
-            const never = moveDirection;
-        }
-    }
-    //網羅チェックになるらしい
-    return moveDirection;
-}
 //プレイヤーを直接動かす。落とす処理もする。
 function movePlayer(player, field, direction) {
+    if (player.state === "drop")
+        return;
     let result = null;
     switch (direction) {
         case "left":
@@ -215,16 +148,233 @@ function movePlayer(player, field, direction) {
     }
     if (result === null)
         return null;
-    // 立てる場所まで落とす
-    while (!canStand(result.coord, field.terrain, 0 < player.smallCount)) {
-        result.coord = downCoord(result.coord);
-    }
-    player.texture = getPlayerTexture(result.state, player.state, result.moveDirection, 0 < player.smallCount);
-    player.state = result.state;
+    player.texture = cloneAndReplayTexture(getTransitionTexture(player, result.state, result.moveDirection, field), () => updateTexture(player, field));
     player.coord = result.coord;
+    player.state = result.state;
+    //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
+    player.facingDirection = direction === "left" ? "left" : "right";
     if (0 < player.smallCount)
         player.smallCount--;
     turn(field, player);
+    function updateTexture(player, field) {
+        switch (player.state) {
+            case "stand":
+                {
+                    switch (player.facingDirection) {
+                        case "left":
+                            {
+                                if (0 < player.smallCount)
+                                    player.texture = cloneAndReplayTexture(resources.player_small_stand_left_texture);
+                                else
+                                    player.texture = cloneAndReplayTexture(resources.player_stand_left_texture);
+                            }
+                            break;
+                        case "right":
+                            {
+                                if (0 < player.smallCount)
+                                    player.texture = cloneAndReplayTexture(resources.player_small_stand_right_texture);
+                                else
+                                    player.texture = cloneAndReplayTexture(resources.player_stand_right_texture);
+                            }
+                            break;
+                        default: const never = player.facingDirection;
+                    }
+                }
+                break;
+            case "ladder":
+                {
+                    if (0 < player.smallCount)
+                        player.texture = cloneAndReplayTexture(resources.player_small_hold_texture);
+                    else
+                        player.texture = cloneAndReplayTexture(resources.player_hold_texture);
+                }
+                break;
+            case "drop":
+                {
+                    //宙に浮いてたら自動で落ちる
+                    const result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
+                    if (result !== null) {
+                        player.texture = cloneAndReplayTexture(getTransitionTexture(player, result.state, result.moveDirection, field), () => updateTexture(player, field));
+                        player.coord = result.coord;
+                        player.state = result.state;
+                        //moveDirectionは更新しない（向いている方向を判別したいので）
+                    }
+                }
+                break;
+        }
+    }
+    function getTransitionTexture(player, newState, moveDirection, field) {
+        // 最上位は移動方向で区別（素材が間に合わなかった場合、同じ移動方向のテクスチャで代用することになりそうなので）
+        switch (moveDirection) {
+            case "left":
+                {
+                    if (0 < player.smallCount)
+                        return resources.player_small_walk_left_texture;
+                    else
+                        return resources.player_walk_left_texture;
+                }
+                break;
+            case "right":
+                {
+                    if (0 < player.smallCount)
+                        return resources.player_small_walk_right_texture;
+                    else
+                        return resources.player_walk_right_texture;
+                }
+                break;
+            case "left_up":
+                {
+                    if (0 < player.smallCount)
+                        return resources.player_small_climb_left_texture;
+                    else
+                        return resources.player_climb_left_texture;
+                }
+                break;
+            case "right_up":
+                {
+                    if (0 < player.smallCount)
+                        return resources.player_small_climb_right_texture;
+                    else
+                        return resources.player_climb_right_texture;
+                }
+                break;
+            case "up":
+                {
+                    if (0 < player.smallCount)
+                        return resources.player_small_climb_up_texture;
+                    else
+                        return resources.player_climb_up_texture;
+                }
+                break;
+            case "down":
+                {
+                    switch (player.state) {
+                        case "stand":
+                            {
+                                //ないはずだけど
+                                return resources.player_drop_left_texture;
+                            }
+                            break;
+                        case "ladder":
+                            {
+                                switch (newState) {
+                                    //足場の一ブロック上に足があるところから飛び下りる
+                                    case "stand":
+                                        {
+                                            if (0 < player.smallCount)
+                                                return resources.player_small_drop_left_texture;
+                                            else
+                                                return resources.player_drop_left_texture;
+                                        }
+                                        break;
+                                    //下に梯子移動
+                                    case "ladder":
+                                        {
+                                            if (0 < player.smallCount)
+                                                return resources.player_small_climb_down_texture;
+                                            else
+                                                return resources.player_climb_down_texture;
+                                        }
+                                        break;
+                                    //梯子の一番下から飛び降りる
+                                    case "drop":
+                                        {
+                                            if (0 < player.smallCount)
+                                                return resources.player_small_drop_left_texture;
+                                            else
+                                                return resources.player_drop_left_texture;
+                                        }
+                                        break;
+                                    default: return newState;
+                                }
+                            }
+                            break;
+                        case "drop":
+                            {
+                                switch (newState) {
+                                    //着地
+                                    case "stand":
+                                        {
+                                            switch (player.facingDirection) {
+                                                case "left":
+                                                    {
+                                                        if (0 < player.smallCount)
+                                                            return resources.player_small_drop_right_texture;
+                                                        else
+                                                            return resources.player_drop_right_texture;
+                                                    }
+                                                    break;
+                                                case "right":
+                                                    {
+                                                        if (0 < player.smallCount)
+                                                            return resources.player_small_drop_left_texture;
+                                                        else
+                                                            return resources.player_drop_left_texture;
+                                                    }
+                                                    break;
+                                                default: return player.facingDirection;
+                                            }
+                                        }
+                                        break;
+                                    //梯子に着地
+                                    case "ladder":
+                                        {
+                                            switch (player.facingDirection) {
+                                                case "left":
+                                                    {
+                                                        if (0 < player.smallCount)
+                                                            return resources.player_small_drop_right_texture;
+                                                        else
+                                                            return resources.player_drop_right_texture;
+                                                    }
+                                                    break;
+                                                case "right":
+                                                    {
+                                                        if (0 < player.smallCount)
+                                                            return resources.player_small_drop_left_texture;
+                                                        else
+                                                            return resources.player_drop_left_texture;
+                                                    }
+                                                    break;
+                                                default: return player.facingDirection;
+                                            }
+                                        }
+                                        break;
+                                    //落下継続
+                                    case "drop":
+                                        {
+                                            switch (player.facingDirection) {
+                                                case "left":
+                                                    {
+                                                        if (0 < player.smallCount)
+                                                            return resources.player_small_drop_right_texture;
+                                                        else
+                                                            return resources.player_drop_right_texture;
+                                                    }
+                                                    break;
+                                                case "right":
+                                                    {
+                                                        if (0 < player.smallCount)
+                                                            return resources.player_small_drop_left_texture;
+                                                        else
+                                                            return resources.player_drop_left_texture;
+                                                    }
+                                                    break;
+                                                default: return player.facingDirection;
+                                            }
+                                        }
+                                        break;
+                                    default: return newState;
+                                }
+                            }
+                            break;
+                        default: return player.state;
+                    }
+                }
+                break;
+            default: return moveDirection;
+        }
+    }
 }
 function createRenderer(width, height) {
     const marginTop = 28;
@@ -339,6 +489,8 @@ function loadResources() {
         player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
         player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
         player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
         player_small_stand_right_texture: loadStaticTexture("image/player_small/stand_right.png", 24, 24, 12, 0, true, 3),
         player_small_stand_left_texture: loadStaticTexture("image/player_small/stand_left.png", 24, 24, 12, 0, true, 3),
         player_small_hold_texture: loadStaticTexture("image/player_small/hold.png", 24, 24, 12, 0, true, 3),
@@ -348,6 +500,8 @@ function loadResources() {
         player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [30, 60, 90, 120], false, 3),
         player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [30, 60, 90, 120], false, 3),
         player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
     };
     function loadImage(source, onload = () => { }) {
         const image = new Image();
@@ -393,6 +547,7 @@ function loadResources() {
             animationTimestamp: new Date().getTime(),
             loop,
             depthOffset,
+            animationEndCallback: () => { },
         };
         const image = loadImage(source, () => {
             const lightColorScreen = lightColor.getContext("2d");
@@ -437,9 +592,9 @@ function createRectTexture(color, width, height, offsetX, offsetY) {
         offsetY,
     };
 }
-function cloneAndReplayTexture(texture) {
+function cloneAndReplayTexture(texture, animationEndCallback = () => { }) {
     if (texture.type === "image") {
-        return Object.assign(Object.assign({}, texture), { animationTimestamp: new Date().getTime() });
+        return Object.assign(Object.assign({}, texture), { animationTimestamp: new Date().getTime(), animationEndCallback });
     }
     // いちおうコピーするけど意味なさそう
     else
@@ -456,8 +611,10 @@ function drawTexture(texture, x, y, renderer) {
         const elapse = new Date().getTime() - texture.animationTimestamp;
         const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
         let frame = texture.timeline.findIndex(t => phase < t);
-        if (frame === -1)
+        if (frame === -1) {
+            texture.animationEndCallback();
             frame = Math.max(0, texture.timeline.length - 1);
+        }
         renderer.lightColor.drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
         0, texture.width, texture.height, renderer.marginLeft + x - texture.offsetX, renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
         renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置

@@ -30,6 +30,9 @@ function loadResources() {
         player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
         player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
         player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        
+        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
 
         player_small_stand_right_texture: loadStaticTexture("image/player_small/stand_right.png", 24, 24, 12, 0, true, 3),
         player_small_stand_left_texture: loadStaticTexture("image/player_small/stand_left.png", 24, 24, 12, 0, true, 3),
@@ -40,6 +43,9 @@ function loadResources() {
         player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [30, 60, 90, 120], false, 3),
         player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [30, 60, 90, 120], false, 3),
         player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+
+        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
     } as const;
 
     function loadImage(source: string, onload: ()=>void = () => {}): HTMLImageElement {
@@ -89,6 +95,7 @@ function loadResources() {
             animationTimestamp: new Date().getTime(),
             loop,
             depthOffset,
+            animationEndCallback: () => {},
         };
         const image = loadImage(source, () => {
             const lightColorScreen = lightColor.getContext("2d");
@@ -178,6 +185,7 @@ interface ImageTexture {
     animationTimestamp: number;
     loop: boolean;
     depthOffset: number;
+    animationEndCallback: () => void;
 }
 
 type Texture = EmptyTexture | RectTexture | ImageTexture;
@@ -199,11 +207,12 @@ function createRectTexture(color: string, width: number, height: number, offsetX
     };
 }
 
-function cloneAndReplayTexture(texture: Texture): Texture {
+function cloneAndReplayTexture(texture: Texture, animationEndCallback: () => void = () => {}): Texture {
     if (texture.type === "image") {
         return {
             ...texture,
-            animationTimestamp: new Date().getTime()
+            animationTimestamp: new Date().getTime(),
+            animationEndCallback,
         }
     }
     // いちおうコピーするけど意味なさそう
@@ -228,7 +237,10 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
         const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
 
         let frame = texture.timeline.findIndex(t => phase < t);
-        if (frame === -1) frame = Math.max(0, texture.timeline.length - 1);
+        if (frame === -1) {
+            texture.animationEndCallback();
+            frame = Math.max(0, texture.timeline.length - 1);
+        }
 
         renderer.lightColor.drawImage(
             texture.lightColor,
