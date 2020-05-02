@@ -127,22 +127,30 @@ function checkDown(coord, terrain, isSmall) {
         };
     return null;
 }
-//プレイヤーのstateを見てテクスチャを更新する。落とす処理もする。
-function updateTexture(player, field) {
-    if (player.state === "drop") {
+function shrinkPlayer(player) {
+    if (!isStable(player))
+        return;
+    player.smallCount = 5;
+    updatePlayersTexture(player);
+}
+function isStable(player) {
+    return player.state === "stand" || player.state === "ladder";
+}
+// プレイヤーを落とす処理
+function dropPlayer(player, field) {
+    if (isStable(player)) {
+        updatePlayersTexture(player);
+    }
+    else {
         //宙に浮いてたら自動で落ちる
         const result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
         if (result !== null) {
             const textureSet = getDropTexture(result.state, player.facingDirection);
-            player.texture = cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => updateTexture(player, field));
+            player.texture = cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => dropPlayer(player, field));
             player.coord = result.coord;
             player.state = result.state;
             //moveDirectionは更新しない（向いている方向を判別したいので）
         }
-    }
-    else {
-        const textureSet = getStateTexture(player.state, player.facingDirection);
-        player.texture = textureSet[0 < player.smallCount ? "small" : "normal"];
     }
     function getDropTexture(newState, facingDirection) {
         switch (newState) {
@@ -204,6 +212,11 @@ function updateTexture(player, field) {
             default: return newState;
         }
     }
+}
+//プレイヤーのstateを見てテクスチャを更新する。
+function updatePlayersTexture(player) {
+    const textureSet = getStateTexture(player.state, player.facingDirection);
+    player.texture = textureSet[0 < player.smallCount ? "small" : "normal"];
     function getStateTexture(state, facingDirection) {
         switch (state) {
             case "stand":
@@ -256,7 +269,7 @@ function movePlayer(player, field, direction) {
     if (result === null)
         return null;
     const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-    player.texture = cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => updateTexture(player, field));
+    player.texture = cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => dropPlayer(player, field));
     player.coord = result.coord;
     player.state = result.state;
     //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
@@ -936,6 +949,8 @@ window.onload = () => {
             player.coord = upCoord(player.coord);
         if (event.code === "KeyS")
             player.coord = downCoord(player.coord);
+        if (event.code === "KeyZ")
+            shrinkPlayer(player);
         if (event.code === "ArrowLeft")
             movePlayer(player, field, "left");
         if (event.code === "ArrowRight")

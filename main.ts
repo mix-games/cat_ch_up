@@ -51,6 +51,7 @@ window.onload = () => {
         if (event.code === "KeyD") player.coord = rightCoord(player.coord);
         if (event.code === "KeyW") player.coord = upCoord(player.coord);
         if (event.code === "KeyS") player.coord = downCoord(player.coord);
+        if (event.code === "KeyZ") shrinkPlayer(player);
 
         if (event.code === "ArrowLeft") movePlayer(player, field, "left");
         if (event.code === "ArrowRight") movePlayer(player, field, "right");
