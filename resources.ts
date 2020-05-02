@@ -223,13 +223,13 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
     if(texture.type === "rect") {
         renderer.lightColor.fillStyle = texture.color;
         renderer.lightColor.fillRect(
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
+            Renderer.marginLeft + x - texture.offsetX,
+            Renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
         renderer.shadowColor.fillStyle = texture.color;
         renderer.shadowColor.fillRect(
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
+            Renderer.marginLeft + x - texture.offsetX,
+            Renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
     }
     if(texture.type === "image") {
@@ -247,8 +247,8 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
             texture.width * frame, // アニメーションによる横位置
             0,
             texture.width, texture.height,
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
+            Renderer.marginLeft + x - texture.offsetX,
+            Renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
 
         renderer.shadowColor.drawImage(
@@ -256,8 +256,8 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
             texture.width * frame, // アニメーションによる横位置
             0,
             texture.width, texture.height,
-            renderer.marginLeft + x - texture.offsetX,
-            renderer.marginTop + y - texture.offsetY,
+            Renderer.marginLeft + x - texture.offsetX,
+            Renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
         
         for(let i = 0; i < texture.depth; i++) {
@@ -266,8 +266,8 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
                 texture.width * frame, // アニメーションによる横位置
                 (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
                 texture.width, texture.height,
-                renderer.marginLeft + x - texture.offsetX,
-                renderer.marginTop + y - texture.offsetY,
+                Renderer.marginLeft + x - texture.offsetX,
+                Renderer.marginTop + y - texture.offsetY,
                 texture.width, texture.height);
             
             renderer.shadowLayers[i + texture.depthOffset].drawImage(
@@ -275,8 +275,8 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
                 texture.width * frame, // アニメーションによる横位置
                 (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
                 texture.width, texture.height,
-                renderer.marginLeft + x - texture.offsetX,
-                renderer.marginTop + y - texture.offsetY,
+                Renderer.marginLeft + x - texture.offsetX,
+                Renderer.marginTop + y - texture.offsetY,
                 texture.width, texture.height);
         }
     }

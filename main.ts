@@ -9,7 +9,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
 
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
 
-        composit(renderer, mainScreen);
+        Renderer.composit(renderer, mainScreen);
         requestAnimationFrame(() => animationLoop(field, player, newCamera, renderer, mainScreen));
     }
     else {
@@ -31,7 +31,7 @@ window.onload = () => {
     const field: Field = createField();
     const player: Player = createPlayer();
     const camera: Camera = Camera.create();
-    const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
+    const renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
