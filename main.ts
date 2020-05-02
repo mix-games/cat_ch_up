@@ -1,5 +1,5 @@
 let field: Field = createField();
-let player: Player = createPlayer();
+let player: Player = Player.create();
 let camera: Camera = Camera.create();
 
 function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
@@ -48,12 +48,12 @@ window.onload = () => {
         if (event.code === "KeyD") player = { ...player, coord: rightCoord(player.coord) };
         if (event.code === "KeyW") player = { ...player, coord: upCoord(player.coord) };
         if (event.code === "KeyS") player = { ...player, coord: downCoord(player.coord) };
-        if (event.code === "KeyZ") shrinkPlayer(player);
+        if (event.code === "KeyZ") Player.shrink(player);
 
-        if (event.code === "ArrowLeft") player = movePlayer(player, field, "left");
-        if (event.code === "ArrowRight") player = movePlayer(player, field, "right");
-        if (event.code === "ArrowUp") player = movePlayer(player, field, "up");
-        if (event.code === "ArrowDown") player = movePlayer(player, field, "down");
+        if (event.code === "ArrowLeft") player = Player.move(player, field, "left");
+        if (event.code === "ArrowRight") player = Player.move(player, field, "right");
+        if (event.code === "ArrowUp") player = Player.move(player, field, "up");
+        if (event.code === "ArrowDown") player = Player.move(player, field, "down");
 
         console.log(player.coord);
     }, false);
