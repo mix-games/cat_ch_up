@@ -2,7 +2,7 @@
 
 function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D): void {
     if (resources._progress.isFinished()) {
-        updateCamera(camera, player, field, renderer);
+        const newCamera = updateCamera(camera, player, field, renderer);
 
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
@@ -10,13 +10,13 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
 
         composit(renderer, mainScreen);
+        requestAnimationFrame(() => animationLoop(field, player, newCamera, renderer, mainScreen));
     }
     else {
         console.log("loading " + (resources._progress.rate() * 100) + "%");
         mainScreen.fillText("loading", 0, 50);
+        requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
     }
-
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
 }
 
 window.onload = () => {

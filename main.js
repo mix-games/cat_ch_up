@@ -885,15 +885,12 @@ function movePlayer(player, field, direction) {
 /// <reference path="./player.ts" />
 /// <reference path="./field.ts" />
 /// <reference path="./renderer.ts" />
+// ヒステリシスゆとり幅
+const clearanceX = 4;
+const clearanceY = 2;
+const initialY = 4;
 function createCamera() {
-    const clearanceX = 4;
-    const clearanceY = 2;
-    const initialY = 4;
     return {
-        // ヒステリシスゆとり幅
-        clearanceX,
-        clearanceY,
-        initialY,
         // カメラ中心の移動目標マス
         coord: createCoord(clearanceX, clearanceY),
         // カメラ中心のスクリーン座標(移動アニメーション折り込み)
@@ -908,34 +905,42 @@ function createCamera() {
     };
 }
 function updateCamera(camera, player, field, renderer) {
-    camera.coord = createCoord(Math.max(player.coord.x - camera.clearanceX, Math.min(player.coord.x + camera.clearanceX, camera.coord.x)), Math.max(camera.initialY, Math.max(player.coord.y - camera.clearanceY, Math.min(player.coord.y + camera.clearanceY, camera.coord.y))));
-    const targetX = camera.coord.x * blockSize;
-    const targetY = -camera.coord.y * blockSize;
+    const coord = createCoord(Math.max(player.coord.x - clearanceX, Math.min(player.coord.x + clearanceX, camera.coord.x)), Math.max(initialY, Math.max(player.coord.y - clearanceY, Math.min(player.coord.y + clearanceY, camera.coord.y))));
+    const targetX = coord.x * blockSize;
+    const targetY = -coord.y * blockSize;
     const smooth = 0.9; // 1フレームあたりの減衰比(0～1の無次元値)
     const accel = 1; // 1フレームあたりの速度変化
-    camera.velocityX =
-        Math.max(camera.velocityX * smooth - accel, Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
-        ((targetX - camera.centerX) * (1 - smooth)))); //この速度にしておけば公比smoothの無限級数がtargetXに収束する
-    camera.velocityY =
-        Math.max(camera.velocityY * smooth - accel, Math.min(camera.velocityY * smooth + accel, ((targetY - camera.centerY) * (1 - smooth))));
-    camera.centerX += camera.velocityX;
-    camera.centerY += camera.velocityY;
-    camera.offsetX = Math.floor(renderer.width / 2 - camera.centerX);
-    camera.offsetY = Math.floor(renderer.height / 2 - camera.centerY);
+    const velocityX = Math.max(camera.velocityX * smooth - accel, Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
+    ((targetX - camera.centerX) * (1 - smooth)))); //この速度にしておけば公比smoothの無限級数がtargetXに収束する
+    const velocityY = Math.max(camera.velocityY * smooth - accel, Math.min(camera.velocityY * smooth + accel, ((targetY - camera.centerY) * (1 - smooth))));
+    const centerX = camera.centerX + velocityX;
+    const centerY = camera.centerY + velocityY;
+    const offsetX = Math.floor(renderer.width / 2 - centerX);
+    const offsetY = Math.floor(renderer.height / 2 - centerY);
+    return {
+        coord,
+        centerX,
+        centerY,
+        velocityX,
+        velocityY,
+        offsetX,
+        offsetY,
+    };
 }
 function animationLoop(field, player, camera, renderer, mainScreen) {
     if (resources._progress.isFinished()) {
-        updateCamera(camera, player, field, renderer);
+        const newCamera = updateCamera(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
         composit(renderer, mainScreen);
+        requestAnimationFrame(() => animationLoop(field, player, newCamera, renderer, mainScreen));
     }
     else {
         console.log("loading " + (resources._progress.rate() * 100) + "%");
         mainScreen.fillText("loading", 0, 50);
+        requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
     }
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
 }
 window.onload = () => {
     const canvas = document.getElementById("canvas");

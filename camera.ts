@@ -3,35 +3,28 @@
 /// <reference path="./field.ts" />
 /// <reference path="./renderer.ts" />
 
+
+// ヒステリシスゆとり幅
+const clearanceX = 4;
+const clearanceY = 2;
+
+const initialY = 4;
+
 interface Camera {
-    readonly clearanceX: number;
-    readonly clearanceY: number;
+    readonly coord: Coord;
 
-    readonly initialY: number;
+    readonly velocityX: number;
+    readonly velocityY: number;
 
-    coord: Coord;
+    readonly centerX: number;
+    readonly centerY: number;
 
-    velocityX: number;
-    velocityY: number;
-
-    centerX: number;
-    centerY: number;
-
-    offsetX: number;
-    offsetY: number;
+    readonly offsetX: number;
+    readonly offsetY: number;
 }
 
 function createCamera(): Camera {
-    const clearanceX = 4;
-    const clearanceY = 2;
-    const initialY = 4;
     return {
-        // ヒステリシスゆとり幅
-        clearanceX,
-        clearanceY,
-
-        initialY,
-        
         // カメラ中心の移動目標マス
         coord: createCoord(clearanceX, clearanceY),
 
@@ -49,33 +42,43 @@ function createCamera(): Camera {
     };
 }
 
-function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): void {
-    camera.coord = createCoord(
-        Math.max(player.coord.x - camera.clearanceX, 
-        Math.min(player.coord.x + camera.clearanceX,
+function updateCamera(camera: Camera, player: Player, field: Field, renderer: Renderer): Camera {
+    const coord = createCoord(
+        Math.max(player.coord.x - clearanceX, 
+        Math.min(player.coord.x + clearanceX,
             camera.coord.x)),
-        Math.max(camera.initialY,
-        Math.max(player.coord.y - camera.clearanceY, 
-        Math.min(player.coord.y + camera.clearanceY,
+        Math.max(initialY,
+        Math.max(player.coord.y - clearanceY, 
+        Math.min(player.coord.y + clearanceY,
             camera.coord.y))));
     
-    const targetX = camera.coord.x * blockSize;
-    const targetY = -camera.coord.y * blockSize;
+    const targetX = coord.x * blockSize;
+    const targetY = -coord.y * blockSize;
     const smooth = 0.9; // 1フレームあたりの減衰比(0～1の無次元値)
     const accel = 1; // 1フレームあたりの速度変化
 
-    camera.velocityX = 
+    const velocityX = 
         Math.max(camera.velocityX * smooth - accel,
         Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
             ((targetX - camera.centerX) * (1 - smooth))));  //この速度にしておけば公比smoothの無限級数がtargetXに収束する
-    camera.velocityY = 
+    const velocityY = 
         Math.max(camera.velocityY * smooth - accel,
         Math.min(camera.velocityY * smooth + accel,
             ((targetY - camera.centerY) * (1 - smooth))));
     
-    camera.centerX += camera.velocityX;
-    camera.centerY += camera.velocityY;
+    const centerX = camera.centerX + velocityX;
+    const centerY = camera.centerY + velocityY;
     
-    camera.offsetX = Math.floor(renderer.width / 2 - camera.centerX);
-    camera.offsetY = Math.floor(renderer.height / 2 - camera.centerY);
+    const offsetX = Math.floor(renderer.width / 2 - centerX);
+    const offsetY = Math.floor(renderer.height / 2 - centerY);
+
+    return {
+        coord,
+        centerX,
+        centerY,
+        velocityX,
+        velocityY,
+        offsetX,
+        offsetY,
+    }
 }
