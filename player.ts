@@ -40,12 +40,12 @@ function checkPlayerState(coord: Coord, terrain: Terrain, isSmall: boolean): Pla
         const ground = getBlock(terrain, downCoord(coord)).collision;
         const foot = getBlock(terrain, coord).collision;
         const head = getBlock(terrain, upCoord(coord)).collision;
-        
+
         if (head === "solid" || foot === "solid") return null;
         if (ground === "solid") return "stand";
         if (head === "ladder") return "ladder";
         if (head === "air") return "drop";
-        
+
         //意味わからんけど網羅チェックとして機能するらしい
         return head;
     }
@@ -63,7 +63,7 @@ function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
 
 type Direction = "left" | "right" | "up" | "down";
 type MoveDirection = "move_left" | "move_right" | "move_up" | "move_down" | "move_left_up" | "move_right_up";
-type MoveResult = null | { coord: Coord; state: PlayerState, moveDirection: MoveDirection };
+type MoveResult = null | { coord: Coord; state: PlayerState, moveDirection: MoveDirection; };
 
 function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
     // 左が空いているならそこ
@@ -77,11 +77,11 @@ function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult
     }
     // 上がふさがってなくて左上に立てるならそこ
     if (checkPlayerState(upCoord(coord), terrain, isSmall) !== null
-    && checkPlayerState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
-        return { 
+        && checkPlayerState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
+        return {
             coord: leftCoord(upCoord(coord)),
             state: "stand",
-            moveDirection: "move_left_up", 
+            moveDirection: "move_left_up",
         };
     return null;
 }
@@ -97,11 +97,11 @@ function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResul
     }
     // 上がふさがってなくて右上に立てるならそこ
     if (checkPlayerState(upCoord(coord), terrain, isSmall) !== null
-    && checkPlayerState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
-        return { 
+        && checkPlayerState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+        return {
             coord: rightCoord(upCoord(coord)),
             state: "stand",
-            moveDirection: "move_right_up", 
+            moveDirection: "move_right_up",
         };
     return null;
 }
@@ -134,81 +134,80 @@ function shrinkPlayer(player: Player) {
     updatePlayersTexture(player);
 }
 
-function isStable(player: Player): player is Player & { state: "stand" | "ladder" }{
+function isStable(player: Player): player is Player & { state: "stand" | "ladder"; } {
     return player.state === "stand" || player.state === "ladder";
 }
 
 // プレイヤーを落とす処理
-function dropPlayer(player: Player, field:Field) {
-    if (isStable(player))  {
+function dropPlayer(player: Player, field: Field) {
+    if (isStable(player)) {
         updatePlayersTexture(player);
     }
     else {
         //宙に浮いてたら自動で落ちる
-        const result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
-        if(result !== null) {
-            const textureSet = getDropTexture(result.state, player.facingDirection);
-            player.texture = cloneAndReplayTexture(
-                textureSet[0 < player.smallCount ? "small" : "normal"],
-                () => dropPlayer(player, field));
-            player.coord = result.coord;
-            player.state = result.state;
-            //moveDirectionは更新しない（向いている方向を判別したいので）
-        }
+        const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
+            || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
+        const textureSet = getDropTexture(result.state, player.facingDirection);
+        player.texture = cloneAndReplayTexture(
+            textureSet[0 < player.smallCount ? "small" : "normal"],
+            () => dropPlayer(player, field));
+        player.coord = result.coord;
+        player.state = result.state;
+        //moveDirectionは更新しない（向いている方向を判別したいので）
     }
 
-    function getDropTexture(newState: PlayerState, facingDirection: FacingDirection): {normal: Texture, small: Texture} {
+    function getDropTexture(newState: PlayerState, facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
         switch (newState) {
             //落下に関して移動方向は考えない（必ず下と見做す）。代わりに顔の向きを考える
             //着地
             case "stand": switch (facingDirection) {
-                    case "facing_left": return {
-                        small: resources.player_small_drop_left_texture,
-                        normal: resources.player_drop_left_texture,
-                    }; break;
-                    case "facing_right": return {
-                        small: resources.player_small_drop_right_texture,
-                        normal: resources.player_drop_right_texture,
-                    }; break;
-                    default: return facingDirection;
-                } break;
+                case "facing_left": return {
+                    small: resources.player_small_drop_left_texture,
+                    normal: resources.player_drop_left_texture,
+                }; break;
+                case "facing_right": return {
+                    small: resources.player_small_drop_right_texture,
+                    normal: resources.player_drop_right_texture,
+                }; break;
+                default: return facingDirection;
+            } break;
             //梯子に着地
             case "ladder": switch (facingDirection) {
-                    case "facing_left": return {
-                        small: resources.player_small_drop_left_texture,
-                        normal: resources.player_drop_left_texture,
-                    }; break; 
-                    case "facing_right": return {
-                        small: resources.player_small_drop_right_texture,
-                        normal: resources.player_drop_right_texture,
-                    }; break;
-                    default: return facingDirection;
-                }
-            break;
+                case "facing_left": return {
+                    small: resources.player_small_drop_left_texture,
+                    normal: resources.player_drop_left_texture,
+                }; break;
+                case "facing_right": return {
+                    small: resources.player_small_drop_right_texture,
+                    normal: resources.player_drop_right_texture,
+                }; break;
+                default: return facingDirection;
+            }
+                break;
             //落下継続
             case "drop": switch (facingDirection) {
-                    case "facing_left": return {
-                        small: resources.player_small_drop_left_texture,
-                        normal: resources.player_drop_left_texture,
-                    }; break; 
-                    case "facing_right": return {
-                        small: resources.player_small_drop_right_texture,
-                        normal: resources.player_drop_right_texture,
-                    }; break;
-                    default: return facingDirection;
-                } break;
+                case "facing_left": return {
+                    small: resources.player_small_drop_left_texture,
+                    normal: resources.player_drop_left_texture,
+                }; break;
+                case "facing_right": return {
+                    small: resources.player_small_drop_right_texture,
+                    normal: resources.player_drop_right_texture,
+                }; break;
+                default: return facingDirection;
+            } break;
             default: return newState;
         }
     }
 }
 
 //プレイヤーのstateを見てテクスチャを更新する。
-function updatePlayersTexture(player: Player & { state: "stand" | "ladder" }){
+function updatePlayersTexture(player: Player & { state: "stand" | "ladder"; }) {
     const textureSet = getStateTexture(player.state, player.facingDirection);
     player.texture = textureSet[0 < player.smallCount ? "small" : "normal"];
 
-    function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): {normal: Texture, small: Texture} {
-        switch(state) {
+    function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
+        switch (state) {
             case "stand": {
                 switch (facingDirection) {
                     case "facing_left": return {
@@ -219,7 +218,7 @@ function updatePlayersTexture(player: Player & { state: "stand" | "ladder" }){
                         small: cloneAndReplayTexture(resources.player_small_stand_right_texture),
                         normal: cloneAndReplayTexture(resources.player_stand_right_texture),
                     }; break;
-                    default : return facingDirection;
+                    default: return facingDirection;
                 }
             } break;
             case "ladder": return {
@@ -242,7 +241,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
         case "down": result = checkDown(player.coord, field.terrain, 0 < player.smallCount); break;
     }
     if (result === null) return null;
-    
+
     const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
     player.texture = cloneAndReplayTexture(
         textureSet[0 < player.smallCount ? "small" : "normal"],
@@ -252,16 +251,16 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
     //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
     player.facingDirection = direction === "left" ? "facing_left" : "facing_right";
 
-    if(0 < player.smallCount)
+    if (0 < player.smallCount)
         player.smallCount--;
 
     turn(field, player);
 
-    function getTransitionTexture(oldState: "stand" | "ladder", newState: PlayerState, moveDirection: MoveDirection, facingDirection: FacingDirection): {normal: Texture, small: Texture}  {
+    function getTransitionTexture(oldState: "stand" | "ladder", newState: PlayerState, moveDirection: MoveDirection, facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
         switch (oldState) {
             case "stand": switch (newState) {
                 // 歩き系
-                case "stand": switch(moveDirection) {
+                case "stand": switch (moveDirection) {
                     //左に歩く
                     case "move_left": return {
                         small: resources.player_small_walk_left_texture,
@@ -284,7 +283,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
                     }; break;
                 } break;
                 //梯子につかまる
-                case "ladder": switch(moveDirection) {
+                case "ladder": switch (moveDirection) {
                     //左の梯子に掴まる
                     case "move_left": return {
                         small: resources.player_small_walk_left_texture,
@@ -302,7 +301,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
                     }; break;
                 } break;
                 //足場から飛び降り
-                case "drop": switch(moveDirection) {
+                case "drop": switch (moveDirection) {
                     //左に飛び降り
                     case "move_left": return {
                         small: resources.player_small_walk_left_texture,
@@ -317,7 +316,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
             } break;
             case "ladder": switch (newState) {
                 //梯子から穏便に落ちる
-                case "stand": switch(moveDirection) {
+                case "stand": switch (moveDirection) {
                     //左の足場に下りる
                     case "move_left": return {
                         small: resources.player_small_walk_left_texture,
@@ -335,7 +334,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
                     }; break;
                 } break;
                 //梯子上で移動
-                case "ladder": switch(moveDirection) {
+                case "ladder": switch (moveDirection) {
                     //左の梯子に掴まる
                     case "move_left": return {
                         small: resources.player_small_walk_left_texture,
@@ -358,7 +357,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
                     }; break;
                 } break;
                 //梯子から飛び降り
-                case "drop": switch(moveDirection) {
+                case "drop": switch (moveDirection) {
                     //左に
                     case "move_left": return {
                         small: resources.player_small_walk_left_texture,
