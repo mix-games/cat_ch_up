@@ -2,7 +2,7 @@
 
 function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D): void {
     if (resources._progress.isFinished()) {
-        const newCamera = updateCamera(camera, player, field, renderer);
+        const newCamera = Camera.update(camera, player, field, renderer);
 
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
@@ -30,7 +30,7 @@ window.onload = () => {
     
     const field: Field = createField();
     const player: Player = createPlayer();
-    const camera: Camera = createCamera();
+    const camera: Camera = Camera.create();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
     /*
