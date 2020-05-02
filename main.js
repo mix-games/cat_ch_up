@@ -907,7 +907,7 @@ function updateCamera(camera, player, field, renderer) {
     camera.offsetX = Math.floor(renderer.width / 2 - camera.centerX);
     camera.offsetY = Math.floor(renderer.height / 2 - camera.centerY);
 }
-function animationLoop(field, player, camera, renderer, mainScreen, resources) {
+function animationLoop(field, player, camera, renderer, mainScreen) {
     if (resources._progress.isFinished()) {
         updateCamera(camera, player, field, renderer);
         drawField(field, camera, renderer);
@@ -919,7 +919,7 @@ function animationLoop(field, player, camera, renderer, mainScreen, resources) {
         console.log("loading " + (resources._progress.rate() * 100) + "%");
         mainScreen.fillText("loading", 0, 50);
     }
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
+    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
 }
 window.onload = () => {
     const canvas = document.getElementById("canvas");
@@ -932,7 +932,6 @@ window.onload = () => {
     const player = createPlayer();
     const camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const loadingProgress = loadResources();
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -964,5 +963,5 @@ window.onload = () => {
             movePlayer(player, field, "down");
         console.log(player.coord);
     }, false);
-    animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
+    animationLoop(field, player, camera, renderer, mainScreen);
 };

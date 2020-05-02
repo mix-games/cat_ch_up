@@ -1,6 +1,6 @@
 
 
-function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
+function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D): void {
     if (resources._progress.isFinished()) {
         updateCamera(camera, player, field, renderer);
 
@@ -16,7 +16,7 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         mainScreen.fillText("loading", 0, 50);
     }
 
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, resources));
+    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
 }
 
 window.onload = () => {
@@ -32,8 +32,6 @@ window.onload = () => {
     const player: Player = createPlayer();
     const camera: Camera = createCamera();
     const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-
-    const loadingProgress = loadResources();
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
@@ -61,5 +59,5 @@ window.onload = () => {
         console.log(player.coord);
     }, false);
 
-    animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
+    animationLoop(field, player, camera, renderer, mainScreen);
 };
