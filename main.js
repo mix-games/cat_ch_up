@@ -797,6 +797,20 @@ function movePlayer(player, field, direction) {
                                     normal: resources.player_climb_down_texture,
                                 };
                                 break;
+                            //梯子から左上によじ登る
+                            case "move_left_up":
+                                return {
+                                    small: resources.player_small_climb_left_texture,
+                                    normal: resources.player_climb_left_texture,
+                                };
+                                break;
+                            //梯子から右上によじ登る
+                            case "move_right_up":
+                                return {
+                                    small: resources.player_small_climb_right_texture,
+                                    normal: resources.player_climb_right_texture,
+                                };
+                                break;
                         }
                         break;
                     //梯子上で移動
