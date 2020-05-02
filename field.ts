@@ -6,18 +6,18 @@
 type Collision = "ladder" | "solid" | "air";
 
 interface BlockWithoutTexture {
-    collision: Collision;
+    readonly collision: Collision;
 }
 interface Block {
-    collision: Collision;
-    texture0: Texture;
-    texture1: Texture;
+    readonly collision: Collision;
+    readonly texture0: Texture;
+    readonly texture1: Texture;
 }
 type Terrain = Block[][];
 interface Field {
-    terrain: Terrain;
-    entities: Entity[];
-    backgroundTexture: Texture;
+    readonly terrain: Terrain;
+    readonly entities: Entity[];
+    readonly backgroundTexture: Texture;
 }
 
 function createField(): Field {
