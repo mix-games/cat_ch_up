@@ -183,7 +183,6 @@ function loadResources() {
             offsetY,
             width,
             height,
-            depth: 0,
             timeline,
             animationTimestamp: new Date().getTime(),
             loop,
@@ -201,17 +200,16 @@ function loadResources() {
             lightColor.height = useShadowColor ? (image.height - height) : image.height;
             shadowColor.width = image.width;
             shadowColor.height = useShadowColor ? (image.height - height) : image.height;
-            texture.depth = Math.floor(image.height / height - (useShadowColor ? 2 : 1));
             lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, 0, image.width, height);
             lightColorScreen.drawImage(image, 0, useShadowColor ? (height * 2) : height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             lightColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; i < texture.depth; i++) {
+            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
                 lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, height * (i + 1), image.width, height);
             }
             shadowColorScreen.drawImage(image, 0, useShadowColor ? height : 0, image.width, height, 0, 0, image.width, height);
             shadowColorScreen.drawImage(image, 0, height * 2, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             shadowColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; i < texture.depth; i++) {
+            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
                 shadowColorScreen.drawImage(image, 0, height, image.width, height, 0, height * (i + 1), image.width, height);
             }
         });
@@ -260,7 +258,7 @@ function drawTexture(texture, x, y, renderer) {
         0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
         renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
         0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-        for (let i = 0; i < texture.depth; i++) {
+        for (let i = 0; (i + 1) * texture.height < texture.lightColor.height; i++) {
             renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
             (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
             texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);

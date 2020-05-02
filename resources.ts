@@ -90,7 +90,6 @@ function loadResources() {
             offsetY,
             width,
             height,
-            depth: 0,
             timeline,
             animationTimestamp: new Date().getTime(),
             loop,
@@ -108,8 +107,6 @@ function loadResources() {
             shadowColor.width = image.width;
             shadowColor.height = useShadowColor ? (image.height - height) : image.height;
 
-            texture.depth = Math.floor(image.height / height - (useShadowColor ? 2 : 1))
-
             lightColorScreen.drawImage(
                 image,
                 0, 0,
@@ -123,7 +120,7 @@ function loadResources() {
                 0, height,
                 image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             lightColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; i < texture.depth; i++) {
+            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
                 lightColorScreen.drawImage(
                     image,
                     0, 0,
@@ -144,7 +141,7 @@ function loadResources() {
                 0, height,
                 image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
             shadowColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; i < texture.depth; i++) {
+            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
                 shadowColorScreen.drawImage(
                     image,
                     0, height,
@@ -160,32 +157,31 @@ function loadResources() {
 type Resources = ReturnType<typeof loadResources>;
 
 interface EmptyTexture {
-    type: "empty";
+    readonly type: "empty";
 }
 interface RectTexture {
-    type: "rect";
-    color: string;
-    width: number;
-    height: number;
-    offsetX: number;
-    offsetY: number;
+    readonly type: "rect";
+    readonly color: string;
+    readonly width: number;
+    readonly height: number;
+    readonly offsetX: number;
+    readonly offsetY: number;
 }
 interface ImageTexture {
-    type: "image";
+    readonly type: "image";
 
-    lightColor: HTMLCanvasElement;
-    shadowColor: HTMLCanvasElement;
+    readonly lightColor: HTMLCanvasElement;
+    readonly shadowColor: HTMLCanvasElement;
 
-    offsetX: number;
-    offsetY: number;
-    width: number;
-    height: number;
-    depth: number;
-    timeline: number[];
-    animationTimestamp: number;
-    loop: boolean;
-    depthOffset: number;
-    animationEndCallback: () => void;
+    readonly offsetX: number;
+    readonly offsetY: number;
+    readonly width: number;
+    readonly height: number;
+    readonly timeline: readonly number[];
+    readonly animationTimestamp: number;
+    readonly loop: boolean;
+    readonly depthOffset: number;
+    readonly animationEndCallback: () => void;
 }
 
 type Texture = EmptyTexture | RectTexture | ImageTexture;
@@ -260,7 +256,7 @@ function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer):
             Renderer.marginTop + y - texture.offsetY,
             texture.width, texture.height);
         
-        for(let i = 0; i < texture.depth; i++) {
+        for(let i = 0; (i + 1) * texture.height < texture.lightColor.height; i++) {
             renderer.lightLayers[i + texture.depthOffset].drawImage(
                 texture.lightColor,
                 texture.width * frame, // アニメーションによる横位置

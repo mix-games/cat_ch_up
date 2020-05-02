@@ -1,8 +1,8 @@
 interface Renderer {
     readonly lightColor: CanvasRenderingContext2D;
     readonly shadowColor: CanvasRenderingContext2D;
-    readonly lightLayers: CanvasRenderingContext2D[];
-    readonly shadowLayers: CanvasRenderingContext2D[];
+    readonly lightLayers: readonly CanvasRenderingContext2D[];
+    readonly shadowLayers: readonly CanvasRenderingContext2D[];
     readonly compositScreen: CanvasRenderingContext2D;
 
     readonly width: number,
