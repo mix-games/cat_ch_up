@@ -138,6 +138,10 @@ function isStable(player: Player): player is Player & { state: "stand" | "ladder
     return player.state === "stand" || player.state === "ladder";
 }
 
+function selectTexture(textureSet: {small: Texture, normal: Texture}, smallCount:number){
+    return textureSet[0 < smallCount ? "small" : "normal"];
+}
+
 // プレイヤーを落とす処理
 function dropPlayer(player: Player, field: Field) {
     if (isStable(player)) {
@@ -149,7 +153,7 @@ function dropPlayer(player: Player, field: Field) {
             || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
         const textureSet = getDropTexture(result.state, player.facingDirection);
         player.texture = cloneAndReplayTexture(
-            textureSet[0 < player.smallCount ? "small" : "normal"],
+            selectTexture(textureSet, player.smallCount),
             () => dropPlayer(player, field));
         player.coord = result.coord;
         player.state = result.state;
@@ -204,7 +208,7 @@ function dropPlayer(player: Player, field: Field) {
 //プレイヤーのstateを見てテクスチャを更新する。
 function updatePlayersTexture(player: Player & { state: "stand" | "ladder"; }) {
     const textureSet = getStateTexture(player.state, player.facingDirection);
-    player.texture = textureSet[0 < player.smallCount ? "small" : "normal"];
+    player.texture = selectTexture(textureSet, player.smallCount);
 
     function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
         switch (state) {
@@ -244,7 +248,7 @@ function movePlayer(player: Player, field: Field, direction: Direction) {
 
     const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
     player.texture = cloneAndReplayTexture(
-        textureSet[0 < player.smallCount ? "small" : "normal"],
+        selectTexture(textureSet, player.smallCount),
         () => dropPlayer(player, field));
     player.coord = result.coord;
     player.state = result.state;

@@ -547,6 +547,9 @@ function shrinkPlayer(player) {
 function isStable(player) {
     return player.state === "stand" || player.state === "ladder";
 }
+function selectTexture(textureSet, smallCount) {
+    return textureSet[0 < smallCount ? "small" : "normal"];
+}
 // プレイヤーを落とす処理
 function dropPlayer(player, field) {
     if (isStable(player)) {
@@ -557,7 +560,7 @@ function dropPlayer(player, field) {
         const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
             || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
         const textureSet = getDropTexture(result.state, player.facingDirection);
-        player.texture = cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => dropPlayer(player, field));
+        player.texture = cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => dropPlayer(player, field));
         player.coord = result.coord;
         player.state = result.state;
         //moveDirectionは更新しない（向いている方向を判別したいので）
@@ -626,7 +629,7 @@ function dropPlayer(player, field) {
 //プレイヤーのstateを見てテクスチャを更新する。
 function updatePlayersTexture(player) {
     const textureSet = getStateTexture(player.state, player.facingDirection);
-    player.texture = textureSet[0 < player.smallCount ? "small" : "normal"];
+    player.texture = selectTexture(textureSet, player.smallCount);
     function getStateTexture(state, facingDirection) {
         switch (state) {
             case "stand":
@@ -679,7 +682,7 @@ function movePlayer(player, field, direction) {
     if (result === null)
         return null;
     const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-    player.texture = cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => dropPlayer(player, field));
+    player.texture = cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => dropPlayer(player, field));
     player.coord = result.coord;
     player.state = result.state;
     //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
