@@ -1,3 +1,6 @@
+/// <reference path="./resources.ts" />
+/// <reference path="./gameobject.ts" />
+/// <reference path="./field.ts" />
 
 interface Player extends GameObject {
     state: PlayerState;
