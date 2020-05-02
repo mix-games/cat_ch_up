@@ -297,8 +297,9 @@ function controlNeko(neko, field, player) {
     // 近づいたら
     if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 2) {
         //動く
-        neko.coord = rightCoord(neko.coord);
+        return Object.assign(Object.assign({}, neko), { coord: rightCoord(neko.coord) });
     }
+    return neko;
 }
 function controlEntity(entity, field, player) {
     if (entity.type === "neko") {
@@ -542,9 +543,8 @@ function checkDown(coord, terrain, isSmall) {
 }
 function shrinkPlayer(player) {
     if (!isStable(player))
-        return;
-    player.smallCount = 5;
-    updatePlayersTexture(player);
+        return player;
+    return updatePlayersTexture(Object.assign(Object.assign({}, player), { smallCount: 5 }));
 }
 function isStable(player) {
     return player.state === "stand" || player.state === "ladder";
@@ -555,17 +555,17 @@ function selectTexture(textureSet, smallCount) {
 // プレイヤーを落とす処理
 function dropPlayer(player, field) {
     if (isStable(player)) {
-        updatePlayersTexture(player);
+        return updatePlayersTexture(player);
     }
     else {
         //宙に浮いてたら自動で落ちる
-        const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
-            || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
-        const textureSet = getDropTexture(result.state, player.facingDirection);
-        player.texture = cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => dropPlayer(player, field));
-        player.coord = result.coord;
-        player.state = result.state;
-        //moveDirectionは更新しない（向いている方向を判別したいので）
+        const result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
+        if (result !== null) {
+            const textureSet = getDropTexture(result.state, player.facingDirection);
+            return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => dropPlayer(player, field)), coord: result.coord, state: result.state });
+        }
+        //謎
+        return player;
     }
     function getDropTexture(newState, facingDirection) {
         switch (newState) {
@@ -631,7 +631,7 @@ function dropPlayer(player, field) {
 //プレイヤーのstateを見てテクスチャを更新する。
 function updatePlayersTexture(player) {
     const textureSet = getStateTexture(player.state, player.facingDirection);
-    player.texture = selectTexture(textureSet, player.smallCount);
+    return Object.assign(Object.assign({}, player), { texture: textureSet[0 < player.smallCount ? "small" : "normal"] });
     function getStateTexture(state, facingDirection) {
         switch (state) {
             case "stand":
@@ -665,7 +665,7 @@ function updatePlayersTexture(player) {
 //プレイヤーを直接動かす。
 function movePlayer(player, field, direction) {
     if (player.state === "drop")
-        return;
+        return player;
     let result = null;
     switch (direction) {
         case "left":
@@ -682,15 +682,11 @@ function movePlayer(player, field, direction) {
             break;
     }
     if (result === null)
-        return null;
+        return player;
     const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-    player.texture = cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => dropPlayer(player, field));
-    player.coord = result.coord;
-    player.state = result.state;
-    //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
-    player.facingDirection = direction === "left" ? "facing_left" : "facing_right";
-    if (0 < player.smallCount)
-        player.smallCount--;
+    return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => dropPlayer(player, field)), coord: result.coord, state: result.state, 
+        //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
+        facingDirection: direction === "left" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
     turn(field, player);
     function getTransitionTexture(oldState, newState, moveDirection, facingDirection) {
         switch (oldState) {
@@ -934,19 +930,22 @@ var Camera;
     }
     Camera.update = update;
 })(Camera || (Camera = {}));
-function animationLoop(field, player, camera, renderer, mainScreen) {
+let field = createField();
+let player = createPlayer();
+let camera = Camera.create();
+function animationLoop(renderer, mainScreen, resources) {
     if (resources._progress.isFinished()) {
-        const newCamera = Camera.update(camera, player, field, renderer);
+        camera = Camera.update(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
         Renderer.composit(renderer, mainScreen);
-        requestAnimationFrame(() => animationLoop(field, player, newCamera, renderer, mainScreen));
+        requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
     else {
         console.log("loading " + (resources._progress.rate() * 100) + "%");
         mainScreen.fillText("loading", 0, 50);
-        requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
+        requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
 }
 window.onload = () => {
@@ -956,9 +955,6 @@ window.onload = () => {
     const mainScreen = canvas.getContext("2d");
     if (mainScreen === null)
         throw new Error("context2d not found");
-    const field = createField();
-    const player = createPlayer();
-    const camera = Camera.create();
     const renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
@@ -972,24 +968,24 @@ window.onload = () => {
         if (event.repeat)
             return;
         if (event.code === "KeyA")
-            player.coord = leftCoord(player.coord);
+            player = Object.assign(Object.assign({}, player), { coord: leftCoord(player.coord) });
         if (event.code === "KeyD")
-            player.coord = rightCoord(player.coord);
+            player = Object.assign(Object.assign({}, player), { coord: rightCoord(player.coord) });
         if (event.code === "KeyW")
-            player.coord = upCoord(player.coord);
+            player = Object.assign(Object.assign({}, player), { coord: upCoord(player.coord) });
         if (event.code === "KeyS")
-            player.coord = downCoord(player.coord);
+            player = Object.assign(Object.assign({}, player), { coord: downCoord(player.coord) });
         if (event.code === "KeyZ")
             shrinkPlayer(player);
         if (event.code === "ArrowLeft")
-            movePlayer(player, field, "left");
+            player = movePlayer(player, field, "left");
         if (event.code === "ArrowRight")
-            movePlayer(player, field, "right");
+            player = movePlayer(player, field, "right");
         if (event.code === "ArrowUp")
-            movePlayer(player, field, "up");
+            player = movePlayer(player, field, "up");
         if (event.code === "ArrowDown")
-            movePlayer(player, field, "down");
+            player = movePlayer(player, field, "down");
         console.log(player.coord);
     }, false);
-    animationLoop(field, player, camera, renderer, mainScreen);
+    animationLoop(renderer, mainScreen, resources);
 };

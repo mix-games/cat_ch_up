@@ -1,8 +1,10 @@
+let field: Field = createField();
+let player: Player = createPlayer();
+let camera: Camera = Camera.create();
 
-
-function animationLoop(field: Field, player: Player, camera: Camera, renderer: Renderer, mainScreen: CanvasRenderingContext2D): void {
+function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
     if (resources._progress.isFinished()) {
-        const newCamera = Camera.update(camera, player, field, renderer);
+        camera = Camera.update(camera, player, field, renderer);
 
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
@@ -10,12 +12,12 @@ function animationLoop(field: Field, player: Player, camera: Camera, renderer: R
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
 
         Renderer.composit(renderer, mainScreen);
-        requestAnimationFrame(() => animationLoop(field, player, newCamera, renderer, mainScreen));
+        requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
     else {
         console.log("loading " + (resources._progress.rate() * 100) + "%");
         mainScreen.fillText("loading", 0, 50);
-        requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen));
+        requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
 }
 
@@ -27,10 +29,7 @@ window.onload = () => {
     const mainScreen = canvas.getContext("2d");
     if (mainScreen === null)
         throw new Error("context2d not found");
-    
-    const field: Field = createField();
-    const player: Player = createPlayer();
-    const camera: Camera = Camera.create();
+
     const renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
     /*
@@ -45,19 +44,19 @@ window.onload = () => {
         // リピート（長押し時に繰り返し発火する）は無視
         if (event.repeat) return;
 
-        if (event.code === "KeyA") player.coord = leftCoord(player.coord);
-        if (event.code === "KeyD") player.coord = rightCoord(player.coord);
-        if (event.code === "KeyW") player.coord = upCoord(player.coord);
-        if (event.code === "KeyS") player.coord = downCoord(player.coord);
+        if (event.code === "KeyA") player = { ...player, coord: leftCoord(player.coord) };
+        if (event.code === "KeyD") player = { ...player, coord: rightCoord(player.coord) };
+        if (event.code === "KeyW") player = { ...player, coord: upCoord(player.coord) };
+        if (event.code === "KeyS") player = { ...player, coord: downCoord(player.coord) };
         if (event.code === "KeyZ") shrinkPlayer(player);
 
-        if (event.code === "ArrowLeft") movePlayer(player, field, "left");
-        if (event.code === "ArrowRight") movePlayer(player, field, "right");
-        if (event.code === "ArrowUp") movePlayer(player, field, "up");
-        if (event.code === "ArrowDown") movePlayer(player, field, "down");
+        if (event.code === "ArrowLeft") player = movePlayer(player, field, "left");
+        if (event.code === "ArrowRight") player = movePlayer(player, field, "right");
+        if (event.code === "ArrowUp") player = movePlayer(player, field, "up");
+        if (event.code === "ArrowDown") player = movePlayer(player, field, "down");
 
         console.log(player.coord);
     }, false);
 
-    animationLoop(field, player, camera, renderer, mainScreen);
+    animationLoop(renderer, mainScreen, resources);
 };

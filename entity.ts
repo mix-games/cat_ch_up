@@ -25,12 +25,16 @@ function canNekoStand(coord: Coord, terrain: Terrain): boolean {
     return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid"
 }
 
-function controlNeko(neko: Neko, field: Field, player: Player): void {
+function controlNeko(neko: Neko, field: Field, player: Player): Neko {
     // 近づいたら
     if(Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 2) {
         //動く
-        neko.coord = rightCoord(neko.coord);
+        return {
+            ...neko,
+            coord: rightCoord(neko.coord),
+        }
     }
+    return neko;
 }
 
 function controlEntity(entity: Entity, field:Field, player: Player) {

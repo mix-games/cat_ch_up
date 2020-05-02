@@ -3,8 +3,8 @@
 /// <reference path="./camera.ts" />
 
 interface GameObject {
-    texture: Texture;
-    coord: Coord;
+    readonly texture: Texture;
+    readonly coord: Coord;
 }
 
 function drawGameObject(gameObject: GameObject, camera: Camera, renderer: Renderer) {
