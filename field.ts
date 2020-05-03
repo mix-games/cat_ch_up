@@ -13,10 +13,10 @@ interface Block {
     readonly texture0: Texture;
     readonly texture1: Texture;
 }
-type Terrain = Block[][];
+type Terrain = readonly (readonly Block[])[];
 interface Field {
     readonly terrain: Terrain;
-    readonly entities: Entity[];
+    readonly entities: readonly Entity[];
     readonly backgroundTexture: Texture;
 }
 
@@ -36,18 +36,20 @@ function createField(): Field {
     }
 
     let field: Field = {
-        terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow)),
+        terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow, [])),
         entities: [createNeko()],
         backgroundTexture: resources.background_texture
     };
-    for (let i = 0; i < 10; i++) generateRow(field);
+    annexRow(field.terrain, 10);
     return field;
 }
 
 const fieldWidth = 10;
 
 //Y座標は下から数える
-function generateRow(field: Field): void {
+function annexRow(terrain: Terrain, targetHeight: number): Terrain {
+    if(targetHeight <= terrain.length) return terrain;
+
     const protoRow: BlockWithoutTexture[] = [];
         for (let x = 0; x < fieldWidth; x++) {
             if (Math.random() < 0.7)
@@ -57,9 +59,9 @@ function generateRow(field: Field): void {
             else
                 protoRow[x] = { collision: "ladder" };
     }
-    field.terrain.push(assignTexture(protoRow));
+    return annexRow([...terrain, assignTexture(protoRow, terrain)], targetHeight);
 }
-function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
+function assignTexture(protoRow: BlockWithoutTexture[], terrain: Terrain): Block[] {
     return protoRow.map((bwt: BlockWithoutTexture): Block => {
         switch(bwt.collision) {
             case "ladder":
@@ -155,16 +157,11 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
     field.entities.forEach(e => drawGameObject(e, camera, renderer));
 }
 
-//プレイヤーの行動後に呼ばれる
+// プレイヤー行動後の敵などの処理はここ
 function turn(field: Field, player: Player): Field {
-    //敵などのターン処理はここ
-
-    field.entities.forEach(e => controlEntity(e, field, player))
-
-    while (
-        field.terrain.length - 5 < player.coord.y ||
-        field.terrain.length - 5 < Math.max(...field.entities.map(e => e.coord.y)))
-        generateRow(field);
-
-    return field;
+    return {
+        ...field,
+        entities: field.entities.map(e => controlEntity(e, field, player)),
+        terrain: annexRow(field.terrain, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5))),
+    };
 }

@@ -301,8 +301,10 @@ function controlNeko(neko, field, player) {
 }
 function controlEntity(entity, field, player) {
     if (entity.type === "neko") {
-        controlNeko(entity, field, player);
+        return controlNeko(entity, field, player);
     }
+    // 網羅チェック
+    return entity.type;
 }
 /// <reference path="./resources.ts" />
 /// <reference path="./coord.ts" />
@@ -323,17 +325,18 @@ function createField() {
             protoTerrain[1][x] = { collision: "air" };
     }
     let field = {
-        terrain: protoTerrain.map((protoRow) => assignTexture(protoRow)),
+        terrain: protoTerrain.map((protoRow) => assignTexture(protoRow, [])),
         entities: [createNeko()],
         backgroundTexture: resources.background_texture
     };
-    for (let i = 0; i < 10; i++)
-        generateRow(field);
+    annexRow(field.terrain, 10);
     return field;
 }
 const fieldWidth = 10;
 //Y座標は下から数える
-function generateRow(field) {
+function annexRow(terrain, targetHeight) {
+    if (targetHeight <= terrain.length)
+        return terrain;
     const protoRow = [];
     for (let x = 0; x < fieldWidth; x++) {
         if (Math.random() < 0.7)
@@ -343,9 +346,9 @@ function generateRow(field) {
         else
             protoRow[x] = { collision: "ladder" };
     }
-    field.terrain.push(assignTexture(protoRow));
+    return annexRow([...terrain, assignTexture(protoRow, terrain)], targetHeight);
 }
-function assignTexture(protoRow) {
+function assignTexture(protoRow, terrain) {
     return protoRow.map((bwt) => {
         switch (bwt.collision) {
             case "ladder":
@@ -416,14 +419,9 @@ function drawField(field, camera, renderer) {
     } //*/
     field.entities.forEach(e => drawGameObject(e, camera, renderer));
 }
-//プレイヤーの行動後に呼ばれる
+// プレイヤー行動後の敵などの処理はここ
 function turn(field, player) {
-    //敵などのターン処理はここ
-    field.entities.forEach(e => controlEntity(e, field, player));
-    while (field.terrain.length - 5 < player.coord.y ||
-        field.terrain.length - 5 < Math.max(...field.entities.map(e => e.coord.y)))
-        generateRow(field);
-    return field;
+    return Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)), terrain: annexRow(field.terrain, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5))) });
 }
 /// <reference path="./resources.ts" />
 /// <reference path="./gameobject.ts" />

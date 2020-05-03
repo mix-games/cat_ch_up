@@ -37,8 +37,10 @@ function controlNeko(neko: Neko, field: Field, player: Player): Neko {
     return neko;
 }
 
-function controlEntity(entity: Entity, field:Field, player: Player) {
+function controlEntity(entity: Entity, field:Field, player: Player): Entity {
     if (entity.type === "neko") {
-        controlNeko(entity, field, player);
+        return controlNeko(entity, field, player);
     }
+    // 網羅チェック
+    return entity.type;
 }
