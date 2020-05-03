@@ -546,17 +546,17 @@ var Player;
     function selectTexture(textureSet, smallCount) {
         return textureSet[0 < smallCount ? "small" : "normal"];
     }
-    // プレイヤーを落とす処理
-    function drop(player, field) {
+    // プレイヤーを落とす処理（※グローバル参照）
+    function drop(field) {
         if (player.state !== "drop") {
-            return updateTexture(player);
+            player = updateTexture(player);
         }
         else {
             //宙に浮いてたら自動で落ちる
             const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
                 || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
             const textureSet = getDropTexture(result.state, player.facingDirection);
-            return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state });
+            player = Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(field)), coord: result.coord, state: result.state });
         }
         function getDropTexture(newState, facingDirection) {
             switch (newState) {
@@ -656,7 +656,7 @@ var Player;
     //与えられたMoveResult | nullに従ってプレイヤーを動かす
     function move(player, result) {
         const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state, 
+        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(field)), coord: result.coord, state: result.state, 
             //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
             facingDirection: result.moveDirection === "move_left" || result.moveDirection === "move_left_up" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
         function getTransitionTexture(oldState, newState, moveDirection, facingDirection) {

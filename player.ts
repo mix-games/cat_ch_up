@@ -145,21 +145,21 @@ namespace Player {
         return textureSet[0 < smallCount ? "small" : "normal"];
     }
 
-    // プレイヤーを落とす処理
-    function drop(player: Player, field: Field): Player {
+    // プレイヤーを落とす処理（※グローバル参照）
+    function drop(field: Field) {
         if (player.state !== "drop") {
-            return updateTexture(player);
+            player = updateTexture(player);
         }
         else {
             //宙に浮いてたら自動で落ちる
             const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
                 || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
             const textureSet = getDropTexture(result.state, player.facingDirection);
-            return {
+            player = {
                 ...player,
                 texture: cloneAndReplayTexture(
                     selectTexture(textureSet, player.smallCount),
-                    () => drop(player, field)),
+                    () => drop(field)),
                 coord: result.coord,
                 state: result.state,
                 //moveDirectionは更新しない（向いている方向を判別したいので）
@@ -252,7 +252,7 @@ namespace Player {
             ...player,
             texture: cloneAndReplayTexture(
                 selectTexture(textureSet, player.smallCount),
-                () => drop(player, field)),
+                () => drop(field)),
             coord: result.coord,
             state: result.state,
             //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
