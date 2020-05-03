@@ -245,8 +245,8 @@ namespace Player {
     }
 
     //プレイヤーを直接動かす。
-    export function move(player: Player, field: Field, direction: Direction): Player {
-        if (player.state === "drop") return player;
+    export function move(player: Player, field: Field, direction: Direction): { player: Player, success: boolean; } {
+        if (player.state === "drop") return { player, success: false };
 
         let result: MoveResult = null;
         switch (direction) {
@@ -255,24 +255,25 @@ namespace Player {
             case "up": result = checkUp(player.coord, field.terrain, 0 < player.smallCount); break;
             case "down": result = checkDown(player.coord, field.terrain, 0 < player.smallCount); break;
         }
-        if (result === null) return player;
+        if (result === null) return { player, success: false };
 
         const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
 
         return {
-            ...player,
-            texture: cloneAndReplayTexture(
-                selectTexture(textureSet, player.smallCount),
-                () => drop(player, field)),
-            coord: result.coord,
-            state: result.state,
-            //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
-            facingDirection: direction === "left" ? "facing_left" : "facing_right",
+            player: {
+                ...player,
+                texture: cloneAndReplayTexture(
+                    selectTexture(textureSet, player.smallCount),
+                    () => drop(player, field)),
+                coord: result.coord,
+                state: result.state,
+                //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
+                facingDirection: direction === "left" ? "facing_left" : "facing_right",
 
-            smallCount: Math.max(0, player.smallCount - 1),
+                smallCount: Math.max(0, player.smallCount - 1),
+            },
+            success: true,
         };
-
-        turn(field, player);
 
         function getTransitionTexture(oldState: "stand" | "ladder", newState: PlayerState, moveDirection: MoveDirection, facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
             switch (oldState) {

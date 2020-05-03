@@ -664,7 +664,7 @@ var Player;
     //プレイヤーを直接動かす。
     function move(player, field, direction) {
         if (player.state === "drop")
-            return player;
+            return { player, success: false };
         let result = null;
         switch (direction) {
             case "left":
@@ -681,12 +681,14 @@ var Player;
                 break;
         }
         if (result === null)
-            return player;
+            return { player, success: false };
         const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state, 
-            //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
-            facingDirection: direction === "left" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
-        turn(field, player);
+        return {
+            player: Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state, 
+                //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
+                facingDirection: direction === "left" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) }),
+            success: true,
+        };
         function getTransitionTexture(oldState, newState, moveDirection, facingDirection) {
             switch (oldState) {
                 case "stand":
@@ -978,14 +980,34 @@ window.onload = () => {
             player = Object.assign(Object.assign({}, player), { coord: downCoord(player.coord) });
         if (event.code === "KeyZ")
             Player.shrink(player);
-        if (event.code === "ArrowLeft")
-            player = Player.move(player, field, "left");
-        if (event.code === "ArrowRight")
-            player = Player.move(player, field, "right");
-        if (event.code === "ArrowUp")
-            player = Player.move(player, field, "up");
-        if (event.code === "ArrowDown")
-            player = Player.move(player, field, "down");
+        if (event.code === "ArrowLeft") {
+            const result = Player.move(player, field, "left");
+            if (result.success) {
+                player = result.player;
+                turn(field, player);
+            }
+        }
+        if (event.code === "ArrowRight") {
+            const result = Player.move(player, field, "right");
+            if (result.success) {
+                player = result.player;
+                turn(field, player);
+            }
+        }
+        if (event.code === "ArrowUp") {
+            const result = Player.move(player, field, "up");
+            if (result.success) {
+                player = result.player;
+                turn(field, player);
+            }
+        }
+        if (event.code === "ArrowDown") {
+            const result = Player.move(player, field, "down");
+            if (result.success) {
+                player = result.player;
+                turn(field, player);
+            }
+        }
         console.log(player.coord);
     }, false);
     animationLoop(renderer, mainScreen, resources);
