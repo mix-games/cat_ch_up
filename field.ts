@@ -34,14 +34,12 @@ function createField(): Field {
         else
             protoTerrain[1][x] = { collision: "air" };
     }
-
-    let field: Field = {
-        terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow, [])),
+    
+    return {
+        terrain: annexRow(protoTerrain.map((protoRow)=>assignTexture(protoRow, [])), 10),
         entities: [createNeko()],
         backgroundTexture: resources.background_texture
     };
-    annexRow(field.terrain, 10);
-    return field;
 }
 
 const fieldWidth = 10;
