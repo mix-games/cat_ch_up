@@ -2,11 +2,17 @@
 /// <reference path="./gameobject.ts" />
 /// <reference path="./field.ts" />
 
-interface Player extends GameObject {
-    readonly state: PlayerState;
+interface StablePlayer extends GameObject {
+    readonly state: "stand" | "ladder";
     readonly facingDirection: FacingDirection;
     readonly smallCount: number;
 }
+interface DroppingPlayer extends GameObject {
+    readonly state: "drop";
+    readonly facingDirection: FacingDirection;
+    readonly smallCount: number;
+}
+type Player = StablePlayer | DroppingPlayer;
 
 type PlayerState = "stand" | "ladder" | "drop";
 type FacingDirection = "facing_left" | "facing_right";
@@ -128,19 +134,12 @@ namespace Player {
         return null;
     }
 
-    export function shrink(player: Player): Player {
-        if (!isStable(player)) return player;
-
+    export function shrink(player: StablePlayer): Player {
         return updateTexture({
             ...player,
             smallCount: 5,
         });
     }
-
-    function isStable(player: Player): player is Player & { state: "stand" | "ladder"; } {
-        return player.state === "stand" || player.state === "ladder";
-    }
-
 
     function selectTexture(textureSet: { normal: Texture, small: Texture; }, smallCount: number): Texture {
         return textureSet[0 < smallCount ? "small" : "normal"];
@@ -148,7 +147,7 @@ namespace Player {
 
     // プレイヤーを落とす処理
     function drop(player: Player, field: Field): Player {
-        if (isStable(player)) {
+        if (player.state !== "drop") {
             return updateTexture(player);
         }
         else {
@@ -396,26 +395,22 @@ namespace Player {
         }
     }
     
-    export function moveLeft(player: Player, field: Field): [Player, Field] {
-        if (!isStable(player)) return [ player, field ];
+    export function moveLeft(player: StablePlayer, field: Field): [Player, Field] {
         let result = checkLeft(player.coord, field.terrain, 0 < player.smallCount); 
         return result === null ? [player, field] : [move(player, result), turn(field, player)];
     }
     
-    export function moveRight(player: Player, field: Field): [Player, Field]{
-        if (!isStable(player)) return [ player, field ];
+    export function moveRight(player: StablePlayer, field: Field): [Player, Field]{
         let result = checkRight(player.coord, field.terrain, 0 < player.smallCount); 
         return result === null ? [ player, field ] : [ move(player, result), turn(field, player)];
     }
     
-    export function moveUp(player: Player, field: Field): [Player, Field]{
-        if (!isStable(player)) return [ player, field ];
+    export function moveUp(player: StablePlayer, field: Field): [Player, Field]{
         let result = checkUp(player.coord, field.terrain, 0 < player.smallCount); 
         return result === null ? [ player, field ] : [move(player, result), turn(field, player)];
     }
     
-    export function moveDown(player: Player, field: Field): [Player, Field]{
-        if (!isStable(player)) return [ player, field ];
+    export function moveDown(player: StablePlayer, field: Field): [Player, Field]{
         let result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
         return result === null ? [ player, field ] : [ move(player, result), turn(field, player)];
     }

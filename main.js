@@ -542,20 +542,15 @@ var Player;
         return null;
     }
     function shrink(player) {
-        if (!isStable(player))
-            return player;
         return updateTexture(Object.assign(Object.assign({}, player), { smallCount: 5 }));
     }
     Player.shrink = shrink;
-    function isStable(player) {
-        return player.state === "stand" || player.state === "ladder";
-    }
     function selectTexture(textureSet, smallCount) {
         return textureSet[0 < smallCount ? "small" : "normal"];
     }
     // プレイヤーを落とす処理
     function drop(player, field) {
-        if (isStable(player)) {
+        if (player.state !== "drop") {
             return updateTexture(player);
         }
         else {
@@ -858,29 +853,21 @@ var Player;
         }
     }
     function moveLeft(player, field) {
-        if (!isStable(player))
-            return [player, field];
         let result = checkLeft(player.coord, field.terrain, 0 < player.smallCount);
         return result === null ? [player, field] : [move(player, result), turn(field, player)];
     }
     Player.moveLeft = moveLeft;
     function moveRight(player, field) {
-        if (!isStable(player))
-            return [player, field];
         let result = checkRight(player.coord, field.terrain, 0 < player.smallCount);
         return result === null ? [player, field] : [move(player, result), turn(field, player)];
     }
     Player.moveRight = moveRight;
     function moveUp(player, field) {
-        if (!isStable(player))
-            return [player, field];
         let result = checkUp(player.coord, field.terrain, 0 < player.smallCount);
         return result === null ? [player, field] : [move(player, result), turn(field, player)];
     }
     Player.moveUp = moveUp;
     function moveDown(player, field) {
-        if (!isStable(player))
-            return [player, field];
         let result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
         return result === null ? [player, field] : [move(player, result), turn(field, player)];
     }
@@ -982,16 +969,35 @@ window.onload = () => {
             player = Object.assign(Object.assign({}, player), { coord: upCoord(player.coord) });
         if (event.code === "KeyS")
             player = Object.assign(Object.assign({}, player), { coord: downCoord(player.coord) });
-        if (event.code === "KeyZ")
-            Player.shrink(player);
-        if (event.code === "ArrowLeft")
-            [player, field] = Player.moveLeft(player, field);
-        if (event.code === "ArrowRight")
-            [player, field] = Player.moveRight(player, field);
-        if (event.code === "ArrowUp")
-            [player, field] = Player.moveUp(player, field);
-        if (event.code === "ArrowDown")
-            [player, field] = Player.moveDown(player, field);
+        if (player.state !== "drop") {
+            switch (event.code) {
+                case "KeyZ":
+                    {
+                        player = Player.shrink(player);
+                    }
+                    break;
+                case "ArrowLeft":
+                    {
+                        [player, field] = Player.moveLeft(player, field);
+                    }
+                    break;
+                case "ArrowRight":
+                    {
+                        [player, field] = Player.moveRight(player, field);
+                    }
+                    break;
+                case "ArrowUp":
+                    {
+                        [player, field] = Player.moveUp(player, field);
+                    }
+                    break;
+                case "ArrowDown":
+                    {
+                        [player, field] = Player.moveDown(player, field);
+                    }
+                    break;
+            }
+        }
         console.log(player.coord);
     }, false);
     animationLoop(renderer, mainScreen, resources);

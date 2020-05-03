@@ -48,13 +48,26 @@ window.onload = () => {
         if (event.code === "KeyD") player = { ...player, coord: rightCoord(player.coord) };
         if (event.code === "KeyW") player = { ...player, coord: upCoord(player.coord) };
         if (event.code === "KeyS") player = { ...player, coord: downCoord(player.coord) };
-        if (event.code === "KeyZ") Player.shrink(player);
 
-        if (event.code === "ArrowLeft") [player, field] =  Player.moveLeft(player, field);
-        if (event.code === "ArrowRight") [player, field] =  Player.moveRight(player, field);
-        if (event.code === "ArrowUp") [player, field] =  Player.moveUp(player, field);
-        if (event.code === "ArrowDown") [player, field] =  Player.moveDown(player, field);
-
+        if (player.state !== "drop") {
+            switch (event.code) {
+                case "KeyZ": {
+                    player = Player.shrink(player);
+                } break;
+                case "ArrowLeft": {
+                    [player, field] = Player.moveLeft(player, field);
+                } break;
+                case "ArrowRight": {
+                    [player, field] = Player.moveRight(player, field);
+                } break;
+                case "ArrowUp": {
+                    [player, field] = Player.moveUp(player, field);
+                } break;
+                case "ArrowDown": {
+                    [player, field] = Player.moveDown(player, field);
+                } break;
+            }
+        }
         console.log(player.coord);
     }, false);
 
