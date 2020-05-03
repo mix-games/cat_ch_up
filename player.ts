@@ -141,6 +141,11 @@ namespace Player {
         return player.state === "stand" || player.state === "ladder";
     }
 
+
+    function selectTexture(textureSet: { normal: Texture, small: Texture; }, smallCount: number): Texture {
+        return textureSet[0 < smallCount ? "small" : "normal"];
+    }
+
     // プレイヤーを落とす処理
     function drop(player: Player, field: Field): Player {
         if (isStable(player)) {
@@ -154,7 +159,7 @@ namespace Player {
             return {
                 ...player,
                 texture: cloneAndReplayTexture(
-                    textureSet[0 < player.smallCount ? "small" : "normal"],
+                    selectTexture(textureSet, player.smallCount),
                     () => drop(player, field)),
                 coord: result.coord,
                 state: result.state,
@@ -213,7 +218,7 @@ namespace Player {
 
         return {
             ...player,
-            texture: textureSet[0 < player.smallCount ? "small" : "normal"],
+            texture: selectTexture(textureSet, player.smallCount),
         };
 
         function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
@@ -257,7 +262,7 @@ namespace Player {
         return {
             ...player,
             texture: cloneAndReplayTexture(
-                textureSet[0 < player.smallCount ? "small" : "normal"],
+                selectTexture(textureSet, player.smallCount),
                 () => drop(player, field)),
             coord: result.coord,
             state: result.state,

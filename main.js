@@ -551,6 +551,9 @@ var Player;
     function isStable(player) {
         return player.state === "stand" || player.state === "ladder";
     }
+    function selectTexture(textureSet, smallCount) {
+        return textureSet[0 < smallCount ? "small" : "normal"];
+    }
     // プレイヤーを落とす処理
     function drop(player, field) {
         if (isStable(player)) {
@@ -561,7 +564,7 @@ var Player;
             const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
                 || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
             const textureSet = getDropTexture(result.state, player.facingDirection);
-            return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => drop(player, field)), coord: result.coord, state: result.state });
+            return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state });
         }
         function getDropTexture(newState, facingDirection) {
             switch (newState) {
@@ -627,7 +630,7 @@ var Player;
     //プレイヤーのstateを見てテクスチャを更新する。
     function updateTexture(player) {
         const textureSet = getStateTexture(player.state, player.facingDirection);
-        return Object.assign(Object.assign({}, player), { texture: textureSet[0 < player.smallCount ? "small" : "normal"] });
+        return Object.assign(Object.assign({}, player), { texture: selectTexture(textureSet, player.smallCount) });
         function getStateTexture(state, facingDirection) {
             switch (state) {
                 case "stand":
@@ -680,7 +683,7 @@ var Player;
         if (result === null)
             return player;
         const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(textureSet[0 < player.smallCount ? "small" : "normal"], () => drop(player, field)), coord: result.coord, state: result.state, 
+        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state, 
             //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
             facingDirection: direction === "left" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
         turn(field, player);
