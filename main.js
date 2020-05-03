@@ -423,6 +423,7 @@ function turn(field, player) {
     while (field.terrain.length - 5 < player.coord.y ||
         field.terrain.length - 5 < Math.max(...field.entities.map(e => e.coord.y)))
         generateRow(field);
+    return field;
 }
 /// <reference path="./resources.ts" />
 /// <reference path="./gameobject.ts" />
@@ -661,34 +662,12 @@ var Player;
             }
         }
     }
-    //プレイヤーを直接動かす。
-    function move(player, field, direction) {
-        if (player.state === "drop")
-            return { player, success: false };
-        let result = null;
-        switch (direction) {
-            case "left":
-                result = checkLeft(player.coord, field.terrain, 0 < player.smallCount);
-                break;
-            case "right":
-                result = checkRight(player.coord, field.terrain, 0 < player.smallCount);
-                break;
-            case "up":
-                result = checkUp(player.coord, field.terrain, 0 < player.smallCount);
-                break;
-            case "down":
-                result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
-                break;
-        }
-        if (result === null)
-            return { player, success: false };
+    //与えられたMoveResult | nullに従ってプレイヤーを動かす
+    function move(player, result) {
         const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
-        return {
-            player: Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state, 
-                //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
-                facingDirection: direction === "left" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) }),
-            success: true,
-        };
+        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount), () => drop(player, field)), coord: result.coord, state: result.state, 
+            //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
+            facingDirection: result.moveDirection === "move_left" || result.moveDirection === "move_left_up" ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
         function getTransitionTexture(oldState, newState, moveDirection, facingDirection) {
             switch (oldState) {
                 case "stand":
@@ -880,7 +859,34 @@ var Player;
             throw new Error("unecpected texture requested");
         }
     }
-    Player.move = move;
+    function moveLeft(player, field) {
+        if (!isStable(player))
+            return [player, field];
+        let result = checkLeft(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveLeft = moveLeft;
+    function moveRight(player, field) {
+        if (!isStable(player))
+            return [player, field];
+        let result = checkRight(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveRight = moveRight;
+    function moveUp(player, field) {
+        if (!isStable(player))
+            return [player, field];
+        let result = checkUp(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveUp = moveUp;
+    function moveDown(player, field) {
+        if (!isStable(player))
+            return [player, field];
+        let result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveDown = moveDown;
 })(Player || (Player = {}));
 /// <reference path="./coord.ts" />
 /// <reference path="./player.ts" />
@@ -980,34 +986,14 @@ window.onload = () => {
             player = Object.assign(Object.assign({}, player), { coord: downCoord(player.coord) });
         if (event.code === "KeyZ")
             Player.shrink(player);
-        if (event.code === "ArrowLeft") {
-            const result = Player.move(player, field, "left");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        }
-        if (event.code === "ArrowRight") {
-            const result = Player.move(player, field, "right");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        }
-        if (event.code === "ArrowUp") {
-            const result = Player.move(player, field, "up");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        }
-        if (event.code === "ArrowDown") {
-            const result = Player.move(player, field, "down");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        }
+        if (event.code === "ArrowLeft")
+            [player, field] = Player.moveLeft(player, field);
+        if (event.code === "ArrowRight")
+            [player, field] = Player.moveRight(player, field);
+        if (event.code === "ArrowUp")
+            [player, field] = Player.moveUp(player, field);
+        if (event.code === "ArrowDown")
+            [player, field] = Player.moveDown(player, field);
         console.log(player.coord);
     }, false);
     animationLoop(renderer, mainScreen, resources);

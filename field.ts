@@ -156,7 +156,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
 }
 
 //プレイヤーの行動後に呼ばれる
-function turn(field: Field, player: Player) {
+function turn(field: Field, player: Player): Field {
     //敵などのターン処理はここ
 
     field.entities.forEach(e => controlEntity(e, field, player))
@@ -165,4 +165,6 @@ function turn(field: Field, player: Player) {
         field.terrain.length - 5 < player.coord.y ||
         field.terrain.length - 5 < Math.max(...field.entities.map(e => e.coord.y)))
         generateRow(field);
+
+    return field;
 }

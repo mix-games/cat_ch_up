@@ -63,9 +63,9 @@ namespace Player {
 
     type Direction = "left" | "right" | "up" | "down";
     type MoveDirection = "move_left" | "move_right" | "move_up" | "move_down" | "move_left_up" | "move_right_up";
-    type MoveResult = null | { coord: Coord; state: PlayerState, moveDirection: MoveDirection; };
+    type MoveResult = { coord: Coord; state: PlayerState, moveDirection: MoveDirection; };
 
-    function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
+    function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 左が空いているならそこ
         const leftState = checkState(leftCoord(coord), terrain, isSmall);
         if (leftState !== null) {
@@ -85,7 +85,7 @@ namespace Player {
             };
         return null;
     }
-    function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
+    function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 右が空いているならそこ
         const rightState = checkState(rightCoord(coord), terrain, isSmall);
         if (rightState !== null) {
@@ -105,7 +105,7 @@ namespace Player {
             };
         return null;
     }
-    function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
+    function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 上半身が梯子で、かつ真上に留まれるなら登る？
         if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder" &&
             canStand(upCoord(coord), terrain, isSmall))
@@ -116,7 +116,7 @@ namespace Player {
             };
         return null;
     }
-    function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult {
+    function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 真下が空いてるなら（飛び）下りる？
         const downstate = checkState(downCoord(coord), terrain, isSmall);
         if (downstate !== null)
@@ -244,36 +244,23 @@ namespace Player {
         }
     }
 
-    //プレイヤーを直接動かす。
-    export function move(player: Player, field: Field, direction: Direction): { player: Player, success: boolean; } {
-        if (player.state === "drop") return { player, success: false };
-
-        let result: MoveResult = null;
-        switch (direction) {
-            case "left": result = checkLeft(player.coord, field.terrain, 0 < player.smallCount); break;
-            case "right": result = checkRight(player.coord, field.terrain, 0 < player.smallCount); break;
-            case "up": result = checkUp(player.coord, field.terrain, 0 < player.smallCount); break;
-            case "down": result = checkDown(player.coord, field.terrain, 0 < player.smallCount); break;
-        }
-        if (result === null) return { player, success: false };
+    //与えられたMoveResult | nullに従ってプレイヤーを動かす
+    function move(player: Player & {state: "stand" | "ladder"}, result: MoveResult): Player {
 
         const textureSet = getTransitionTexture(player.state, result.state, result.moveDirection, player.facingDirection);
 
         return {
-            player: {
-                ...player,
-                texture: cloneAndReplayTexture(
-                    selectTexture(textureSet, player.smallCount),
-                    () => drop(player, field)),
-                coord: result.coord,
-                state: result.state,
-                //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
-                facingDirection: direction === "left" ? "facing_left" : "facing_right",
+            ...player,
+            texture: cloneAndReplayTexture(
+                selectTexture(textureSet, player.smallCount),
+                () => drop(player, field)),
+            coord: result.coord,
+            state: result.state,
+            //意図的に左を向いた時のみ左を向く。（梯子中など）無標は右
+            facingDirection:result.moveDirection === "move_left" || result.moveDirection === "move_left_up" ? "facing_left" : "facing_right",
 
-                smallCount: Math.max(0, player.smallCount - 1),
-            },
-            success: true,
-        };
+            smallCount: Math.max(0, player.smallCount - 1),
+        }
 
         function getTransitionTexture(oldState: "stand" | "ladder", newState: PlayerState, moveDirection: MoveDirection, facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
             switch (oldState) {
@@ -407,5 +394,29 @@ namespace Player {
             }
             throw new Error("unecpected texture requested");
         }
+    }
+    
+    export function moveLeft(player: Player, field: Field): [Player, Field] {
+        if (!isStable(player)) return [ player, field ];
+        let result = checkLeft(player.coord, field.terrain, 0 < player.smallCount); 
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    
+    export function moveRight(player: Player, field: Field): [Player, Field]{
+        if (!isStable(player)) return [ player, field ];
+        let result = checkRight(player.coord, field.terrain, 0 < player.smallCount); 
+        return result === null ? [ player, field ] : [ move(player, result), turn(field, player)];
+    }
+    
+    export function moveUp(player: Player, field: Field): [Player, Field]{
+        if (!isStable(player)) return [ player, field ];
+        let result = checkUp(player.coord, field.terrain, 0 < player.smallCount); 
+        return result === null ? [ player, field ] : [move(player, result), turn(field, player)];
+    }
+    
+    export function moveDown(player: Player, field: Field): [Player, Field]{
+        if (!isStable(player)) return [ player, field ];
+        let result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [ player, field ] : [ move(player, result), turn(field, player)];
     }
 }

@@ -50,34 +50,10 @@ window.onload = () => {
         if (event.code === "KeyS") player = { ...player, coord: downCoord(player.coord) };
         if (event.code === "KeyZ") Player.shrink(player);
 
-        if (event.code === "ArrowLeft") {
-            const result = Player.move(player, field, "left");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        }
-        if (event.code === "ArrowRight") {
-            const result = Player.move(player, field, "right");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        } if (event.code === "ArrowUp") {
-            const result = Player.move(player, field, "up");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-        }
-        if (event.code === "ArrowDown") {
-            const result = Player.move(player, field, "down");
-            if (result.success) {
-                player = result.player;
-                turn(field, player);
-            }
-
-        }
+        if (event.code === "ArrowLeft") [player, field] =  Player.moveLeft(player, field);
+        if (event.code === "ArrowRight") [player, field] =  Player.moveRight(player, field);
+        if (event.code === "ArrowUp") [player, field] =  Player.moveUp(player, field);
+        if (event.code === "ArrowDown") [player, field] =  Player.moveDown(player, field);
 
         console.log(player.coord);
     }, false);
