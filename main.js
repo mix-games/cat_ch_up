@@ -106,171 +106,6 @@ var Renderer;
     }
     Renderer.composit = composit;
 })(Renderer || (Renderer = {}));
-/// <reference path="./renderer.ts" />
-function loadResources() {
-    const progress = {
-        registeredCount: 0,
-        finishedCount: 0,
-        errorCount: 0,
-        isFinished: function () {
-            return this.registeredCount === this.finishedCount + this.errorCount;
-        },
-        rate: function () {
-            return (this.finishedCount + this.errorCount) / this.registeredCount;
-        }
-    };
-    return {
-        _progress: progress,
-        testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 1, 0),
-        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0, 0),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0, 0),
-        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 2, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 6, 0),
-        player_stand_right_texture: loadStaticTexture("image/player/stand_right.png", 24, 48, 12, 24, true, 1, 3),
-        player_stand_left_texture: loadStaticTexture("image/player/stand_left.png", 24, 48, 12, 24, true, 1, 3),
-        player_hold_texture: loadStaticTexture("image/player/hold.png", 24, 48, 12, 24, true, 1, 3),
-        player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_right_texture: loadAnimationTexture("image/player/climb_right.png", 48, 72, 36, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
-        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
-        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_stand_right_texture: loadStaticTexture("image/player_small/stand_right.png", 24, 24, 12, 0, true, 1, 3),
-        player_small_stand_left_texture: loadStaticTexture("image/player_small/stand_left.png", 24, 24, 12, 0, true, 1, 3),
-        player_small_hold_texture: loadStaticTexture("image/player_small/hold.png", 24, 24, 12, 0, true, 1, 3),
-        player_small_walk_right_texture: loadAnimationTexture("image/player_small/walk_right.png", 48, 24, 36, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_walk_left_texture: loadAnimationTexture("image/player_small/walk_left.png", 48, 24, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_right_texture: loadAnimationTexture("image/player_small/climb_right.png", 48, 48, 36, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-    };
-    function loadImage(source, onload = () => { }) {
-        const image = new Image();
-        progress.registeredCount++;
-        image.addEventListener('load', () => {
-            progress.finishedCount++;
-            onload();
-        }, false);
-        image.addEventListener("error", () => {
-            progress.errorCount++;
-        });
-        image.src = source;
-        return image;
-    }
-    function loadAudio(source, onload = () => { }) {
-        const audio = new Audio();
-        audio.addEventListener('canplaythrough', () => {
-            progress.finishedCount++;
-            onload();
-        }, false);
-        audio.addEventListener("error", () => {
-            progress.errorCount++;
-        });
-        audio.src = source;
-        return audio;
-    }
-    function loadStaticTexture(source, width, height, offsetX, offsetY, useShadowColor, depth, depthOffset) {
-        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
-        const image = loadImage(source, () => readyVolumeTexture(texture, image, useShadowColor));
-        return texture;
-    }
-    function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depth, depthOffset) {
-        const textures = timeline.map(() => createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset));
-        const texture = createAnimationTexture(textures, timeline, new Date().getTime(), loop);
-        const image = loadImage(source, () => {
-            textures.forEach((texture, i) => {
-                const source = document.createElement("canvas");
-                source.width = width;
-                source.height = image.height;
-                const context = source.getContext("2d");
-                if (context === null)
-                    throw new Error("failed to get context-2d");
-                context.drawImage(image, width * i, 0, width, image.height, 0, 0, width, image.height);
-                readyVolumeTexture(texture, source, useShadowColor);
-            });
-        });
-        return texture;
-        /*
-        const lightColor = document.createElement("canvas");
-        const shadowColor = document.createElement("canvas");
-        const texture = {
-            type: "image" as const,
-            lightColor: lightColor,
-            shadowColor: shadowColor,
-            offsetX,
-            offsetY,
-            width,
-            height,
-            timeline,
-            animationTimestamp: new Date().getTime(),
-            loop,
-            depth,
-            depthOffset,
-            animationEndCallback: () => { },
-        };
-        const image = loadImage(source, () => {
-            const lightColorScreen = lightColor.getContext("2d");
-            if (lightColorScreen === null) throw new Error("failed to get context-2d");
-            const shadowColorScreen = shadowColor.getContext("2d");
-            if (shadowColorScreen === null) throw new Error("failed to get context-2d");
-
-            lightColor.width = image.width;
-            lightColor.height = useShadowColor ? (image.height - height) : image.height;
-            shadowColor.width = image.width;
-            shadowColor.height = useShadowColor ? (image.height - height) : image.height;
-
-            lightColorScreen.drawImage(
-                image,
-                0, 0,
-                image.width, height,
-                0, 0,
-                image.width, height);
-            lightColorScreen.drawImage(
-                image,
-                0, useShadowColor ? (height * 2) : height,
-                image.width, useShadowColor ? (image.height - height * 2) : (image.height - height),
-                0, height,
-                image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
-            lightColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
-                lightColorScreen.drawImage(
-                    image,
-                    0, 0,
-                    image.width, height,
-                    0, height * (i + 1),
-                    image.width, height);
-            }
-            shadowColorScreen.drawImage(
-                image,
-                0, useShadowColor ? height : 0,
-                image.width, height,
-                0, 0,
-                image.width, height);
-            shadowColorScreen.drawImage(
-                image,
-                0, height * 2,
-                image.width, useShadowColor ? (image.height - height * 2) : (image.height - height),
-                0, height,
-                image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
-            shadowColorScreen.globalCompositeOperation = "source-atop";
-            for (var i = 0; i < depth; i++) {
-                shadowColorScreen.drawImage(
-                    image,
-                    0, height,
-                    image.width, height,
-                    0, height * (i + 1),
-                    image.width, height);
-            }
-        });
-        return texture;
-        */
-    }
-}
 function createEmptyTexture() {
     return {
         type: "empty"
@@ -418,6 +253,98 @@ function drawTexture(texture, x, y, renderer) {
     }
 }
 const resources = loadResources();
+/// <reference path="./renderer.ts" />
+/// <reference path="./texture.ts" />
+function loadResources() {
+    const progress = {
+        registeredCount: 0,
+        finishedCount: 0,
+        errorCount: 0,
+        isFinished: function () {
+            return this.registeredCount === this.finishedCount + this.errorCount;
+        },
+        rate: function () {
+            return (this.finishedCount + this.errorCount) / this.registeredCount;
+        }
+    };
+    return {
+        _progress: progress,
+        testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 1, 0),
+        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 2, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 6, 0),
+        player_stand_right_texture: loadStaticTexture("image/player/stand_right.png", 24, 48, 12, 24, true, 1, 3),
+        player_stand_left_texture: loadStaticTexture("image/player/stand_left.png", 24, 48, 12, 24, true, 1, 3),
+        player_hold_texture: loadStaticTexture("image/player/hold.png", 24, 48, 12, 24, true, 1, 3),
+        player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_climb_right_texture: loadAnimationTexture("image/player/climb_right.png", 48, 72, 36, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
+        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
+        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_stand_right_texture: loadStaticTexture("image/player_small/stand_right.png", 24, 24, 12, 0, true, 1, 3),
+        player_small_stand_left_texture: loadStaticTexture("image/player_small/stand_left.png", 24, 24, 12, 0, true, 1, 3),
+        player_small_hold_texture: loadStaticTexture("image/player_small/hold.png", 24, 24, 12, 0, true, 1, 3),
+        player_small_walk_right_texture: loadAnimationTexture("image/player_small/walk_right.png", 48, 24, 36, 0, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_walk_left_texture: loadAnimationTexture("image/player_small/walk_left.png", 48, 24, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_climb_right_texture: loadAnimationTexture("image/player_small/climb_right.png", 48, 48, 36, 0, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+    };
+    function loadImage(source, onload = () => { }) {
+        const image = new Image();
+        progress.registeredCount++;
+        image.addEventListener('load', () => {
+            progress.finishedCount++;
+            onload();
+        }, false);
+        image.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        image.src = source;
+        return image;
+    }
+    function loadAudio(source, onload = () => { }) {
+        const audio = new Audio();
+        audio.addEventListener('canplaythrough', () => {
+            progress.finishedCount++;
+            onload();
+        }, false);
+        audio.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        audio.src = source;
+        return audio;
+    }
+    function loadStaticTexture(source, width, height, offsetX, offsetY, useShadowColor, depth, depthOffset) {
+        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+        const image = loadImage(source, () => readyVolumeTexture(texture, image, useShadowColor));
+        return texture;
+    }
+    function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depth, depthOffset) {
+        const textures = timeline.map(() => createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset));
+        const texture = createAnimationTexture(textures, timeline, new Date().getTime(), loop);
+        const image = loadImage(source, () => {
+            textures.forEach((texture, i) => {
+                const source = document.createElement("canvas");
+                source.width = width;
+                source.height = image.height;
+                const context = source.getContext("2d");
+                if (context === null)
+                    throw new Error("failed to get context-2d");
+                context.drawImage(image, width * i, 0, width, image.height, 0, 0, width, image.height);
+                readyVolumeTexture(texture, source, useShadowColor);
+            });
+        });
+        return texture;
+    }
+}
 /// <reference path="./resources.ts" />
 /// <reference path="./coord.ts" />
 /// <reference path="./camera.ts" />
