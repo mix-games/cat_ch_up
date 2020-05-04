@@ -5,16 +5,16 @@ function loadResources() {
         registeredCount: 0,
         finishedCount: 0,
         errorCount: 0,
-        isFinished: function(): boolean {
+        isFinished: function (): boolean {
             return this.registeredCount === this.finishedCount + this.errorCount;
         },
-        rate: function(): number {
+        rate: function (): number {
             return (this.finishedCount + this.errorCount) / this.registeredCount;
         }
-    }
+    };
 
     return {
-        _progress : progress,
+        _progress: progress,
         testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 1, 0),
         background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0, 0),
         terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0, 0),
@@ -30,7 +30,7 @@ function loadResources() {
         player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
         player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
         player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
-        
+
         player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
         player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
 
@@ -48,7 +48,7 @@ function loadResources() {
         player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
     } as const;
 
-    function loadImage(source: string, onload: ()=>void = () => {}): HTMLImageElement {
+    function loadImage(source: string, onload: () => void = () => { }): HTMLImageElement {
         const image = new Image();
         progress.registeredCount++;
         image.addEventListener('load', () => {
@@ -61,7 +61,7 @@ function loadResources() {
         image.src = source;
         return image;
     }
-    function loadAudio(source: string, onload: ()=>void = () => {}): HTMLAudioElement {
+    function loadAudio(source: string, onload: () => void = () => { }): HTMLAudioElement {
         const audio = new Audio();
         audio.addEventListener('canplaythrough', () => {
             progress.finishedCount++;
@@ -75,11 +75,26 @@ function loadResources() {
     }
 
 
-    function loadStaticTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, depth: number, depthOffset: number): ImageTexture {
+    function loadStaticTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, depth: number, depthOffset: number): VolumeTexture {
         return loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, [], false, depth, depthOffset);
     }
 
-    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): ImageTexture {
+    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): VolumeTexture {
+        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+
+        const image = loadImage(source, () => {
+            const source1 = document.createElement("canvas");
+            source1.width = width;
+            source1.height = image.height;
+            const context = source1.getContext("2d");
+            if(context === null) throw new Error("failed to get context-2d")
+            context.drawImage(image, 0, 0);
+
+            readyVolumeTexture(texture, image, useShadowColor)
+        });
+
+        return texture;
+        /*
         const lightColor = document.createElement("canvas");
         const shadowColor = document.createElement("canvas");
         const texture = {
@@ -95,7 +110,7 @@ function loadResources() {
             loop,
             depth,
             depthOffset,
-            animationEndCallback: () => {},
+            animationEndCallback: () => { },
         };
         const image = loadImage(source, () => {
             const lightColorScreen = lightColor.getContext("2d");
@@ -127,7 +142,7 @@ function loadResources() {
                     0, 0,
                     image.width, height,
                     0, height * (i + 1),
-                    image.width, height);    
+                    image.width, height);
             }
             shadowColorScreen.drawImage(
                 image,
@@ -148,10 +163,11 @@ function loadResources() {
                     0, height,
                     image.width, height,
                     0, height * (i + 1),
-                    image.width, height);    
+                    image.width, height);
             }
         });
         return texture;
+        */
     }
 }
 
@@ -185,8 +201,33 @@ interface ImageTexture {
     readonly depthOffset: number;
     readonly animationEndCallback: () => void;
 }
+interface VolumeTexture {
+    readonly type: "volume";
 
-type Texture = EmptyTexture | RectTexture | ImageTexture;
+    readonly lightColor: HTMLCanvasElement;
+    readonly shadowColor: HTMLCanvasElement;
+    readonly lightLayers: HTMLCanvasElement[];
+    readonly shadowLayers: HTMLCanvasElement[];
+
+    readonly offsetX: number;
+    readonly offsetY: number;
+
+    readonly width: number;
+    readonly height: number;
+    
+    readonly depth: number;
+    readonly depthOffset: number;
+}
+interface AnimationTexture {
+    readonly type: "animation";
+
+    readonly textures: Texture[];
+    readonly timeline: number[];
+    readonly timeStamp: number[];
+    readonly loop: number[];
+}
+
+type Texture = EmptyTexture | RectTexture | ImageTexture | VolumeTexture;
 
 function createEmptyTexture(): EmptyTexture {
     return {
@@ -205,77 +246,198 @@ function createRectTexture(color: string, width: number, height: number, offsetX
     };
 }
 
-function cloneAndReplayTexture(texture: Texture, animationEndCallback: () => void = () => {}): Texture {
+function createVolumeTexture(width:number, height:number, offsetX: number, offsetY: number, depth: number, depthOffset: number): VolumeTexture {
+    const lightColor = document.createElement("canvas");
+    const shadowColor = document.createElement("canvas");
+    lightColor.width = width;
+    lightColor.height = height;
+    shadowColor.width = width;
+    shadowColor.height = height;
+    
+    const lightLayers: HTMLCanvasElement[] = [];
+    const shadowLayers: HTMLCanvasElement[] = [];
+    for(var i = 0; i < depth; i++) {
+        lightLayers[i] = document.createElement("canvas");
+        shadowLayers[i] = document.createElement("canvas");
+        lightLayers[i].width = width;
+        lightLayers[i].height = height;
+        shadowLayers[i].width = width;
+        shadowLayers[i].height = height;
+    }
+    return {
+        type: "volume" as const,
+        lightColor,
+        shadowColor,
+        lightLayers,
+        shadowLayers,
+        width,
+        height,
+        offsetX,
+        offsetY,
+        depth,
+        depthOffset,
+    };
+}
+
+function createAnimationTexture() {
+
+}
+
+function cloneAndReplayTexture(texture: Texture, animationEndCallback: () => void = () => { }): Texture {
     if (texture.type === "image") {
         return {
             ...texture,
             animationTimestamp: new Date().getTime(),
             animationEndCallback,
-        }
+        };
     }
     // いちおうコピーするけど意味なさそう
-    else return {...texture};
+    else return { ...texture };
 }
 
-function drawTexture(texture:Texture, x: number, y: number, renderer: Renderer): void {
-    if(texture.type === "rect") {
-        renderer.lightColor.fillStyle = texture.color;
-        renderer.lightColor.fillRect(
-            Renderer.marginLeft + x - texture.offsetX,
-            Renderer.marginTop + y - texture.offsetY,
+function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | HTMLImageElement, useShadowColor: boolean) {
+    const lightColorScreen = texture.lightColor.getContext("2d");
+    if (lightColorScreen === null) throw new Error("failed to get context-2d");
+    const shadowColorScreen = texture.shadowColor.getContext("2d");
+    if (shadowColorScreen === null) throw new Error("failed to get context-2d");
+
+    lightColorScreen.drawImage(
+        image,
+        0, 0,
+        texture.width, texture.height,
+        0, 0,
+        texture.width, texture.height);
+    shadowColorScreen.drawImage(
+        image,
+        0, texture.height * (useShadowColor ? 1 : 0),
+        texture.width, texture.height,
+        0, 0,
+        texture.width, texture.height,);
+
+    for (var i = 0; i < texture.depth; i++) {
+        const currentLightScreen = texture.lightLayers[i].getContext("2d");
+        if (currentLightScreen === null) throw new Error("failed to get context-2d");
+        const currentShadowScreen = texture.shadowLayers[i].getContext("2d");
+        if (currentShadowScreen === null) throw new Error("failed to get context-2d");
+
+        currentLightScreen.drawImage(
+            image,
+            0, texture.height * (useShadowColor ? i + 2 : i + 1),
+            texture.width, texture.height,
+            0, 0,
+            texture.width, texture.height,);
+
+        currentShadowScreen.drawImage(
+            image,
+            0, texture.height * (useShadowColor ? i + 2 : i + 1),
+            texture.width, texture.height,
+            0, 0,
+            texture.width, texture.height,);
+            
+        currentLightScreen.globalCompositeOperation = "source-atop";
+        currentLightScreen.drawImage(
+            image,
+            0, 0,
+            texture.width, texture.height,
+            0, 0,
             texture.width, texture.height);
-        renderer.shadowColor.fillStyle = texture.color;
-        renderer.shadowColor.fillRect(
-            Renderer.marginLeft + x - texture.offsetX,
-            Renderer.marginTop + y - texture.offsetY,
+        currentLightScreen.globalCompositeOperation = "source-over";
+
+        currentShadowScreen.globalCompositeOperation = "source-atop";
+        currentShadowScreen.drawImage(
+            image,
+            0, texture.height * (useShadowColor ? 1 : 0),
+            texture.width, texture.height,
+            0, 0,
             texture.width, texture.height);
+        currentShadowScreen.globalCompositeOperation = "source-over";
     }
-    if(texture.type === "image") {
-        const elapse = new Date().getTime() - texture.animationTimestamp;
-        const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+}
 
-        let frame = texture.timeline.findIndex(t => phase < t);
-        if (frame === -1) {
-            texture.animationEndCallback();
-            frame = Math.max(0, texture.timeline.length - 1);
-        }
+function drawTexture(texture: Texture, x: number, y: number, renderer: Renderer): void {
+    switch (texture.type) {
+        case "rect": {
+            renderer.lightColor.fillStyle = texture.color;
+            renderer.lightColor.fillRect(
+                Renderer.marginLeft + x - texture.offsetX,
+                Renderer.marginTop + y - texture.offsetY,
+                texture.width, texture.height);
+            renderer.shadowColor.fillStyle = texture.color;
+            renderer.shadowColor.fillRect(
+                Renderer.marginLeft + x - texture.offsetX,
+                Renderer.marginTop + y - texture.offsetY,
+                texture.width, texture.height);
+        } break;
+        case "volume": {
+            renderer.lightColor.drawImage(
+                texture.lightColor,
+                Renderer.marginLeft + x - texture.offsetX,
+                Renderer.marginTop + y - texture.offsetY);
 
-        renderer.lightColor.drawImage(
-            texture.lightColor,
-            texture.width * frame, // アニメーションによる横位置
-            0,
-            texture.width, texture.height,
-            Renderer.marginLeft + x - texture.offsetX,
-            Renderer.marginTop + y - texture.offsetY,
-            texture.width, texture.height);
+            renderer.shadowColor.drawImage(
+                texture.shadowColor,
+                Renderer.marginLeft + x - texture.offsetX,
+                Renderer.marginTop + y - texture.offsetY);
 
-        renderer.shadowColor.drawImage(
-            texture.shadowColor,
-            texture.width * frame, // アニメーションによる横位置
-            0,
-            texture.width, texture.height,
-            Renderer.marginLeft + x - texture.offsetX,
-            Renderer.marginTop + y - texture.offsetY,
-            texture.width, texture.height);
-        
-        for(let i = 0; i < texture.depth; i++) {
-            renderer.lightLayers[i + texture.depthOffset].drawImage(
+            for (let i = 0; i < texture.depth; i++) {
+                renderer.lightLayers[i + texture.depthOffset].drawImage(
+                    texture.lightLayers[i],
+                    Renderer.marginLeft + x - texture.offsetX,
+                    Renderer.marginTop + y - texture.offsetY);
+
+                renderer.shadowLayers[i + texture.depthOffset].drawImage(
+                    texture.shadowLayers[i],
+                    Renderer.marginLeft + x - texture.offsetX,
+                    Renderer.marginTop + y - texture.offsetY);
+            }
+        } break;
+        case "image": {
+            const elapse = new Date().getTime() - texture.animationTimestamp;
+            const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+
+            let frame = texture.timeline.findIndex(t => phase < t);
+            if (frame === -1) {
+                texture.animationEndCallback();
+                frame = Math.max(0, texture.timeline.length - 1);
+            }
+
+            renderer.lightColor.drawImage(
                 texture.lightColor,
                 texture.width * frame, // アニメーションによる横位置
-                (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
+                0,
                 texture.width, texture.height,
                 Renderer.marginLeft + x - texture.offsetX,
                 Renderer.marginTop + y - texture.offsetY,
                 texture.width, texture.height);
-            
-            renderer.shadowLayers[i + texture.depthOffset].drawImage(
+
+            renderer.shadowColor.drawImage(
                 texture.shadowColor,
                 texture.width * frame, // アニメーションによる横位置
-                (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
+                0,
                 texture.width, texture.height,
                 Renderer.marginLeft + x - texture.offsetX,
                 Renderer.marginTop + y - texture.offsetY,
                 texture.width, texture.height);
+
+            for (let i = 0; i < texture.depth; i++) {
+                renderer.lightLayers[i + texture.depthOffset].drawImage(
+                    texture.lightColor,
+                    texture.width * frame, // アニメーションによる横位置
+                    (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
+                    texture.width, texture.height,
+                    Renderer.marginLeft + x - texture.offsetX,
+                    Renderer.marginTop + y - texture.offsetY,
+                    texture.width, texture.height);
+
+                renderer.shadowLayers[i + texture.depthOffset].drawImage(
+                    texture.shadowColor,
+                    texture.width * frame, // アニメーションによる横位置
+                    (i + 1) * texture.height,　// （色を除いて）上からi枚目の画像
+                    texture.width, texture.height,
+                    Renderer.marginLeft + x - texture.offsetX,
+                    Renderer.marginTop + y - texture.offsetY,
+                    texture.width, texture.height);
+            }
         }
     }
 }

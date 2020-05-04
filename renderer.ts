@@ -67,8 +67,8 @@ namespace Renderer {
 
         for (let i = 0; i < layerNum; i++)
             renderer.shadowColor.drawImage(renderer.shadowLayers[i].canvas, 0, 0);
-
-        // shadowLayersを斜め累積
+        
+            // shadowLayersを斜め累積
         for (let i = layerNum - 2; 0 <= i; i--) {
             renderer.shadowLayers[i].drawImage(renderer.shadowLayers[i + 1].canvas, shadowDirectionX, shadowDirectionY);
         }
