@@ -6,30 +6,30 @@ function createTrafficDigraph(lowerBound, upperBound, terrain) {
     for (let y = lowerBound; y < upperBound; y++) {
         for (let x = 0; x < fieldWidth; x++) {
             const coord = { x, y };
-            if (canEnter(coord, terrain, false))
+            if (Player.canEnter(coord, terrain, false))
                 digraph.set(JSON.stringify(coord), { coord, inflow: [], outflow: [] });
         }
     }
     for (let y = lowerBound; y < upperBound; y++) {
         for (let x = 0; x < fieldWidth; x++) {
             const coord = { x, y };
-            if (!canEnter(coord, terrain, false))
+            if (!Player.canEnter(coord, terrain, false))
                 continue;
             //空中のマスは落ちるだけできる
-            if (!canStand(coord, terrain, false)) {
+            if (!Player.canStand(coord, terrain, false)) {
                 addArrow(digraph, coord, downCoord(coord));
                 continue;
             }
-            const left = checkLeft(coord, terrain, false);
+            const left = Player.checkLeft(coord, terrain, false);
             if (left !== null)
                 addArrow(digraph, coord, left.coord);
-            const right = checkRight(coord, terrain, false);
+            const right = Player.checkRight(coord, terrain, false);
             if (right !== null)
                 addArrow(digraph, coord, right.coord);
-            const down = checkDown(coord, terrain, false);
+            const down = Player.checkDown(coord, terrain, false);
             if (down !== null)
                 addArrow(digraph, coord, down.coord);
-            const up = checkUp(coord, terrain, false);
+            const up = Player.checkUp(coord, terrain, false);
             if (up !== null)
                 addArrow(digraph, coord, up.coord);
         }
@@ -114,12 +114,12 @@ function drawDigraphForTest(camera, screen) {
     screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex) => {
         vertex.outflow.forEach((to) => {
-            drawArrow(camera.offsetX + (vertex.coord.x) * blockSize, camera.offsetY - (vertex.coord.y) * blockSize, camera.offsetX + (to.coord.x) * blockSize, camera.offsetY - (to.coord.y) * blockSize);
+            drawArrow(camera.offsetX + Renderer.marginLeft + (vertex.coord.x) * blockSize, camera.offsetY + Renderer.marginTop - (vertex.coord.y) * blockSize, camera.offsetX + Renderer.marginLeft + +(to.coord.x) * blockSize, camera.offsetY + Renderer.marginTop - (to.coord.y) * blockSize);
         });
     });
     screen.fillStyle = "black";
     Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
-        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x - 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
+        screen.fillText(componentIndex.toString(), camera.offsetX + Renderer.marginLeft + (vertex.coord.x - 0.5) * blockSize, camera.offsetY + Renderer.marginTop - (vertex.coord.y - 0.5) * blockSize);
     }));
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
@@ -136,192 +136,317 @@ function drawDigraphForTest(camera, screen) {
         screen.fill();
     }
 }
-function resourceLoader(sources, callback = () => { }, progress = {
-    registeredCount: 0,
-    finishedCount: 0,
-    imageResources: new Map(),
-    audioResources: new Map()
-}) {
-    progress.registeredCount += sources.length;
-    sources.forEach(source => {
-        if (source.match(/\.(bmp|png|jpg)$/)) {
-            const image = new Image();
-            image.addEventListener('load', () => {
-                progress.imageResources.set(source, image);
-                progress.finishedCount++;
-                if (progress.registeredCount === progress.finishedCount)
-                    callback();
-            }, false);
-            image.addEventListener("error", () => {
-                //こうしないとロードがいつまでも終わらないことになるので。本当はカウンターを分けるべき？
-                progress.finishedCount++;
-            });
-            image.src = source;
-        }
-        else if (source.match(/\.(wav|ogg|mp3)$/)) {
-            const audio = new Audio();
-            audio.addEventListener('canplaythrough', () => {
-                progress.audioResources.set(source, audio);
-                progress.finishedCount++;
-                if (progress.registeredCount === progress.finishedCount)
-                    callback();
-            }, false);
-            audio.addEventListener("error", () => {
-                progress.finishedCount++;
-            });
-            audio.src = source;
-        }
-        else
-            throw new Error("unknown extension");
-    });
-    return progress;
+function createCoord(x, y) {
+    return { x, y };
 }
-function createRenderer(width, height) {
-    const marginTop = 28;
-    const marginLeft = 28;
+function upCoord(coord) {
+    return createCoord(coord.x, coord.y + 1);
+}
+function downCoord(coord) {
+    return createCoord(coord.x, coord.y - 1);
+}
+function leftCoord(coord) {
+    return createCoord(coord.x - 1, coord.y);
+}
+function rightCoord(coord) {
+    return createCoord(coord.x + 1, coord.y);
+}
+const blockSize = 24;
+var Renderer;
+(function (Renderer) {
+    Renderer.layerNum = 6;
+    Renderer.marginTop = 28;
+    Renderer.marginLeft = 28;
     const marginRignt = 0;
     const marginBottom = 0;
-    const lightColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
-    const shadowColor = create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom);
-    const volumeLayers = [];
-    for (let i = 0; i < 6; i++)
-        volumeLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
-    const shadowAccScreens = [];
-    for (let i = 0; i < volumeLayers.length; i++)
-        shadowAccScreens.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
-    const compositScreen = create2dScreen(width, height);
-    return {
-        lightColor,
-        shadowColor,
-        volumeLayers,
-        compositScreen,
-        shadowAccScreens,
-        compositOffsetX: -marginLeft,
-        compositOffsetY: -marginTop,
-    };
-    function create2dScreen(width, height) {
-        let canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        let context = canvas.getContext("2d");
-        if (context === null)
-            throw new Error("failed to get 2D context");
-        return context;
-    }
-}
-function composit(renderer, mainScreen) {
-    const shadowDirectionX = 3;
-    const shadowDirectionY = 2;
-    // shadowAccScreens[i]にはi-1層目に落ちる影を描画する
-    for (let i = renderer.volumeLayers.length - 1; 0 <= i; i--) {
-        renderer.shadowAccScreens[i].globalCompositeOperation = "source-over";
-        renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i].canvas, 0, 0);
-        if (i !== renderer.volumeLayers.length - 1)
-            renderer.shadowAccScreens[i].drawImage(renderer.shadowAccScreens[i + 1].canvas, shadowDirectionX, shadowDirectionY);
-    }
-    for (let i = 0; i < renderer.shadowAccScreens.length; i++) {
-        //i-1層目の形で打ち抜く
-        if (i !== 0) {
-            renderer.shadowAccScreens[i].globalCompositeOperation = "source-in";
-            renderer.shadowAccScreens[i].drawImage(renderer.volumeLayers[i - 1].canvas, -shadowDirectionY, -shadowDirectionY);
+    const shadowDirectionX = 2;
+    const shadowDirectionY = 3;
+    function create(width, height) {
+        const lightColor = create2dScreen(Renderer.marginLeft + width + marginRignt, Renderer.marginTop + height + marginBottom);
+        const shadowColor = create2dScreen(Renderer.marginLeft + width + marginRignt, Renderer.marginTop + height + marginBottom);
+        const lightLayers = [];
+        for (let i = 0; i < Renderer.layerNum; i++)
+            lightLayers.push(create2dScreen(Renderer.marginLeft + width + marginRignt, Renderer.marginTop + height + marginBottom));
+        const shadowLayers = [];
+        for (let i = 0; i < Renderer.layerNum; i++)
+            shadowLayers.push(create2dScreen(Renderer.marginLeft + width + marginRignt, Renderer.marginTop + height + marginBottom));
+        const compositScreen = create2dScreen(width, height);
+        return {
+            lightColor,
+            shadowColor,
+            lightLayers,
+            shadowLayers,
+            compositScreen,
+            width,
+            height,
+        };
+        function create2dScreen(width, height) {
+            let canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            let context = canvas.getContext("2d");
+            if (context === null)
+                throw new Error("failed to get 2D context");
+            return context;
         }
-        //compositに累積
-        renderer.compositScreen.globalCompositeOperation = "source-over";
-        renderer.compositScreen.drawImage(renderer.shadowAccScreens[i].canvas, renderer.compositOffsetX + shadowDirectionX, renderer.compositOffsetY + shadowDirectionY);
-        //見えなくなる部分を隠す
-        renderer.compositScreen.globalCompositeOperation = "destination-out";
-        renderer.compositScreen.drawImage(renderer.volumeLayers[i].canvas, renderer.compositOffsetX, renderer.compositOffsetY);
     }
-    // 影部分が不透明な状態になっているはずなので、影色で上書きする
-    renderer.compositScreen.globalCompositeOperation = "source-atop";
-    renderer.compositScreen.drawImage(renderer.shadowColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
-    // 残りの部分に光色
-    renderer.compositScreen.globalCompositeOperation = "destination-over";
-    renderer.compositScreen.drawImage(renderer.lightColor.canvas, renderer.compositOffsetX, renderer.compositOffsetY);
-    // メインスクリーン（本番のcanvas）にスムージングなしで拡大
-    mainScreen.imageSmoothingEnabled = false;
-    mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
-    mainScreen.drawImage(renderer.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
-    //次フレームの描画に備えてレイヤーを消去
-    clearScreen(renderer.lightColor);
-    clearScreen(renderer.shadowColor);
-    for (var i = 0; i < renderer.volumeLayers.length; i++) {
-        clearScreen(renderer.volumeLayers[i]);
-        clearScreen(renderer.shadowAccScreens[i]);
+    Renderer.create = create;
+    function composit(renderer, mainScreen) {
+        for (let i = 0; i < Renderer.layerNum; i++)
+            renderer.lightColor.drawImage(renderer.lightLayers[i].canvas, 0, 0);
+        for (let i = 0; i < Renderer.layerNum; i++)
+            renderer.shadowColor.drawImage(renderer.shadowLayers[i].canvas, 0, 0);
+        // shadowLayersを斜め累積
+        for (let i = Renderer.layerNum - 2; 0 <= i; i--) {
+            renderer.shadowLayers[i].drawImage(renderer.shadowLayers[i + 1].canvas, shadowDirectionX, shadowDirectionY);
+        }
+        for (let i = 0; i < Renderer.layerNum; i++) {
+            //i-1層目の形で打ち抜く
+            if (i !== 0) {
+                renderer.shadowLayers[i].globalCompositeOperation = "source-in";
+                renderer.shadowLayers[i].drawImage(renderer.lightLayers[i - 1].canvas, -shadowDirectionX, -shadowDirectionY);
+            }
+            //compositに累積
+            renderer.compositScreen.globalCompositeOperation = "source-over";
+            renderer.compositScreen.drawImage(renderer.shadowLayers[i].canvas, -Renderer.marginLeft + shadowDirectionX, -Renderer.marginTop + shadowDirectionY);
+            //見えなくなる部分を隠す
+            renderer.compositScreen.globalCompositeOperation = "destination-out";
+            renderer.compositScreen.drawImage(renderer.lightLayers[i].canvas, -Renderer.marginLeft, -Renderer.marginTop);
+        }
+        // 影部分が不透明な状態になっているはずなので、影色で上書きする
+        renderer.compositScreen.globalCompositeOperation = "source-atop";
+        renderer.compositScreen.drawImage(renderer.shadowColor.canvas, -Renderer.marginLeft, -Renderer.marginTop);
+        // 残りの部分に光色
+        renderer.compositScreen.globalCompositeOperation = "destination-over";
+        renderer.compositScreen.drawImage(renderer.lightColor.canvas, -Renderer.marginLeft, -Renderer.marginTop);
+        // メインスクリーン（本番のcanvas）にスムージングなしで拡大
+        mainScreen.imageSmoothingEnabled = false;
+        mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+        mainScreen.drawImage(renderer.compositScreen.canvas, 0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
+        //次フレームの描画に備えてレイヤーを消去
+        clearScreen(renderer.lightColor);
+        clearScreen(renderer.shadowColor);
+        for (var i = 0; i < Renderer.layerNum; i++) {
+            clearScreen(renderer.lightLayers[i]);
+            clearScreen(renderer.shadowLayers[i]);
+        }
+        clearScreen(renderer.compositScreen);
+        function clearScreen(screen) {
+            screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
+            screen.globalCompositeOperation = "source-over";
+        }
     }
-    clearScreen(renderer.compositScreen);
-    function clearScreen(screen) {
-        screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
+    Renderer.composit = composit;
+})(Renderer || (Renderer = {}));
+/// <reference path="./renderer.ts" />
+function loadResources() {
+    const progress = {
+        registeredCount: 0,
+        finishedCount: 0,
+        errorCount: 0,
+        isFinished: function () {
+            return this.registeredCount === this.finishedCount + this.errorCount;
+        },
+        rate: function () {
+            return (this.finishedCount + this.errorCount) / this.registeredCount;
+        }
+    };
+    return {
+        _progress: progress,
+        testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 0),
+        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 0),
+        player_stand_right_texture: loadStaticTexture("image/player/stand_right.png", 24, 48, 12, 24, true, 3),
+        player_stand_left_texture: loadStaticTexture("image/player/stand_left.png", 24, 48, 12, 24, true, 3),
+        player_hold_texture: loadStaticTexture("image/player/hold.png", 24, 48, 12, 24, true, 3),
+        player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [30, 60, 90, 120], false, 3),
+        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_right_texture: loadAnimationTexture("image/player/climb_right.png", 48, 72, 36, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 3),
+        player_small_stand_right_texture: loadStaticTexture("image/player_small/stand_right.png", 24, 24, 12, 0, true, 3),
+        player_small_stand_left_texture: loadStaticTexture("image/player_small/stand_left.png", 24, 24, 12, 0, true, 3),
+        player_small_hold_texture: loadStaticTexture("image/player_small/hold.png", 24, 24, 12, 0, true, 3),
+        player_small_walk_right_texture: loadAnimationTexture("image/player_small/walk_right.png", 48, 24, 36, 0, true, [30, 60, 90, 120], false, 3),
+        player_small_walk_left_texture: loadAnimationTexture("image/player_small/walk_left.png", 48, 24, 12, 0, true, [30, 60, 90, 120], false, 3),
+        player_small_climb_right_texture: loadAnimationTexture("image/player_small/climb_right.png", 48, 48, 36, 0, true, [30, 60, 90, 120], false, 3),
+        player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [30, 60, 90, 120], false, 3),
+        player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [30, 60, 90, 120], false, 3),
+        player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 3),
+    };
+    function loadImage(source, onload = () => { }) {
+        const image = new Image();
+        progress.registeredCount++;
+        image.addEventListener('load', () => {
+            progress.finishedCount++;
+            onload();
+        }, false);
+        image.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        image.src = source;
+        return image;
+    }
+    function loadAudio(source, onload = () => { }) {
+        const audio = new Audio();
+        audio.addEventListener('canplaythrough', () => {
+            progress.finishedCount++;
+            onload();
+        }, false);
+        audio.addEventListener("error", () => {
+            progress.errorCount++;
+        });
+        audio.src = source;
+        return audio;
+    }
+    function loadStaticTexture(source, width, height, offsetX, offsetY, useShadowColor, depthOffset) {
+        return loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, [], false, depthOffset);
+    }
+    function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depthOffset) {
+        const lightColor = document.createElement("canvas");
+        const shadowColor = document.createElement("canvas");
+        const texture = {
+            type: "image",
+            lightColor: lightColor,
+            shadowColor: shadowColor,
+            offsetX,
+            offsetY,
+            width,
+            height,
+            timeline,
+            animationTimestamp: new Date().getTime(),
+            loop,
+            depthOffset,
+            animationEndCallback: () => { },
+        };
+        const image = loadImage(source, () => {
+            const lightColorScreen = lightColor.getContext("2d");
+            if (lightColorScreen === null)
+                throw new Error("failed to get context-2d");
+            const shadowColorScreen = shadowColor.getContext("2d");
+            if (shadowColorScreen === null)
+                throw new Error("failed to get context-2d");
+            lightColor.width = image.width;
+            lightColor.height = useShadowColor ? (image.height - height) : image.height;
+            shadowColor.width = image.width;
+            shadowColor.height = useShadowColor ? (image.height - height) : image.height;
+            lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, 0, image.width, height);
+            lightColorScreen.drawImage(image, 0, useShadowColor ? (height * 2) : height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
+            lightColorScreen.globalCompositeOperation = "source-atop";
+            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
+                lightColorScreen.drawImage(image, 0, 0, image.width, height, 0, height * (i + 1), image.width, height);
+            }
+            shadowColorScreen.drawImage(image, 0, useShadowColor ? height : 0, image.width, height, 0, 0, image.width, height);
+            shadowColorScreen.drawImage(image, 0, height * 2, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height), 0, height, image.width, useShadowColor ? (image.height - height * 2) : (image.height - height));
+            shadowColorScreen.globalCompositeOperation = "source-atop";
+            for (var i = 0; (i + (useShadowColor ? 2 : 1)) * height < image.height; i++) {
+                shadowColorScreen.drawImage(image, 0, height, image.width, height, 0, height * (i + 1), image.width, height);
+            }
+        });
+        return texture;
     }
 }
 function createEmptyTexture() {
     return {
-        draw: () => { }
+        type: "empty"
     };
 }
-// 四角を描画するテクスチャ
-function createRectTexture(lightColor, width, height, offsetX, offsetY, shadowColor = lightColor) {
+function createRectTexture(color, width, height, offsetX, offsetY) {
     return {
-        draw: (x, y, renderer, resources) => {
-            renderer.lightColor.fillStyle = lightColor;
-            renderer.lightColor.fillRect(x - offsetX, y - offsetY, width, height);
-            renderer.shadowColor.fillStyle = shadowColor;
-            renderer.shadowColor.fillRect(x - offsetX, y - offsetY, width, height);
-        }
+        type: "rect",
+        color,
+        width,
+        height,
+        offsetX,
+        offsetY,
     };
 }
-// ただの（アニメーションしない、影も落とさないし受けない）テクスチャを作る
-function createStaticTexture(source, offsetX, offsetY, useShadowColor) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, -1, useShadowColor, []);
+function cloneAndReplayTexture(texture, animationEndCallback = () => { }) {
+    if (texture.type === "image") {
+        return Object.assign(Object.assign({}, texture), { animationTimestamp: new Date().getTime(), animationEndCallback });
+    }
+    // いちおうコピーするけど意味なさそう
+    else
+        return Object.assign({}, texture);
 }
-function createStaticVolumeTexture(source, offsetX, offsetY, sh, useShadowColor, volumeLayout) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, -1, [], false, sh, useShadowColor, volumeLayout);
+function drawTexture(texture, x, y, renderer) {
+    if (texture.type === "rect") {
+        renderer.lightColor.fillStyle = texture.color;
+        renderer.lightColor.fillRect(Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+        renderer.shadowColor.fillStyle = texture.color;
+        renderer.shadowColor.fillRect(Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+    }
+    if (texture.type === "image") {
+        const elapse = new Date().getTime() - texture.animationTimestamp;
+        const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+        let frame = texture.timeline.findIndex(t => phase < t);
+        if (frame === -1) {
+            texture.animationEndCallback();
+            frame = Math.max(0, texture.timeline.length - 1);
+        }
+        renderer.lightColor.drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
+        0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+        renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
+        0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+        for (let i = 0; (i + 1) * texture.height < texture.lightColor.height; i++) {
+            renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
+            (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
+            texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+            renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
+            (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
+            texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+        }
+    }
 }
-function createAnimationTexture(source, offsetX, offsetY, sw, timeline, loop) {
-    return createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, -1, false, []);
+const resources = loadResources();
+/// <reference path="./resources.ts" />
+/// <reference path="./coord.ts" />
+/// <reference path="./camera.ts" />
+function drawGameObject(gameObject, camera, renderer) {
+    drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
 }
-function createAnimationVolumeTexture(source, offsetX, offsetY, sw, timeline, loop, sh, useShadowColor, volumeLayout) {
-    const startTime = new Date().getTime();
+/// <reference path="./resources.ts" />
+/// <reference path="./gameobject.ts" />
+/// <reference path="./field.ts" />
+function createNeko() {
     return {
-        draw: (x, y, renderer, resources) => {
-            const image = resources.get(source);
-            if (image === undefined) {
-                console.log("not loaded yet");
-                return;
-            }
-            if (sh === -1)
-                sh = image.height;
-            if (sw === -1)
-                sw = image.width;
-            const elapse = new Date().getTime() - startTime;
-            const phase = loop ? elapse % timeline[timeline.length - 1] : elapse;
-            let frame = timeline.findIndex(t => phase < t);
-            if (frame === -1)
-                frame = Math.max(0, timeline.length - 1);
-            renderer.lightColor.drawImage(image, sw * frame, // アニメーションによる横位置
-            0, // どんなテクスチャでも1番目はlightColor（ほんとか？）
-            sw, sh, x - offsetX, y - offsetY, sw, sh);
-            renderer.shadowColor.drawImage(image, sw * frame, // アニメーションによる横位置
-            useShadowColor ? sh : 0, // useShadowColorがfalseのときはlightColorを流用する
-            sw, sh, x - offsetX, y - offsetY, sw, sh);
-            volumeLayout.forEach((target, layout) => renderer.volumeLayers[target].drawImage(image, sw * frame, // アニメーションによる横位置
-            (layout + (useShadowColor ? 2 : 1)) * sh, // （色を除いて）上からlayout枚目の画像targetlayerに書く
-            sw, sh, x - offsetX, y - offsetY, sw, sh));
-        }
+        type: "neko",
+        coord: createCoord(0, 5),
+        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, -2)
     };
 }
-function upCoord(coord) {
-    return { x: coord.x, y: coord.y + 1 };
+function canNekoEnter(coord, terrain) {
+    return !(getBlock(terrain, coord).collision === "solid");
 }
-function downCoord(coord) {
-    return { x: coord.x, y: coord.y - 1 };
+function canNekoStand(coord, terrain) {
+    return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid";
 }
-function leftCoord(coord) {
-    return { x: coord.x - 1, y: coord.y };
+function controlNeko(neko, field, player) {
+    // 近づいたら
+    if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 2) {
+        //動く
+        return Object.assign(Object.assign({}, neko), { coord: rightCoord(neko.coord) });
+    }
+    return neko;
 }
-function rightCoord(coord) {
-    return { x: coord.x + 1, y: coord.y };
+function controlEntity(entity, field, player) {
+    if (entity.type === "neko") {
+        return controlNeko(entity, field, player);
+    }
+    // 網羅チェック
+    return entity.type;
 }
+/// <reference path="./resources.ts" />
+/// <reference path="./coord.ts" />
+/// <reference path="./player.ts" />
+/// <reference path="./entity.ts" />
 function createField() {
     const protoTerrain = [[], []];
     for (let x = 0; x < fieldWidth; x++) {
@@ -336,19 +461,17 @@ function createField() {
         else
             protoTerrain[1][x] = { collision: "air" };
     }
-    let field = {
-        terrain: protoTerrain.map((protoRow) => assignTexture(protoRow)),
-        neko: createNeko()
+    return {
+        terrain: annexRow(protoTerrain.map((protoRow) => assignTexture(protoRow, [])), 10),
+        entities: [createNeko()],
+        backgroundTexture: resources.background_texture
     };
-    for (let i = 0; i < 10; i++)
-        generateRow(field);
-    trafficDigraphForTest = createTrafficDigraph(0, 8, field.terrain); //テスト
-    sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
-    return field;
 }
 const fieldWidth = 10;
 //Y座標は下から数える
-function generateRow(field) {
+function annexRow(terrain, targetHeight) {
+    if (targetHeight <= terrain.length)
+        return terrain;
     const protoRow = [];
     for (let x = 0; x < fieldWidth; x++) {
         if (Math.random() < 0.7)
@@ -358,25 +481,28 @@ function generateRow(field) {
         else
             protoRow[x] = { collision: "ladder" };
     }
-    field.terrain.push(assignTexture(protoRow));
+    return annexRow([...terrain, assignTexture(protoRow, terrain)], targetHeight);
 }
-function assignTexture(protoRow) {
+function assignTexture(protoRow, terrain) {
     return protoRow.map((bwt) => {
         switch (bwt.collision) {
             case "ladder":
                 return {
                     collision: "ladder",
-                    texture: createRectTexture("red", blockSize, blockSize, blockSize / 2, blockSize / 2)
+                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                    texture1: cloneAndReplayTexture(resources.terrain_ladder_texture),
                 };
             case "solid":
                 return {
                     collision: "solid",
-                    texture: createRectTexture("black", blockSize, blockSize, blockSize / 2, blockSize / 2)
+                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                    texture1: cloneAndReplayTexture(resources.terrain_condenser_texture),
                 };
             case "air":
                 return {
                     collision: "air",
-                    texture: createEmptyTexture()
+                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                    texture1: createEmptyTexture()
                 };
         }
     });
@@ -387,183 +513,584 @@ function getBlock(terrain, coord) {
     if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
         return {
             collision: "solid",
-            texture: createEmptyTexture()
+            texture0: createEmptyTexture(),
+            texture1: createEmptyTexture()
         };
     return terrain[coord.y][coord.x];
 }
-function createPlayer() {
-    return {
-        coord: { x: 0, y: 0 },
-        isSmall: false,
-        texture: createRectTexture("yellow", blockSize - 4, blockSize * 2 - 4, blockSize * 0.5 - 2, blockSize * 1.5 - 4)
-    };
-}
-//そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
-function canEnter(coord, terrain, isSmall) {
-    if (isSmall)
-        return getBlock(terrain, coord).collision !== "solid";
-    return getBlock(terrain, coord).collision !== "solid"
-        && getBlock(terrain, upCoord(coord)).collision !== "solid";
-}
-//その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-function canStand(coord, terrain, isSmall) {
-    if (!canEnter(coord, terrain, isSmall))
-        return false;
-    if (isSmall && getBlock(terrain, coord).collision === "ladder")
-        return true;
-    if (getBlock(terrain, coord).collision === "ladder"
-        || getBlock(terrain, upCoord(coord)).collision === "ladder"
-        || getBlock(terrain, downCoord(coord)).collision === "ladder")
-        return true;
-    return getBlock(terrain, downCoord(coord)).collision === "solid";
-}
-function checkLeft(coord, terrain, isSmall) {
-    // 左が空いているならそこ
-    if (canEnter(leftCoord(coord), terrain, isSmall))
-        return { coord: leftCoord(coord), actionType: "walk" };
-    // 上がふさがってなくて左上が空いているならそこ
-    if (canEnter(upCoord(coord), terrain, isSmall)
-        && canEnter(leftCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: leftCoord(upCoord(coord)), actionType: "climb" };
-    return null;
-}
-function checkRight(coord, terrain, isSmall) {
-    // 右が空いているならそこ
-    if (canEnter(rightCoord(coord), terrain, isSmall))
-        return { coord: rightCoord(coord), actionType: "walk" };
-    // 上がふさがってなくて右上が空いているならそこ
-    if (canEnter(upCoord(coord), terrain, isSmall)
-        && canEnter(rightCoord(upCoord(coord)), terrain, isSmall))
-        return { coord: rightCoord(upCoord(coord)), actionType: "climb" };
-    return null;
-}
-function checkUp(coord, terrain, isSmall) {
-    // 下半身か上半身が梯子で、かつ真上に留まれるなら登る？
-    if ((getBlock(terrain, coord).collision === "ladder" ||
-        getBlock(terrain, upCoord(coord)).collision === "ladder") &&
-        canStand(upCoord(coord), terrain, isSmall))
-        return { coord: upCoord(coord), actionType: "climb" };
-    return null;
-}
-function checkDown(coord, terrain, isSmall) {
-    // 真下が空いてるなら（飛び）下りる？
-    if (canEnter(downCoord(coord), terrain, isSmall))
-        return { coord: downCoord(coord), actionType: "climb" };
-    return null;
-}
-//プレイヤーを直接動かす。落とす処理もする。
-function movePlayer(player, field, direction) {
-    let result = null;
-    switch (direction) {
-        case "left":
-            result = checkLeft(player.coord, field.terrain, player.isSmall);
-            break;
-        case "right":
-            result = checkRight(player.coord, field.terrain, player.isSmall);
-            break;
-        case "up":
-            result = checkUp(player.coord, field.terrain, player.isSmall);
-            break;
-        case "down":
-            result = checkDown(player.coord, field.terrain, player.isSmall);
-            break;
+function drawField(field, camera, renderer) {
+    drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, renderer);
+    const xRange = Math.ceil(renderer.width / blockSize / 2);
+    const yRange = Math.ceil(renderer.height / blockSize / 2);
+    const x1 = Math.floor(camera.centerX / blockSize) - xRange;
+    const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
+    const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
+    const y2 = Math.ceil(-camera.centerY / blockSize) + yRange;
+    for (var x = x1; x <= x2; x++) {
+        for (var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y)
+                continue;
+            const coord = createCoord(x, y);
+            drawTexture(getBlock(field.terrain, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+        }
     }
-    if (result === null)
-        return null;
-    // 立てる場所まで落とす
-    while (!canStand(result.coord, field.terrain, player.isSmall)) {
-        result.actionType = "drop";
-        result.coord = downCoord(result.coord);
+    for (var x = x1; x <= x2; x++) {
+        for (var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y)
+                continue;
+            const coord = createCoord(x, y);
+            drawTexture(getBlock(field.terrain, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+        }
     }
-    player.coord = result.coord;
-    console.log(direction + " " + result.actionType);
-    turn(field, player);
+    // デバッグ用の赤い点
+    //*
+    for (var x = x1; x <= x2; x++) {
+        for (var y = y1; y <= y2; y++) {
+            if (field.terrain.length <= y)
+                continue;
+            const coord = createCoord(x, y);
+            drawTexture(createRectTexture("red", 1, 1, 0, 0), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+        }
+    } //*/
+    field.entities.forEach(e => drawGameObject(e, camera, renderer));
 }
+// プレイヤー行動後の敵などの処理はここ
 function turn(field, player) {
-    //敵などのターン処理はここ
-    controlNeko(field.neko, field, player);
-    while (field.terrain.length - 5 < player.coord.y || field.terrain.length - 5 < field.neko.coord.y)
-        generateRow(field);
+    return Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)), terrain: annexRow(field.terrain, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5))) });
 }
-function createNeko() {
-    return {
-        coord: { x: 0, y: 5 },
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, blockSize / 2 - 2)
-    };
-}
-function controlNeko(neko, field, player) {
-    neko.coord.x++;
-}
-function createCamera() {
+/// <reference path="./resources.ts" />
+/// <reference path="./gameobject.ts" />
+/// <reference path="./field.ts" />
+var Player;
+(function (Player) {
+    function create() {
+        return {
+            state: "stand",
+            coord: createCoord(0, 0),
+            facingDirection: "facing_left",
+            smallCount: 0,
+            texture: cloneAndReplayTexture(resources.player_stand_right_texture),
+        };
+    }
+    Player.create = create;
+    // その場所でプレイヤーがどのようにあるべきか
+    function checkState(coord, terrain, isSmall) {
+        if (isSmall) {
+            const ground = getBlock(terrain, downCoord(coord)).collision;
+            const body = getBlock(terrain, coord).collision;
+            if (body === "solid")
+                return null;
+            if (ground === "solid")
+                return "stand";
+            if (body === "ladder")
+                return "ladder";
+            if (body === "air")
+                return "drop";
+            //意味わからんけど網羅チェックとして機能するらしい
+            return body;
+        }
+        else {
+            const ground = getBlock(terrain, downCoord(coord)).collision;
+            const foot = getBlock(terrain, coord).collision;
+            const head = getBlock(terrain, upCoord(coord)).collision;
+            if (head === "solid" || foot === "solid")
+                return null;
+            if (ground === "solid")
+                return "stand";
+            if (head === "ladder")
+                return "ladder";
+            if (head === "air")
+                return "drop";
+            //意味わからんけど網羅チェックとして機能するらしい
+            return head;
+        }
+    }
+    //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
+    function canEnter(coord, terrain, isSmall) {
+        return checkState(coord, terrain, isSmall) !== null;
+    }
+    Player.canEnter = canEnter;
+    //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
+    function canStand(coord, terrain, isSmall) {
+        return checkState(coord, terrain, isSmall) !== null
+            && checkState(coord, terrain, isSmall) !== "drop";
+    }
+    Player.canStand = canStand;
+    function drop(coord, state, terrain, isSmall) {
+        if (state === "stand" || state === "ladder")
+            return { coord, state };
+        return (drop(downCoord(coord), checkState(downCoord(coord), terrain, isSmall), terrain, isSmall));
+    }
+    function checkLeft(coord, terrain, isSmall) {
+        // 左が空いているならそこ
+        const leftState = checkState(leftCoord(coord), terrain, isSmall);
+        if (leftState !== null) {
+            return drop(leftCoord(coord), leftState, terrain, isSmall);
+        }
+        // 上がふさがってなくて左上に立てるならそこ
+        if (checkState(upCoord(coord), terrain, isSmall) !== null
+            && checkState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
+            return {
+                coord: leftCoord(upCoord(coord)),
+                state: "stand",
+            };
+        return null;
+    }
+    Player.checkLeft = checkLeft;
+    function checkRight(coord, terrain, isSmall) {
+        // 右が空いているならそこ
+        const rightState = checkState(rightCoord(coord), terrain, isSmall);
+        if (rightState !== null) {
+            return drop(rightCoord(coord), rightState, terrain, isSmall);
+        }
+        // 上がふさがってなくて右上に立てるならそこ
+        if (checkState(upCoord(coord), terrain, isSmall) !== null
+            && checkState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+            return {
+                coord: rightCoord(upCoord(coord)),
+                state: "stand",
+            };
+        return null;
+    }
+    Player.checkRight = checkRight;
+    function checkUp(coord, terrain, isSmall) {
+        // 上半身が梯子で、かつ真上に留まれるなら登る？
+        if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder" &&
+            canStand(upCoord(coord), terrain, isSmall))
+            return {
+                coord: upCoord(coord),
+                state: "ladder",
+            };
+        return null;
+    }
+    Player.checkUp = checkUp;
+    function checkDown(coord, terrain, isSmall) {
+        // 真下が空いてるなら（飛び）下りる？
+        const downState = checkState(downCoord(coord), terrain, isSmall);
+        if (downState !== null)
+            return drop(downCoord(coord), downState, terrain, isSmall);
+        return null;
+    }
+    Player.checkDown = checkDown;
+    function shrink(player) {
+        return updateTexture(Object.assign(Object.assign({}, player), { smallCount: 5 }));
+    }
+    Player.shrink = shrink;
+    function selectTexture(textureSet, smallCount) {
+        return textureSet[0 < smallCount ? "small" : "normal"];
+    }
+    /*
+    // プレイヤーを落とす処理（※グローバル参照）
+    function drop(field: Field) {
+        if (player.state !== "drop") {
+            player = updateTexture(player);
+        }
+        else {
+            //宙に浮いてたら自動で落ちる
+            const result = checkDown(player.coord, field.terrain, 0 < player.smallCount)
+                || { state: "drop", coord: downCoord(player.coord) }; //埋まる場合には更に落とす
+            const textureSet = getDropTexture(result.state, player.facingDirection);
+            player = {
+                ...player,
+                texture: cloneAndReplayTexture(
+                    selectTexture(textureSet, player.smallCount),
+                    () => drop(field)),
+                coord: result.coord,
+                state: result.state,
+                //moveDirectionは更新しない（向いている方向を判別したいので）
+            };
+        }
+
+        function getDropTexture(newState: "stand" | "ladder" | "drop", facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
+            switch (newState) {
+                //落下に関して移動方向は考えない（必ず下と見做す）。代わりに顔の向きを考える
+                //着地
+                case "stand": switch (facingDirection) {
+                    case "facing_left": return {
+                        small: resources.player_small_drop_left_texture,
+                        normal: resources.player_drop_left_texture,
+                    }; break;
+                    case "facing_right": return {
+                        small: resources.player_small_drop_right_texture,
+                        normal: resources.player_drop_right_texture,
+                    }; break;
+                    default: return facingDirection;
+                } break;
+                //梯子に着地
+                case "ladder": switch (facingDirection) {
+                    case "facing_left": return {
+                        small: resources.player_small_drop_left_texture,
+                        normal: resources.player_drop_left_texture,
+                    }; break;
+                    case "facing_right": return {
+                        small: resources.player_small_drop_right_texture,
+                        normal: resources.player_drop_right_texture,
+                    }; break;
+                    default: return facingDirection;
+                }
+                    break;
+                //落下継続
+                case "drop": switch (facingDirection) {
+                    case "facing_left": return {
+                        small: resources.player_small_drop_left_texture,
+                        normal: resources.player_drop_left_texture,
+                    }; break;
+                    case "facing_right": return {
+                        small: resources.player_small_drop_right_texture,
+                        normal: resources.player_drop_right_texture,
+                    }; break;
+                    default: return facingDirection;
+                } break;
+                default: return newState;
+            }
+        }
+    }
+    */
+    //プレイヤーのstateを見てテクスチャを更新する。
+    function updateTexture(player) {
+        const textureSet = getStateTexture(player.state, player.facingDirection);
+        return Object.assign(Object.assign({}, player), { texture: selectTexture(textureSet, player.smallCount) });
+        function getStateTexture(state, facingDirection) {
+            switch (state) {
+                case "stand":
+                    {
+                        switch (facingDirection) {
+                            case "facing_left":
+                                return {
+                                    small: cloneAndReplayTexture(resources.player_small_stand_left_texture),
+                                    normal: cloneAndReplayTexture(resources.player_stand_left_texture),
+                                };
+                                break;
+                            case "facing_right":
+                                return {
+                                    small: cloneAndReplayTexture(resources.player_small_stand_right_texture),
+                                    normal: cloneAndReplayTexture(resources.player_stand_right_texture),
+                                };
+                                break;
+                            default: return facingDirection;
+                        }
+                    }
+                    break;
+                case "ladder":
+                    return {
+                        small: cloneAndReplayTexture(resources.player_small_hold_texture),
+                        normal: cloneAndReplayTexture(resources.player_hold_texture),
+                    };
+                    break;
+            }
+        }
+    }
+    //与えられたMoveResult | nullに従ってプレイヤーを動かす
+    function move(player, result) {
+        const textureSet = getTransitionTexture(player.state, result.state, result.coord.x - player.coord.x, result.coord.y - player.coord.y, player.facingDirection);
+        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount)), coord: result.coord, state: result.state, 
+            //左に移動したときのみ左を向く。無標（上下移動）では右
+            facingDirection: result.coord < player.coord ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
+        function getTransitionTexture(oldState, newState, dx, dy, facingDirection) {
+            //飛び降り条件
+            if (dy < -1 || dy === -1 && (dx !== 0 || oldState !== "ladder")) {
+                //一旦適当
+                if (dx === -1)
+                    return {
+                        small: resources.player_small_walk_left_texture,
+                        normal: resources.player_walk_left_texture,
+                    };
+                else
+                    return {
+                        small: resources.player_small_walk_right_texture,
+                        normal: resources.player_walk_right_texture,
+                    };
+            }
+            switch (oldState) {
+                case "stand":
+                    switch (newState) {
+                        // 歩き系
+                        case "stand":
+                            switch (dx) {
+                                //左に
+                                case -1:
+                                    switch (dy) {
+                                        //歩く
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_left_texture,
+                                                normal: resources.player_walk_left_texture,
+                                            };
+                                            break;
+                                        //よじ登る
+                                        case 1:
+                                            return {
+                                                small: resources.player_small_climb_left_texture,
+                                                normal: resources.player_climb_left_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                                //右に
+                                case 1:
+                                    switch (dy) {
+                                        //歩く
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_right_texture,
+                                                normal: resources.player_walk_right_texture,
+                                            };
+                                            break;
+                                        //よじ登る
+                                        case 1:
+                                            return {
+                                                small: resources.player_small_climb_right_texture,
+                                                normal: resources.player_climb_right_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                            }
+                            break;
+                        //梯子につかまる
+                        case "ladder":
+                            switch (dx) {
+                                case -1:
+                                    switch (dy) {
+                                        //左の梯子に掴まる 
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_left_texture,
+                                                normal: resources.player_walk_left_texture,
+                                            };
+                                            break;
+                                    }
+                                    ;
+                                    break;
+                                case 1:
+                                    switch (dy) {
+                                        //右の梯子につかまる
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_right_texture,
+                                                normal: resources.player_walk_right_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                                //上の梯子につかまる
+                                case 0: switch (dy) {
+                                    case 1:
+                                        return {
+                                            small: resources.player_small_climb_up_texture,
+                                            normal: resources.player_climb_up_texture,
+                                        };
+                                        break;
+                                }
+                            }
+                            break;
+                    }
+                    break;
+                case "ladder":
+                    switch (newState) {
+                        //梯子から穏便に落ちる
+                        case "stand":
+                            switch (dx) {
+                                //左に
+                                case -1:
+                                    switch (dy) {
+                                        //左の足場に下りる
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_left_texture,
+                                                normal: resources.player_walk_left_texture,
+                                            };
+                                            break;
+                                        //梯子から左上によじ登る
+                                        case 1:
+                                            return {
+                                                small: resources.player_small_climb_left_texture,
+                                                normal: resources.player_climb_left_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                                //右に
+                                case 1:
+                                    switch (dy) {
+                                        //右の足場に下りる
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_right_texture,
+                                                normal: resources.player_walk_right_texture,
+                                            };
+                                            break;
+                                        //梯子から右上によじ登る
+                                        case 1:
+                                            return {
+                                                small: resources.player_small_climb_right_texture,
+                                                normal: resources.player_climb_right_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                                //上下に
+                                case 0:
+                                    switch (dy) {
+                                        //下の足場に下りる
+                                        case -1:
+                                            return {
+                                                small: resources.player_small_climb_down_texture,
+                                                normal: resources.player_climb_down_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                            }
+                            break;
+                        //梯子上で移動
+                        case "ladder":
+                            switch (dx) {
+                                //左
+                                case -1:
+                                    switch (dy) {
+                                        //左の梯子に掴まる
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_left_texture,
+                                                normal: resources.player_walk_left_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                                //上下
+                                case 0:
+                                    switch (dy) {
+                                        //上の梯子につかまる
+                                        case 1:
+                                            return {
+                                                small: resources.player_small_climb_up_texture,
+                                                normal: resources.player_climb_up_texture,
+                                            };
+                                            break;
+                                        //下の梯子につかまる
+                                        case -1:
+                                            return {
+                                                small: resources.player_small_climb_down_texture,
+                                                normal: resources.player_climb_down_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                                //右
+                                case 1:
+                                    switch (dy) {
+                                        //右の梯子につかまる
+                                        case 0:
+                                            return {
+                                                small: resources.player_small_walk_right_texture,
+                                                normal: resources.player_walk_right_texture,
+                                            };
+                                            break;
+                                    }
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
+            }
+            throw new Error("unecpected texture requested");
+        }
+    }
+    function moveLeft(player, field) {
+        let result = checkLeft(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveLeft = moveLeft;
+    function moveRight(player, field) {
+        let result = checkRight(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveRight = moveRight;
+    function moveUp(player, field) {
+        let result = checkUp(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveUp = moveUp;
+    function moveDown(player, field) {
+        let result = checkDown(player.coord, field.terrain, 0 < player.smallCount);
+        return result === null ? [player, field] : [move(player, result), turn(field, player)];
+    }
+    Player.moveDown = moveDown;
+})(Player || (Player = {}));
+/// <reference path="./coord.ts" />
+/// <reference path="./player.ts" />
+/// <reference path="./field.ts" />
+/// <reference path="./renderer.ts" />
+var Camera;
+(function (Camera) {
+    // ヒステリシスゆとり幅
     const clearanceX = 4;
-    const clearanceY = 4;
-    return {
-        // ヒステリシスゆとり幅
-        clearanceX,
-        clearanceY,
-        // カメラ中心の移動目標マス
-        coord: { x: clearanceX, y: clearanceY },
-        // カメラ中心のスクリーン座標(移動アニメーション折り込み)
-        centerX: clearanceX * blockSize,
-        centerY: -clearanceY * blockSize,
-        // カメラの移動速度
-        velocityX: 0,
-        velocityY: 0,
-        // 描画用オフセット（スクリーン左上座標）
-        offsetX: 0,
-        offsetY: 0,
-    };
-}
-function updateCamera(camera, player, field, renderer) {
-    if (camera.coord.x > player.coord.x + camera.clearanceX)
-        camera.coord.x = player.coord.x + camera.clearanceX;
-    if (camera.coord.x < player.coord.x - camera.clearanceX)
-        camera.coord.x = player.coord.x - camera.clearanceX;
-    if (camera.coord.y > player.coord.y + camera.clearanceY)
-        camera.coord.y = player.coord.y + camera.clearanceY;
-    if (camera.coord.y < player.coord.y - camera.clearanceY)
-        camera.coord.y = player.coord.y - camera.clearanceY;
-    const targetX = camera.coord.x * blockSize;
-    const targetY = -camera.coord.y * blockSize;
+    const clearanceY = 2;
+    const initialY = 4;
     const smooth = 0.9; // 1フレームあたりの減衰比(0～1の無次元値)
     const accel = 1; // 1フレームあたりの速度変化
-    camera.velocityX =
-        Math.max(camera.velocityX * smooth - accel, Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
+    function create() {
+        return {
+            // カメラ中心の移動目標マス
+            coord: createCoord(clearanceX, clearanceY),
+            // カメラ中心のスクリーン座標(移動アニメーション折り込み)
+            centerX: clearanceX * blockSize,
+            centerY: -initialY * blockSize,
+            // カメラの移動速度
+            velocityX: 0,
+            velocityY: 0,
+            // 描画用オフセット（スクリーン左上座標）
+            offsetX: 0,
+            offsetY: 0,
+        };
+    }
+    Camera.create = create;
+    function update(camera, player, field, renderer) {
+        const coord = createCoord(Math.max(player.coord.x - clearanceX, Math.min(player.coord.x + clearanceX, camera.coord.x)), Math.max(initialY, Math.max(player.coord.y - clearanceY, Math.min(player.coord.y + clearanceY, camera.coord.y))));
+        const targetX = coord.x * blockSize;
+        const targetY = -coord.y * blockSize;
+        const velocityX = Math.max(camera.velocityX * smooth - accel, Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
         ((targetX - camera.centerX) * (1 - smooth)))); //この速度にしておけば公比smoothの無限級数がtargetXに収束する
-    camera.velocityY =
-        Math.max(camera.velocityY * smooth - accel, Math.min(camera.velocityY * smooth + accel, ((targetY - camera.centerY) * (1 - smooth))));
-    camera.centerX += camera.velocityX;
-    camera.centerY += camera.velocityY;
-    camera.offsetX = Math.floor(renderer.lightColor.canvas.width / 2 - camera.centerX);
-    camera.offsetY = Math.floor(renderer.lightColor.canvas.height / 2 - camera.centerY);
-}
-const blockSize = 16;
-function drawBlock(block, coord, camera, renderer, imageResources) {
-    block.texture.draw(camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer, imageResources);
-}
-function drawField(field, camera, renderer, imageResources) {
-    field.terrain.forEach((row, y) => row.forEach((block, x) => drawBlock(block, { x, y }, camera, renderer, imageResources)));
-}
-function drawGameObject(gameObject, camera, renderer, imageResources) {
-    gameObject.texture.draw(camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer, imageResources);
-}
-function animationLoop(field, player, camera, renderer, mainScreen, loadingProgress) {
-    if (loadingProgress.registeredCount === loadingProgress.finishedCount) {
-        updateCamera(camera, player, field, renderer);
-        drawField(field, camera, renderer, loadingProgress.imageResources);
-        drawGameObject(player, camera, renderer, loadingProgress.imageResources);
-        drawGameObject(field.neko, camera, renderer, loadingProgress.imageResources);
-        drawDigraphForTest(camera, renderer.lightColor); //テスト
-        testAnimation.draw(40, 40, renderer, loadingProgress.imageResources);
-        composit(renderer, mainScreen);
+        const velocityY = Math.max(camera.velocityY * smooth - accel, Math.min(camera.velocityY * smooth + accel, ((targetY - camera.centerY) * (1 - smooth))));
+        const centerX = camera.centerX + velocityX;
+        const centerY = camera.centerY + velocityY;
+        const offsetX = Math.floor(renderer.width / 2 - centerX);
+        const offsetY = Math.floor(renderer.height / 2 - centerY);
+        return {
+            coord,
+            centerX,
+            centerY,
+            velocityX,
+            velocityY,
+            offsetX,
+            offsetY,
+        };
+    }
+    Camera.update = update;
+})(Camera || (Camera = {}));
+/// <reference path="./algorithm.ts" />
+let field = createField();
+trafficDigraphForTest = createTrafficDigraph(0, 8, field.terrain); //テスト
+sccs = sccDecomposition(Array.from(trafficDigraphForTest.values()));
+let player = Player.create();
+let camera = Camera.create();
+function animationLoop(renderer, mainScreen, resources) {
+    if (resources._progress.isFinished()) {
+        camera = Camera.update(camera, player, field, renderer);
+        drawField(field, camera, renderer);
+        drawGameObject(player, camera, renderer);
+        drawDigraphForTest(camera, renderer.lightColor);
+        drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
+        Renderer.composit(renderer, mainScreen);
+        requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
     else {
-        console.log("loading " + loadingProgress.finishedCount + "/" + loadingProgress.registeredCount);
-        mainScreen.fillText("loading", 0, 0);
+        console.log("loading " + (resources._progress.rate() * 100) + "%");
+        mainScreen.fillText("loading", 0, 50);
+        requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
-    requestAnimationFrame(() => animationLoop(field, player, camera, renderer, mainScreen, loadingProgress));
 }
-let testAnimation;
 window.onload = () => {
     const canvas = document.getElementById("canvas");
     if (canvas === null || !(canvas instanceof HTMLCanvasElement))
@@ -571,12 +1098,7 @@ window.onload = () => {
     const mainScreen = canvas.getContext("2d");
     if (mainScreen === null)
         throw new Error("context2d not found");
-    const field = createField();
-    const player = createPlayer();
-    const camera = createCamera();
-    const renderer = createRenderer(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
-    const loadingProgress = resourceLoader(["test.png"]);
-    testAnimation = createAnimationTexture("test.png", 0, 0, 32, [30, 60, 90, 120, 150, 180, 210, 240], true);
+    const renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;
@@ -589,22 +1111,41 @@ window.onload = () => {
         if (event.repeat)
             return;
         if (event.code === "KeyA")
-            player.coord.x--;
+            player = Object.assign(Object.assign({}, player), { coord: leftCoord(player.coord) });
         if (event.code === "KeyD")
-            player.coord.x++;
+            player = Object.assign(Object.assign({}, player), { coord: rightCoord(player.coord) });
         if (event.code === "KeyW")
-            player.coord.y++;
+            player = Object.assign(Object.assign({}, player), { coord: upCoord(player.coord) });
         if (event.code === "KeyS")
-            player.coord.y--;
-        if (event.code === "ArrowLeft")
-            movePlayer(player, field, "left");
-        if (event.code === "ArrowRight")
-            movePlayer(player, field, "right");
-        if (event.code === "ArrowUp")
-            movePlayer(player, field, "up");
-        if (event.code === "ArrowDown")
-            movePlayer(player, field, "down");
+            player = Object.assign(Object.assign({}, player), { coord: downCoord(player.coord) });
+        switch (event.code) {
+            case "KeyZ":
+                {
+                    player = Player.shrink(player);
+                }
+                break;
+            case "ArrowLeft":
+                {
+                    [player, field] = Player.moveLeft(player, field);
+                }
+                break;
+            case "ArrowRight":
+                {
+                    [player, field] = Player.moveRight(player, field);
+                }
+                break;
+            case "ArrowUp":
+                {
+                    [player, field] = Player.moveUp(player, field);
+                }
+                break;
+            case "ArrowDown":
+                {
+                    [player, field] = Player.moveDown(player, field);
+                }
+                break;
+        }
         console.log(player.coord);
     }, false);
-    animationLoop(field, player, camera, renderer, mainScreen, loadingProgress);
+    animationLoop(renderer, mainScreen, resources);
 };
