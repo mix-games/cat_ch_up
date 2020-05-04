@@ -170,12 +170,14 @@ var Renderer;
         const shadowLayers = [];
         for (let i = 0; i < Renderer.layerNum; i++)
             shadowLayers.push(create2dScreen(Renderer.marginLeft + width + marginRignt, Renderer.marginTop + height + marginBottom));
+        const uiScreen = create2dScreen(width, height);
         const compositScreen = create2dScreen(width, height);
         return {
             lightColor,
             shadowColor,
             lightLayers,
             shadowLayers,
+            uiScreen,
             compositScreen,
             width,
             height,
@@ -219,6 +221,7 @@ var Renderer;
         // 残りの部分に光色
         renderer.compositScreen.globalCompositeOperation = "destination-over";
         renderer.compositScreen.drawImage(renderer.lightColor.canvas, -Renderer.marginLeft, -Renderer.marginTop);
+        renderer.compositScreen.drawImage(renderer.uiScreen.canvas, 0, 0);
         // メインスクリーン（本番のcanvas）にスムージングなしで拡大
         mainScreen.imageSmoothingEnabled = false;
         mainScreen.clearRect(0, 0, mainScreen.canvas.width, mainScreen.canvas.height);
