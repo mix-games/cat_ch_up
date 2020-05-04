@@ -56,16 +56,16 @@ window.onload = () => {
                 player = Player.shrink(player);
             } break;
             case "ArrowLeft": {
-                [player, field] = Player.moveLeft(player, field);
+                [player, field] = Player.move(player, field, "input_left");
             } break;
             case "ArrowRight": {
-                [player, field] = Player.moveRight(player, field);
+                [player, field] = Player.move(player, field, "input_right");
             } break;
             case "ArrowUp": {
-                [player, field] = Player.moveUp(player, field);
+                [player, field] = Player.move(player, field, "input_up");
             } break;
             case "ArrowDown": {
-                [player, field] = Player.moveDown(player, field);
+                [player, field] = Player.move(player, field, "input_down");
             } break;
         }
         console.log(player.coord);
