@@ -650,19 +650,130 @@ var Player;
         }
     }
     function getTransitionTexture(oldState, newState, dx, dy, facingDirection) {
-        //飛び降り条件
-        if (dy < -1 || dy === -1 && (dx !== 0 || oldState !== "ladder")) {
-            //一旦適当
-            if (dx === -1)
-                return {
-                    small: resources.player_small_walk_left_texture,
-                    normal: resources.player_walk_left_texture,
-                };
-            else
-                return {
-                    small: resources.player_small_walk_right_texture,
-                    normal: resources.player_walk_right_texture,
-                };
+        // 梯子真下移動を除く下方向の移動は飛び降りとして処理
+        if (dy <= -1 && !(oldState === "ladder" && newState === "ladder" && dx === 0 && dy === -1)) {
+            let startTexture = null;
+            switch (oldState) {
+                case "stand":
+                    switch (dx) {
+                        //足場から左に落ちた
+                        case -1:
+                            startTexture = {
+                                small: resources.player_small_walk_left_texture,
+                                normal: resources.player_walk_left_texture,
+                            };
+                            break;
+                        //足場から右に落ちた
+                        case 1:
+                            startTexture = {
+                                small: resources.player_small_walk_right_texture,
+                                normal: resources.player_walk_right_texture,
+                            };
+                            break;
+                    }
+                    break;
+                case "ladder":
+                    switch (dx) {
+                        //梯子から左に落ちた
+                        case -1:
+                            startTexture = {
+                                small: resources.player_small_walk_left_texture,
+                                normal: resources.player_walk_left_texture,
+                            };
+                            break;
+                        //梯子から真下に落ちた
+                        case 0:
+                            startTexture = {
+                                small: resources.player_small_climb_down_texture,
+                                normal: resources.player_small_climb_down_texture,
+                            };
+                            break;
+                        //梯子から右に落ちた
+                        case 1:
+                            startTexture = {
+                                small: resources.player_small_walk_right_texture,
+                                normal: resources.player_walk_right_texture,
+                            };
+                            break;
+                    }
+                    break;
+            }
+            if (startTexture === null)
+                throw new Error("unexpected texture requested");
+            let midTexture;
+            switch (facingDirection) {
+                case "facing_left":
+                    midTexture = {
+                        small: resources.player_small_drop_left_texture,
+                        normal: resources.player_drop_left_texture,
+                    };
+                    break;
+                case "facing_right":
+                    midTexture = {
+                        small: resources.player_small_drop_right_texture,
+                        normal: resources.player_drop_right_texture,
+                    };
+                    break;
+                default: midTexture = facingDirection;
+            }
+            let endTexture;
+            switch (newState) {
+                case "stand":
+                    switch (facingDirection) {
+                        //左を向いて足場に着地
+                        case "facing_left":
+                            endTexture = {
+                                small: resources.player_small_stand_left_texture,
+                                normal: resources.player_stand_left_texture,
+                            };
+                            break;
+                        //右を向いて足場に着地
+                        case "facing_right":
+                            endTexture = {
+                                small: resources.player_small_stand_right_texture,
+                                normal: resources.player_stand_right_texture,
+                            };
+                            break;
+                        default: endTexture = facingDirection;
+                    }
+                    break;
+                case "ladder":
+                    switch (facingDirection) {
+                        //左を向いて梯子に着地
+                        case "facing_left":
+                            endTexture = {
+                                small: resources.player_small_stand_left_texture,
+                                normal: resources.player_stand_left_texture,
+                            };
+                            break;
+                        //右を向いて梯子に着地
+                        case "facing_right":
+                            endTexture = {
+                                small: resources.player_small_stand_right_texture,
+                                normal: resources.player_stand_right_texture,
+                            };
+                            break;
+                        default: endTexture = facingDirection;
+                    }
+                    break;
+                default: endTexture = newState;
+            }
+            const smallTextures = [];
+            smallTextures.push(createOffsetTexture(startTexture.small, 0, -dy * blockSize));
+            for (let i = 0; i < -dy - 1; i++) {
+                smallTextures.push(createOffsetTexture(midTexture.small, 0, (-dy - i - 1) * blockSize));
+            }
+            smallTextures.push(endTexture.small);
+            const normalTextures = [];
+            normalTextures.push(createOffsetTexture(startTexture.normal, 0, -dy * blockSize));
+            for (let i = 0; i < -dy - 1; i++) {
+                normalTextures.push(createOffsetTexture(midTexture.normal, 0, (-dy - i - 1) * blockSize));
+            }
+            normalTextures.push(endTexture.normal);
+            return {
+                small: joinAnimation(smallTextures, false),
+                normal: joinAnimation(normalTextures, false),
+            };
         }
         switch (oldState) {
             case "stand":
