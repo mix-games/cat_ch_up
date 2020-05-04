@@ -110,7 +110,11 @@ function sccDecomposition(vertexes) {
     }
 }
 //テスト
-function drawDigraphForTest(camera, screen) {
+function drawDigraphForTest(camera, field, player, screen) {
+    field.terrain.forEach((row, y) => row.forEach((block, x) => {
+        drawCollision(createCoord(x, y), block);
+    }));
+    drawPlayer(player);
     screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex) => {
         vertex.outflow.forEach((to) => {
@@ -121,6 +125,27 @@ function drawDigraphForTest(camera, screen) {
     Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x - 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
+    function drawCollision(coord, block) {
+        switch (block.collision) {
+            case "air":
+                screen.fillStyle = "white";
+                break;
+            case "ladder":
+                screen.fillStyle = "red";
+                break;
+            case "solid":
+                screen.fillStyle = "black";
+                break;
+        }
+        screen.fillRect(camera.offsetX + (coord.x - 0.5) * blockSize, camera.offsetY - coord.y * blockSize, blockSize, blockSize);
+    }
+    function drawPlayer(player) {
+        screen.fillStyle = "yellow";
+        if (0 < player.smallCount)
+            screen.fillRect(camera.offsetX + player.coord.x * blockSize - 10, camera.offsetY - player.coord.y * blockSize + 2, 20, 22);
+        else
+            screen.fillRect(camera.offsetX + player.coord.x * blockSize - 10, camera.offsetY - player.coord.y * blockSize - 22, 20, 46);
+    }
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
     function drawArrow(fromX, fromY, toX, toY) {
@@ -1085,7 +1110,7 @@ function animationLoop(renderer, mainScreen, resources) {
         camera = Camera.update(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
-        drawDigraphForTest(camera, renderer.uiScreen);
+        drawDigraphForTest(camera, field, player, renderer.uiScreen);
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
         Renderer.composit(renderer, mainScreen);
         requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));

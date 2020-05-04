@@ -80,28 +80,28 @@ function sccDecomposition(vertexes: DigraphVertex[]): SCCDecomposition {
         // 全部巡回出来てなかったらstackの先頭から次の根を選ぶ
         let root2: DigraphVertex | undefined = stack[0];
         while (root2 !== undefined) {
-            const component: SCComponent = { vertexes: [], inflow:new Set(), outflow:new Set() };
+            const component: SCComponent = { vertexes: [], inflow: new Set(), outflow: new Set() };
             inflowRecursion(root2, seen, component, decomposition);
             root2 = stack.find(v => seen.get(v) === 1);
         }
-        
+
         // 適当な未探索ノードを選ぶ
         root = vertexes.find(v => seen.get(v) === undefined);
     }
 
-    vertexes.forEach((vertex)=>{
+    vertexes.forEach((vertex) => {
         const component = decomposition.get(vertex);
         if (component === undefined) throw new Error("んなはずない");
         component.vertexes.push(vertex);
         vertex.outflow.forEach(to => {
             const toComponent = decomposition.get(to);
             if (toComponent === undefined) throw new Error("んなはずない2");
-            component.outflow.add(toComponent)
+            component.outflow.add(toComponent);
         });
         vertex.inflow.forEach(from => {
             const fromComponent = decomposition.get(from);
             if (fromComponent === undefined) throw new Error("んなはずない3");
-            component.outflow.add(fromComponent)
+            component.outflow.add(fromComponent);
         });
     });
 
@@ -133,12 +133,19 @@ function sccDecomposition(vertexes: DigraphVertex[]): SCCDecomposition {
 }
 
 //テスト
-function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): void {
+function drawDigraphForTest(camera: Camera, field: Field, player:Player, screen: CanvasRenderingContext2D): void {
+    field.terrain.forEach((row, y)=>
+        row.forEach((block, x)=>{
+            drawCollision(createCoord(x, y), block);
+        }
+    ));
+    drawPlayer(player);
+
     screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
         vertex.outflow.forEach((to: DigraphVertex): void => {
             drawArrow(
-                camera.offsetX +  (vertex.coord.x) * blockSize,
+                camera.offsetX + (vertex.coord.x) * blockSize,
                 camera.offsetY - (vertex.coord.y) * blockSize,
                 camera.offsetX + (to.coord.x) * blockSize,
                 camera.offsetY - (to.coord.y) * blockSize);
@@ -151,6 +158,36 @@ function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): v
             camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
 
+    function drawCollision(coord: Coord, block: Block) {
+        switch (block.collision) {
+            case "air":
+                screen.fillStyle = "white";
+                break;
+            case "ladder":
+                screen.fillStyle = "red";
+                break;
+            case "solid":
+                screen.fillStyle = "black";
+                break;
+        }
+        screen.fillRect(
+            camera.offsetX + (coord.x - 0.5) * blockSize,
+            camera.offsetY - coord.y * blockSize,
+            blockSize, blockSize);
+    }
+    function drawPlayer(player: Player) {
+        screen.fillStyle = "yellow";
+        if(0 < player.smallCount)
+        screen.fillRect(
+            camera.offsetX + player.coord.x * blockSize - 10,
+            camera.offsetY - player.coord.y * blockSize + 2,
+            20, 22);
+        else 
+        screen.fillRect(
+            camera.offsetX + player.coord.x * blockSize - 10,
+            camera.offsetY - player.coord.y * blockSize - 22,
+            20, 46);
+    }
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
     function drawArrow(fromX: number, fromY: number, toX: number, toY: number): void {
