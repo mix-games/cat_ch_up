@@ -71,7 +71,7 @@ namespace Player {
 
     export function drop(coord: Coord, terrain: Terrain, isSmall: boolean): { coord:Coord, state: "stand" | "ladder" } {
         const state = checkState(downCoord(coord), terrain, isSmall);
-        if (state === "stand" || state === "ladder") return { coord, state };
+        if (state === "stand" || state === "ladder") return { coord:downCoord(coord), state };
         return (drop(downCoord(coord), terrain, isSmall));
     }
 
