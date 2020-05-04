@@ -27,7 +27,6 @@ interface AnimationTexture {
 
     readonly textures: Texture[];
     readonly timeline: number[];
-    readonly timestamp: number;
     readonly loop: boolean;
 }
 interface OffsetTexture {
@@ -84,12 +83,11 @@ function createVolumeTexture(width: number, height: number, depth: number, depth
     };
 }
 
-function createAnimationTexture(textures: Texture[], timeline: number[], timestamp: number, loop: boolean): AnimationTexture {
+function createAnimationTexture(textures: Texture[], timeline: number[], loop: boolean): AnimationTexture {
     return {
         type: "animation",
         textures,
         timeline,
-        timestamp,
         loop,
     };
 }
@@ -100,17 +98,6 @@ function createOffsetTexture(texture: Texture, offsetX: number, offsetY: number)
         offsetX,
         offsetY,
     }
-}
-
-function cloneAndReplayTexture(texture: Texture): Texture {
-    if (texture.type === "animation") {
-        return {
-            ...texture,
-            timestamp: new Date().getTime()
-        };
-    }
-    // いちおうコピーするけど意味なさそう
-    else return { ...texture };
 }
 
 function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | HTMLImageElement, useShadowColor: boolean) {
@@ -172,7 +159,7 @@ function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | H
     }
 }
 
-function drawTexture(texture: Texture, x: number, y: number, renderer: Renderer): void {
+function drawTexture(texture: Texture, x: number, y: number, elapse:number, renderer: Renderer): void {
     switch (texture.type) {
         case "rect": {
             renderer.lightColor.fillStyle = texture.color;
@@ -210,7 +197,6 @@ function drawTexture(texture: Texture, x: number, y: number, renderer: Renderer)
             }
         } break;
         case "animation": {
-            const elapse = new Date().getTime() - texture.timestamp;
             const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
 
             let frame = texture.timeline.findIndex(t => phase < t);
@@ -218,10 +204,10 @@ function drawTexture(texture: Texture, x: number, y: number, renderer: Renderer)
                 //texture.animationEndCallback();
                 frame = Math.max(0, texture.timeline.length - 1);
             }
-            drawTexture(texture.textures[frame], x, y, renderer);
+            drawTexture(texture.textures[frame], x, y, elapse - texture.timeline[frame], renderer);
         } break;
         case "offset": {
-            drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, renderer);
+            drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, elapse, renderer);
         } break;
     }
 }

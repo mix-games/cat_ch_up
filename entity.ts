@@ -14,7 +14,8 @@ function createNeko(): Neko {
     return {
         type: "neko",
         coord: createCoord(0, 5),
-        texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2)
+        texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
+        animationTimestamp: 0,
     };
 }
 

@@ -2,6 +2,7 @@ let field: Field = createField();
 let player: Player = Player.create();
 let camera: Camera = Camera.create();
 let renderer; //デバッグ用に外に出した
+let tick = 0;
 
 function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
     if (resources._progress.isFinished()) {
@@ -10,7 +11,7 @@ function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D,
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
 
-        drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
+        drawTexture(resources.player_walk_left_texture, 0, 0, 0, renderer);
         
         Renderer.composit(renderer, mainScreen);
         requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));

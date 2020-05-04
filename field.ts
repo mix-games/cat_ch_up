@@ -18,7 +18,7 @@ interface Field {
     readonly terrain: Terrain;
     readonly entities: readonly Entity[];
     readonly backgroundTexture: Texture;
-}
+    }
 
 function createField(): Field {
     const protoTerrain: BlockWithoutTexture[][] = [[], []];
@@ -38,7 +38,7 @@ function createField(): Field {
     return {
         terrain: annexRow(protoTerrain.map((protoRow)=>assignTexture(protoRow, [])), 10),
         entities: [createNeko()],
-        backgroundTexture: resources.background_texture
+        backgroundTexture: resources.background_texture,
     };
 }
 
@@ -65,19 +65,19 @@ function assignTexture(protoRow: BlockWithoutTexture[], terrain: Terrain): Block
             case "ladder":
             return {
                 collision: "ladder",
-                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
-                texture1: cloneAndReplayTexture(resources.terrain_ladder_texture),
+                texture0: resources.terrain_wall_texture,
+                texture1: resources.terrain_ladder_texture,
             };
             case "solid":
             return {
                 collision: "solid",
-                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
-                texture1: cloneAndReplayTexture(resources.terrain_condenser_texture),
+                texture0: resources.terrain_wall_texture,
+                texture1: resources.terrain_condenser_texture,
             };
             case "air":
             return {
                 collision: "air",
-                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                texture0: resources.terrain_wall_texture,
                 texture1: createEmptyTexture()
             };
         }
@@ -101,6 +101,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
         field.backgroundTexture,
         renderer.width / 2,
         renderer.height / 2,
+        tick,
         renderer
     );
 
@@ -119,6 +120,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
                 getBlock(field.terrain, coord).texture0,
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
+                tick,
                 renderer
             );
         }
@@ -132,6 +134,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
                 getBlock(field.terrain, coord).texture1,
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
+                tick,
                 renderer
             );
         }
@@ -147,6 +150,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
                 createRectTexture("red", 1, 1),
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
+                tick,
                 renderer
             );
         }

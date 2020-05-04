@@ -17,7 +17,8 @@ namespace Player {
             coord: createCoord(0, 0),
             facingDirection: "facing_left",
             smallCount: 0,
-            texture: cloneAndReplayTexture(resources.player_stand_right_texture),
+            animationTimestamp: 0,
+            texture: resources.player_stand_right_texture,
         };
     }
 
@@ -201,6 +202,7 @@ namespace Player {
 
         return {
             ...player,
+            animationTimestamp: tick,
             texture: selectTexture(textureSet, player.smallCount),
         };
 
@@ -209,19 +211,19 @@ namespace Player {
                 case "stand": {
                     switch (facingDirection) {
                         case "facing_left": return {
-                            small: cloneAndReplayTexture(resources.player_small_stand_left_texture),
-                            normal: cloneAndReplayTexture(resources.player_stand_left_texture),
+                            small: resources.player_small_stand_left_texture,
+                            normal: resources.player_stand_left_texture,
                         }; break;
                         case "facing_right": return {
-                            small: cloneAndReplayTexture(resources.player_small_stand_right_texture),
-                            normal: cloneAndReplayTexture(resources.player_stand_right_texture),
+                            small: resources.player_small_stand_right_texture,
+                            normal: resources.player_stand_right_texture,
                         }; break;
                         default: return facingDirection;
                     }
                 } break;
                 case "ladder": return {
-                    small: cloneAndReplayTexture(resources.player_small_hold_texture),
-                    normal: cloneAndReplayTexture(resources.player_hold_texture),
+                    small: resources.player_small_hold_texture,
+                    normal: resources.player_hold_texture,
                 }; break;
             }
         }
@@ -234,7 +236,8 @@ namespace Player {
 
         return {
             ...player,
-            texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount)),
+            texture: selectTexture(textureSet, player.smallCount),
+            animationTimestamp: tick,
             coord: result.coord,
             state: result.state,
             //左に移動したときのみ左を向く。無標（上下移動）では右

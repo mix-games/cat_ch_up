@@ -103,6 +103,7 @@ var Renderer;
             screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
             screen.globalCompositeOperation = "source-over";
         }
+        tick++;
     }
     Renderer.composit = composit;
 })(Renderer || (Renderer = {}));
@@ -148,12 +149,11 @@ function createVolumeTexture(width, height, depth, depthOffset) {
         depthOffset,
     };
 }
-function createAnimationTexture(textures, timeline, timestamp, loop) {
+function createAnimationTexture(textures, timeline, loop) {
     return {
         type: "animation",
         textures,
         timeline,
-        timestamp,
         loop,
     };
 }
@@ -164,14 +164,6 @@ function createOffsetTexture(texture, offsetX, offsetY) {
         offsetX,
         offsetY,
     };
-}
-function cloneAndReplayTexture(texture) {
-    if (texture.type === "animation") {
-        return Object.assign(Object.assign({}, texture), { timestamp: new Date().getTime() });
-    }
-    // いちおうコピーするけど意味なさそう
-    else
-        return Object.assign({}, texture);
 }
 function readyVolumeTexture(texture, image, useShadowColor) {
     const lightColorScreen = texture.lightColor.getContext("2d");
@@ -199,7 +191,7 @@ function readyVolumeTexture(texture, image, useShadowColor) {
         currentShadowScreen.globalCompositeOperation = "source-over";
     }
 }
-function drawTexture(texture, x, y, renderer) {
+function drawTexture(texture, x, y, elapse, renderer) {
     switch (texture.type) {
         case "rect":
             {
@@ -221,19 +213,18 @@ function drawTexture(texture, x, y, renderer) {
             break;
         case "animation":
             {
-                const elapse = new Date().getTime() - texture.timestamp;
                 const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
                 let frame = texture.timeline.findIndex(t => phase < t);
                 if (frame === -1) {
                     //texture.animationEndCallback();
                     frame = Math.max(0, texture.timeline.length - 1);
                 }
-                drawTexture(texture.textures[frame], x, y, renderer);
+                drawTexture(texture.textures[frame], x, y, elapse - texture.timeline[frame], renderer);
             }
             break;
         case "offset":
             {
-                drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, renderer);
+                drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, elapse, renderer);
             }
             break;
     }
@@ -315,7 +306,7 @@ function loadResources() {
     }
     function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depth, depthOffset) {
         const textures = timeline.map(() => createVolumeTexture(width, height, depth, depthOffset));
-        const texture = createAnimationTexture(textures.map(t => createOffsetTexture(t, offsetX, offsetY)), timeline, new Date().getTime(), loop);
+        const texture = createAnimationTexture(textures.map(t => createOffsetTexture(t, offsetX, offsetY)), timeline, loop);
         const image = loadImage(source, () => {
             textures.forEach((texture, i) => {
                 const source = document.createElement("canvas");
@@ -335,7 +326,7 @@ function loadResources() {
 /// <reference path="./coord.ts" />
 /// <reference path="./camera.ts" />
 function drawGameObject(gameObject, camera, renderer) {
-    drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, renderer);
+    drawTexture(gameObject.texture, camera.offsetX + gameObject.coord.x * blockSize, camera.offsetY - gameObject.coord.y * blockSize, tick - gameObject.animationTimestamp, renderer);
 }
 /// <reference path="./resources.ts" />
 /// <reference path="./gameobject.ts" />
@@ -344,7 +335,8 @@ function createNeko() {
     return {
         type: "neko",
         coord: createCoord(0, 5),
-        texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2)
+        texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
+        animationTimestamp: 0,
     };
 }
 function canNekoEnter(coord, terrain) {
@@ -389,7 +381,7 @@ function createField() {
     return {
         terrain: annexRow(protoTerrain.map((protoRow) => assignTexture(protoRow, [])), 10),
         entities: [createNeko()],
-        backgroundTexture: resources.background_texture
+        backgroundTexture: resources.background_texture,
     };
 }
 const fieldWidth = 10;
@@ -414,19 +406,19 @@ function assignTexture(protoRow, terrain) {
             case "ladder":
                 return {
                     collision: "ladder",
-                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
-                    texture1: cloneAndReplayTexture(resources.terrain_ladder_texture),
+                    texture0: resources.terrain_wall_texture,
+                    texture1: resources.terrain_ladder_texture,
                 };
             case "solid":
                 return {
                     collision: "solid",
-                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
-                    texture1: cloneAndReplayTexture(resources.terrain_condenser_texture),
+                    texture0: resources.terrain_wall_texture,
+                    texture1: resources.terrain_condenser_texture,
                 };
             case "air":
                 return {
                     collision: "air",
-                    texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                    texture0: resources.terrain_wall_texture,
                     texture1: createEmptyTexture()
                 };
         }
@@ -444,7 +436,7 @@ function getBlock(terrain, coord) {
     return terrain[coord.y][coord.x];
 }
 function drawField(field, camera, renderer) {
-    drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, renderer);
+    drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, tick, renderer);
     const xRange = Math.ceil(renderer.width / blockSize / 2);
     const yRange = Math.ceil(renderer.height / blockSize / 2);
     const x1 = Math.floor(camera.centerX / blockSize) - xRange;
@@ -456,7 +448,7 @@ function drawField(field, camera, renderer) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            drawTexture(getBlock(field.terrain, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+            drawTexture(getBlock(field.terrain, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
         }
     }
     for (var x = x1; x <= x2; x++) {
@@ -464,7 +456,7 @@ function drawField(field, camera, renderer) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            drawTexture(getBlock(field.terrain, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+            drawTexture(getBlock(field.terrain, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
         }
     }
     // デバッグ用の赤い点
@@ -474,7 +466,7 @@ function drawField(field, camera, renderer) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            drawTexture(createRectTexture("red", 1, 1), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+            drawTexture(createRectTexture("red", 1, 1), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
         }
     } //*/
     field.entities.forEach(e => drawGameObject(e, camera, renderer));
@@ -494,7 +486,8 @@ var Player;
             coord: createCoord(0, 0),
             facingDirection: "facing_left",
             smallCount: 0,
-            texture: cloneAndReplayTexture(resources.player_stand_right_texture),
+            animationTimestamp: 0,
+            texture: resources.player_stand_right_texture,
         };
     }
     Player.create = create;
@@ -668,7 +661,7 @@ var Player;
     //プレイヤーのstateを見てテクスチャを更新する。
     function updateTexture(player) {
         const textureSet = getStateTexture(player.state, player.facingDirection);
-        return Object.assign(Object.assign({}, player), { texture: selectTexture(textureSet, player.smallCount) });
+        return Object.assign(Object.assign({}, player), { animationTimestamp: tick, texture: selectTexture(textureSet, player.smallCount) });
         function getStateTexture(state, facingDirection) {
             switch (state) {
                 case "stand":
@@ -676,14 +669,14 @@ var Player;
                         switch (facingDirection) {
                             case "facing_left":
                                 return {
-                                    small: cloneAndReplayTexture(resources.player_small_stand_left_texture),
-                                    normal: cloneAndReplayTexture(resources.player_stand_left_texture),
+                                    small: resources.player_small_stand_left_texture,
+                                    normal: resources.player_stand_left_texture,
                                 };
                                 break;
                             case "facing_right":
                                 return {
-                                    small: cloneAndReplayTexture(resources.player_small_stand_right_texture),
-                                    normal: cloneAndReplayTexture(resources.player_stand_right_texture),
+                                    small: resources.player_small_stand_right_texture,
+                                    normal: resources.player_stand_right_texture,
                                 };
                                 break;
                             default: return facingDirection;
@@ -692,8 +685,8 @@ var Player;
                     break;
                 case "ladder":
                     return {
-                        small: cloneAndReplayTexture(resources.player_small_hold_texture),
-                        normal: cloneAndReplayTexture(resources.player_hold_texture),
+                        small: resources.player_small_hold_texture,
+                        normal: resources.player_hold_texture,
                     };
                     break;
             }
@@ -702,7 +695,7 @@ var Player;
     //与えられたMoveResult | nullに従ってプレイヤーを動かす
     function move(player, result) {
         const textureSet = getTransitionTexture(player.state, result.state, result.coord.x - player.coord.x, result.coord.y - player.coord.y, player.facingDirection);
-        return Object.assign(Object.assign({}, player), { texture: cloneAndReplayTexture(selectTexture(textureSet, player.smallCount)), coord: result.coord, state: result.state, 
+        return Object.assign(Object.assign({}, player), { texture: selectTexture(textureSet, player.smallCount), animationTimestamp: tick, coord: result.coord, state: result.state, 
             //左に移動したときのみ左を向く。無標（上下移動）では右
             facingDirection: result.coord < player.coord ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) });
         function getTransitionTexture(oldState, newState, dx, dy, facingDirection) {
@@ -992,12 +985,13 @@ let field = createField();
 let player = Player.create();
 let camera = Camera.create();
 let renderer; //デバッグ用に外に出した
+let tick = 0;
 function animationLoop(renderer, mainScreen, resources) {
     if (resources._progress.isFinished()) {
         camera = Camera.update(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
-        drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
+        drawTexture(resources.player_walk_left_texture, 0, 0, 0, renderer);
         Renderer.composit(renderer, mainScreen);
         requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }

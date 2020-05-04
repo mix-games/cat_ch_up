@@ -118,5 +118,7 @@ namespace Renderer {
             screen.clearRect(0, 0, screen.canvas.width, screen.canvas.height);
             screen.globalCompositeOperation = "source-over";
         }
+
+        tick++;
     }
 }

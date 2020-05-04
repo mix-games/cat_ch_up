@@ -84,7 +84,7 @@ function loadResources() {
 
     function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): Texture {
         const textures = timeline.map(() => createVolumeTexture(width, height, depth, depthOffset));
-        const texture = createAnimationTexture(textures.map(t => createOffsetTexture(t, offsetX, offsetY)), timeline, new Date().getTime(), loop);
+        const texture = createAnimationTexture(textures.map(t => createOffsetTexture(t, offsetX, offsetY)), timeline, loop);
 
         const image = loadImage(source, () => {
             textures.forEach((texture, i) => {
