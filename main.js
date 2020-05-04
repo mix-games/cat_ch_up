@@ -852,12 +852,28 @@ var Player;
         //埋まってなければテクスチャを更新するだけ
         if (currentState === "stand" || currentState === "ladder") {
             const textureSet = getStateTexture(player.state, player.facingDirection);
-            return Object.assign(Object.assign({}, player), { animationTimestamp: tick, texture: selectTexture(textureSet, smallCount), acceptInput: true, smallCount: smallCount });
+            return {
+                coord: player.coord,
+                state: currentState,
+                smallCount: smallCount,
+                texture: selectTexture(textureSet, smallCount),
+                facingDirection: player.facingDirection,
+                animationTimestamp: tick,
+                acceptInput: true,
+            };
         }
         else {
             //埋まっていたら落とさなきゃいけない
             const dropResult = drop(player.coord, field.terrain, 0 < smallCount, "stand", "down");
-            return Object.assign(Object.assign({}, player), { texture: selectTexture(dropResult.transition, smallCount), coord: dropResult.coord, state: dropResult.state, acceptInput: false, smallCount: smallCount });
+            return {
+                coord: dropResult.coord,
+                state: dropResult.state,
+                smallCount: smallCount,
+                texture: selectTexture(dropResult.transition, smallCount),
+                facingDirection: player.facingDirection,
+                animationTimestamp: tick,
+                acceptInput: false,
+            };
         }
     }
     Player.transitionEnd = transitionEnd;
@@ -901,7 +917,15 @@ var Player;
         if (result === null)
             return [player, field];
         const transitionTexture = selectTexture(result.transition, player.smallCount);
-        return [Object.assign(Object.assign({}, player), { texture: transitionTexture, animationTimestamp: tick, coord: result.coord, state: result.state, facingDirection: direction === "input_left" ? "facing_left" : "facing_right", acceptInput: false }), turn(field, player)];
+        return [{
+                coord: result.coord,
+                state: result.state,
+                smallCount: player.smallCount,
+                texture: transitionTexture,
+                facingDirection: direction === "input_left" ? "facing_left" : "facing_right",
+                animationTimestamp: tick,
+                acceptInput: false,
+            }, turn(field, player)];
     }
     Player.move = move;
 })(Player || (Player = {}));

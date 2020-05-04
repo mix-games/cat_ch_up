@@ -374,11 +374,13 @@ namespace Player {
             const textureSet = getStateTexture(player.state, player.facingDirection);
 
             return {
-                ...player,
-                animationTimestamp: tick,
-                texture: selectTexture(textureSet, smallCount),
-                acceptInput: true,
+                coord: player.coord,
+                state: currentState,
                 smallCount: smallCount,
+                texture: selectTexture(textureSet, smallCount),
+                facingDirection: player.facingDirection,
+                animationTimestamp: tick,
+                acceptInput: true,
             };
         }
         else {
@@ -386,12 +388,13 @@ namespace Player {
             const dropResult = drop(player.coord, field.terrain, 0 < smallCount, "stand", "down");
 
             return {
-                ...player,
-                texture: selectTexture(dropResult.transition, smallCount),
                 coord: dropResult.coord,
                 state: dropResult.state,
-                acceptInput: false,
                 smallCount: smallCount,
+                texture: selectTexture(dropResult.transition, smallCount),
+                facingDirection: player.facingDirection,
+                animationTimestamp: tick,
+                acceptInput: false,
             };
         }
     }
@@ -434,12 +437,12 @@ namespace Player {
             player.smallCount);
 
         return [{
-            ...player,
-            texture: transitionTexture,
-            animationTimestamp: tick,
             coord: result.coord,
             state: result.state,
+            smallCount: player.smallCount,
+            texture: transitionTexture,
             facingDirection: direction === "input_left" ? "facing_left" : "facing_right",
+            animationTimestamp: tick,
             acceptInput: false,
         }, turn(field, player)];
     }
