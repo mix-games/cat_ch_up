@@ -1,21 +1,24 @@
 /// <reference path="./resources.ts" />
 /// <reference path="./coord.ts" />
-/// <reference path="./gameobject.ts" />
+/// <reference path="./player.ts" />
+/// <reference path="./entity.ts" />
+
+type Collision = "ladder" | "solid" | "air";
 
 interface BlockWithoutTexture {
-    collision: "ladder" | "solid" | "air";
+    readonly collision: Collision;
 }
 interface Block {
-    collision: "ladder" | "solid" | "air";
-    texture0: Texture;
-    texture1: Texture;
+    readonly collision: Collision;
+    readonly texture0: Texture;
+    readonly texture1: Texture;
 }
-type Terrain = Block[][];
+type Terrain = readonly (readonly Block[])[];
 interface Field {
-    terrain: Terrain;
-    neko: Neko;
-    backgroundTexture: Texture;
-}
+    readonly terrain: Terrain;
+    readonly entities: readonly Entity[];
+    readonly backgroundTexture: Texture;
+    }
 
 function createField(): Field {
     const protoTerrain: BlockWithoutTexture[][] = [[], []];
@@ -31,20 +34,20 @@ function createField(): Field {
         else
             protoTerrain[1][x] = { collision: "air" };
     }
-
-    let field: Field = {
-        terrain: protoTerrain.map((protoRow)=>assignTexture(protoRow)),
-        neko: createNeko(),
-        backgroundTexture: resources.background_texture
+    
+    return {
+        terrain: annexRow(protoTerrain.map((protoRow)=>assignTexture(protoRow, [])), 10),
+        entities: [createNeko()],
+        backgroundTexture: resources.background_texture,
     };
-    for (let i = 0; i < 10; i++) generateRow(field);
-    return field;
 }
 
 const fieldWidth = 10;
 
 //Y座標は下から数える
-function generateRow(field: Field): void {
+function annexRow(terrain: Terrain, targetHeight: number): Terrain {
+    if(targetHeight <= terrain.length) return terrain;
+
     const protoRow: BlockWithoutTexture[] = [];
         for (let x = 0; x < fieldWidth; x++) {
             if (Math.random() < 0.7)
@@ -54,27 +57,27 @@ function generateRow(field: Field): void {
             else
                 protoRow[x] = { collision: "ladder" };
     }
-    field.terrain.push(assignTexture(protoRow));
+    return annexRow([...terrain, assignTexture(protoRow, terrain)], targetHeight);
 }
-function assignTexture(protoRow: BlockWithoutTexture[]): Block[] {
+function assignTexture(protoRow: BlockWithoutTexture[], terrain: Terrain): Block[] {
     return protoRow.map((bwt: BlockWithoutTexture): Block => {
         switch(bwt.collision) {
             case "ladder":
             return {
                 collision: "ladder",
-                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
-                texture1: cloneAndReplayTexture(resources.terrain_ladder_texture),
+                texture0: resources.terrain_wall_texture,
+                texture1: resources.terrain_ladder_texture,
             };
             case "solid":
             return {
                 collision: "solid",
-                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
-                texture1: cloneAndReplayTexture(resources.terrain_condenser_texture),
+                texture0: resources.terrain_wall_texture,
+                texture1: resources.terrain_condenser_texture,
             };
             case "air":
             return {
                 collision: "air",
-                texture0: cloneAndReplayTexture(resources.terrain_wall_texture),
+                texture0: resources.terrain_wall_texture,
                 texture1: createEmptyTexture()
             };
         }
@@ -98,6 +101,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
         field.backgroundTexture,
         renderer.width / 2,
         renderer.height / 2,
+        tick,
         renderer
     );
 
@@ -116,6 +120,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
                 getBlock(field.terrain, coord).texture0,
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
+                tick,
                 renderer
             );
         }
@@ -129,6 +134,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
                 getBlock(field.terrain, coord).texture1,
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
+                tick,
                 renderer
             );
         }
@@ -141,13 +147,23 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
             if (field.terrain.length <= y) continue;
             const coord = createCoord(x, y);
             drawTexture(
-                createRectTexture("red", 1, 1, 0, 0),
+                createRectTexture("red", 1, 1),
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
+                tick,
                 renderer
             );
         }
     }//*/
 
-    drawGameObject(field.neko, camera, renderer);
+    field.entities.forEach(e => drawGameObject(e, camera, renderer));
+}
+
+// プレイヤー行動後の敵などの処理はここ
+function turn(field: Field, player: Player): Field {
+    return {
+        ...field,
+        entities: field.entities.map(e => controlEntity(e, field, player)),
+        terrain: annexRow(field.terrain, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5))),
+    };
 }
