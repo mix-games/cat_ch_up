@@ -17,7 +17,7 @@ function createTrafficDigraph(lowerBound, upperBound, terrain) {
                 continue;
             //空中のマスは落ちるだけできる
             if (!Player.canStand(coord, terrain, false)) {
-                addArrow(digraph, coord, downCoord(coord));
+                addArrow(digraph, coord, Player.drop(coord, "drop", terrain, false).coord);
                 continue;
             }
             const left = Player.checkLeft(coord, terrain, false);
@@ -651,6 +651,7 @@ var Player;
             return { coord, state };
         return (drop(downCoord(coord), checkState(downCoord(coord), terrain, isSmall), terrain, isSmall));
     }
+    Player.drop = drop;
     function checkLeft(coord, terrain, isSmall) {
         // 左が空いているならそこ
         const leftState = checkState(leftCoord(coord), terrain, isSmall);

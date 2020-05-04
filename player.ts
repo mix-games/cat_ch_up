@@ -63,7 +63,7 @@ namespace Player {
     //type MoveDirection = "move_left" | "move_right" | "move_up" | "move_down" | "move_left_up" | "move_right_up";
     type MoveResult = { coord: Coord; state: "stand" | "ladder"; };
 
-    function drop(coord: Coord, state: "stand" | "ladder" | "drop" | null, terrain: Terrain, isSmall: boolean): MoveResult {
+    export function drop(coord: Coord, state: "stand" | "ladder" | "drop" | null, terrain: Terrain, isSmall: boolean): MoveResult {
         if (state === "stand" || state === "ladder") return { coord, state };
         return (drop(downCoord(coord), checkState(downCoord(coord), terrain, isSmall), terrain, isSmall));
     }

@@ -28,7 +28,7 @@ function createTrafficDigraph(lowerBound: number, upperBound: number, terrain: T
                 continue;
             //空中のマスは落ちるだけできる
             if (!Player.canStand(coord, terrain, false)) {
-                addArrow(digraph, coord, downCoord(coord));
+                addArrow(digraph, coord, Player.drop(coord, "drop", terrain, false).coord);
                 continue;
             }
 
