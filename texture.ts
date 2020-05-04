@@ -12,8 +12,6 @@ interface RectTexture {
 interface VolumeTexture {
     readonly type: "volume";
 
-    readonly lightColor: HTMLCanvasElement;
-    readonly shadowColor: HTMLCanvasElement;
     readonly lightLayers: HTMLCanvasElement[];
     readonly shadowLayers: HTMLCanvasElement[];
     readonly width: number;
@@ -57,13 +55,6 @@ function createRectTexture(color: string, width: number, height: number): RectTe
 }
 
 function createVolumeTexture(width: number, height: number, depth: number, depthOffset: number): VolumeTexture {
-    const lightColor = document.createElement("canvas");
-    const shadowColor = document.createElement("canvas");
-    lightColor.width = width;
-    lightColor.height = height;
-    shadowColor.width = width;
-    shadowColor.height = height;
-
     const lightLayers: HTMLCanvasElement[] = [];
     const shadowLayers: HTMLCanvasElement[] = [];
     for (var i = 0; i < depth; i++) {
@@ -76,8 +67,6 @@ function createVolumeTexture(width: number, height: number, depth: number, depth
     }
     return {
         type: "volume" as const,
-        lightColor,
-        shadowColor,
         lightLayers,
         shadowLayers,
         width,
@@ -113,24 +102,6 @@ function createFlashTexture(texture1: Texture, texture2: Texture): FlashTexture 
 }
 
 function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | HTMLImageElement, useShadowColor: boolean) {
-    const lightColorScreen = texture.lightColor.getContext("2d");
-    if (lightColorScreen === null) throw new Error("failed to get context-2d");
-    const shadowColorScreen = texture.shadowColor.getContext("2d");
-    if (shadowColorScreen === null) throw new Error("failed to get context-2d");
-
-    lightColorScreen.drawImage(
-        image,
-        0, 0,
-        texture.width, texture.height,
-        0, 0,
-        texture.width, texture.height);
-    shadowColorScreen.drawImage(
-        image,
-        0, texture.height * (useShadowColor ? 1 : 0),
-        texture.width, texture.height,
-        0, 0,
-        texture.width, texture.height);
-
     for (var i = 0; i < texture.depth; i++) {
         const currentLightScreen = texture.lightLayers[i].getContext("2d");
         if (currentLightScreen === null) throw new Error("failed to get context-2d");
@@ -208,16 +179,6 @@ function drawTexture(texture: Texture, x: number, y: number, elapse:number, rend
                 texture.width, texture.height);
         } break;
         case "volume": {
-            renderer.lightColor.drawImage(
-                texture.lightColor,
-                Renderer.marginLeft + x,
-                Renderer.marginTop + y);
-
-            renderer.shadowColor.drawImage(
-                texture.shadowColor,
-                Renderer.marginLeft + x,
-                Renderer.marginTop + y);
-
             for (let i = 0; i < texture.depth; i++) {
                 renderer.lightLayers[i + texture.depthOffset].drawImage(
                     texture.lightLayers[i],

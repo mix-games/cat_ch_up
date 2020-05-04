@@ -17,7 +17,7 @@ function rightCoord(coord) {
 const blockSize = 24;
 var Renderer;
 (function (Renderer) {
-    Renderer.layerNum = 6;
+    Renderer.layerNum = 10;
     Renderer.marginTop = 28;
     Renderer.marginLeft = 28;
     const marginRignt = 0;
@@ -121,12 +121,6 @@ function createRectTexture(color, width, height) {
     };
 }
 function createVolumeTexture(width, height, depth, depthOffset) {
-    const lightColor = document.createElement("canvas");
-    const shadowColor = document.createElement("canvas");
-    lightColor.width = width;
-    lightColor.height = height;
-    shadowColor.width = width;
-    shadowColor.height = height;
     const lightLayers = [];
     const shadowLayers = [];
     for (var i = 0; i < depth; i++) {
@@ -139,8 +133,6 @@ function createVolumeTexture(width, height, depth, depthOffset) {
     }
     return {
         type: "volume",
-        lightColor,
-        shadowColor,
         lightLayers,
         shadowLayers,
         width,
@@ -173,14 +165,6 @@ function createFlashTexture(texture1, texture2) {
     };
 }
 function readyVolumeTexture(texture, image, useShadowColor) {
-    const lightColorScreen = texture.lightColor.getContext("2d");
-    if (lightColorScreen === null)
-        throw new Error("failed to get context-2d");
-    const shadowColorScreen = texture.shadowColor.getContext("2d");
-    if (shadowColorScreen === null)
-        throw new Error("failed to get context-2d");
-    lightColorScreen.drawImage(image, 0, 0, texture.width, texture.height, 0, 0, texture.width, texture.height);
-    shadowColorScreen.drawImage(image, 0, texture.height * (useShadowColor ? 1 : 0), texture.width, texture.height, 0, 0, texture.width, texture.height);
     for (var i = 0; i < texture.depth; i++) {
         const currentLightScreen = texture.lightLayers[i].getContext("2d");
         if (currentLightScreen === null)
@@ -232,8 +216,6 @@ function drawTexture(texture, x, y, elapse, renderer) {
             break;
         case "volume":
             {
-                renderer.lightColor.drawImage(texture.lightColor, Renderer.marginLeft + x, Renderer.marginTop + y);
-                renderer.shadowColor.drawImage(texture.shadowColor, Renderer.marginLeft + x, Renderer.marginTop + y);
                 for (let i = 0; i < texture.depth; i++) {
                     renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightLayers[i], Renderer.marginLeft + x, Renderer.marginTop + y);
                     renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowLayers[i], Renderer.marginLeft + x, Renderer.marginTop + y);
@@ -282,10 +264,10 @@ function loadResources() {
     return {
         _progress: progress,
         testAnimation: loadAnimationTexture("test.png", 32, 32, 0, 0, false, [30, 60, 90, 120, 150, 180, 210, 240], true, 1, 0),
-        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 0, 0),
-        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 0, 0),
-        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 2, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 6, 0),
+        background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 1, 0),
+        terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 1, 0),
+        terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 3, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 7, 0),
         player_stand_right_texture: loadStaticTexture("image/player/stand_right.png", 24, 48, 12, 24, true, 1, 3),
         player_stand_left_texture: loadStaticTexture("image/player/stand_left.png", 24, 48, 12, 24, true, 1, 3),
         player_hold_texture: loadStaticTexture("image/player/hold.png", 24, 48, 12, 24, true, 1, 3),

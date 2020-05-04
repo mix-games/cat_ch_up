@@ -12,7 +12,7 @@ interface Renderer {
 }
 
 namespace Renderer {
-    export const layerNum = 6;
+    export const layerNum = 10;
     
     export const marginTop = 28;
     export const marginLeft = 28;
