@@ -76,21 +76,25 @@ function loadResources() {
 
 
     function loadStaticTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, depth: number, depthOffset: number): VolumeTexture {
-        return loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, [], false, depth, depthOffset);
+        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+        const image = loadImage(source, () => readyVolumeTexture(texture, image, useShadowColor));
+        return texture;
     }
 
-    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): VolumeTexture {
-        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): AnimationTexture {
+        const textures = timeline.map(() => createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset));
+        const texture = createAnimationTexture(textures, timeline, new Date().getTime(), loop);
 
         const image = loadImage(source, () => {
-            const source1 = document.createElement("canvas");
-            source1.width = width;
-            source1.height = image.height;
-            const context = source1.getContext("2d");
-            if(context === null) throw new Error("failed to get context-2d")
-            context.drawImage(image, 0, 0);
-
-            readyVolumeTexture(texture, image, useShadowColor)
+            textures.forEach((texture, i) => {
+                const source = document.createElement("canvas");
+                source.width = width;
+                source.height = image.height;
+                const context = source.getContext("2d");
+                if (context === null) throw new Error("failed to get context-2d");
+                context.drawImage(image, width * i, 0, width, image.height, 0, 0, width, image.height);
+                readyVolumeTexture(texture, source, useShadowColor);
+            });
         });
 
         return texture;
@@ -214,7 +218,7 @@ interface VolumeTexture {
 
     readonly width: number;
     readonly height: number;
-    
+
     readonly depth: number;
     readonly depthOffset: number;
 }
@@ -223,11 +227,11 @@ interface AnimationTexture {
 
     readonly textures: Texture[];
     readonly timeline: number[];
-    readonly timeStamp: number[];
-    readonly loop: number[];
+    readonly timestamp: number;
+    readonly loop: boolean;
 }
 
-type Texture = EmptyTexture | RectTexture | ImageTexture | VolumeTexture;
+type Texture = EmptyTexture | RectTexture | ImageTexture | VolumeTexture | AnimationTexture;
 
 function createEmptyTexture(): EmptyTexture {
     return {
@@ -246,17 +250,17 @@ function createRectTexture(color: string, width: number, height: number, offsetX
     };
 }
 
-function createVolumeTexture(width:number, height:number, offsetX: number, offsetY: number, depth: number, depthOffset: number): VolumeTexture {
+function createVolumeTexture(width: number, height: number, offsetX: number, offsetY: number, depth: number, depthOffset: number): VolumeTexture {
     const lightColor = document.createElement("canvas");
     const shadowColor = document.createElement("canvas");
     lightColor.width = width;
     lightColor.height = height;
     shadowColor.width = width;
     shadowColor.height = height;
-    
+
     const lightLayers: HTMLCanvasElement[] = [];
     const shadowLayers: HTMLCanvasElement[] = [];
-    for(var i = 0; i < depth; i++) {
+    for (var i = 0; i < depth; i++) {
         lightLayers[i] = document.createElement("canvas");
         shadowLayers[i] = document.createElement("canvas");
         lightLayers[i].width = width;
@@ -279,16 +283,21 @@ function createVolumeTexture(width:number, height:number, offsetX: number, offse
     };
 }
 
-function createAnimationTexture() {
-
+function createAnimationTexture(textures: Texture[], timeline: number[], timestamp: number, loop: boolean): AnimationTexture {
+    return {
+        type: "animation",
+        textures,
+        timeline,
+        timestamp,
+        loop,
+    };
 }
 
-function cloneAndReplayTexture(texture: Texture, animationEndCallback: () => void = () => { }): Texture {
-    if (texture.type === "image") {
+function cloneAndReplayTexture(texture: Texture): Texture {
+    if (texture.type === "animation") {
         return {
             ...texture,
-            animationTimestamp: new Date().getTime(),
-            animationEndCallback,
+            timestamp: new Date().getTime()
         };
     }
     // いちおうコピーするけど意味なさそう
@@ -312,7 +321,7 @@ function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | H
         0, texture.height * (useShadowColor ? 1 : 0),
         texture.width, texture.height,
         0, 0,
-        texture.width, texture.height,);
+        texture.width, texture.height);
 
     for (var i = 0; i < texture.depth; i++) {
         const currentLightScreen = texture.lightLayers[i].getContext("2d");
@@ -325,15 +334,15 @@ function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | H
             0, texture.height * (useShadowColor ? i + 2 : i + 1),
             texture.width, texture.height,
             0, 0,
-            texture.width, texture.height,);
+            texture.width, texture.height);
 
         currentShadowScreen.drawImage(
             image,
             0, texture.height * (useShadowColor ? i + 2 : i + 1),
             texture.width, texture.height,
             0, 0,
-            texture.width, texture.height,);
-            
+            texture.width, texture.height);
+
         currentLightScreen.globalCompositeOperation = "source-atop";
         currentLightScreen.drawImage(
             image,
@@ -438,7 +447,18 @@ function drawTexture(texture: Texture, x: number, y: number, renderer: Renderer)
                     Renderer.marginTop + y - texture.offsetY,
                     texture.width, texture.height);
             }
-        }
+        } break;
+        case "animation": {
+            const elapse = new Date().getTime() - texture.timestamp;
+            const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+
+            let frame = texture.timeline.findIndex(t => phase < t);
+            if (frame === -1) {
+                //texture.animationEndCallback();
+                frame = Math.max(0, texture.timeline.length - 1);
+            }
+            drawTexture(texture.textures[frame], x, y, renderer);
+        } break;
     }
 }
 

@@ -175,19 +175,24 @@ function loadResources() {
         return audio;
     }
     function loadStaticTexture(source, width, height, offsetX, offsetY, useShadowColor, depth, depthOffset) {
-        return loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, [], false, depth, depthOffset);
+        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+        const image = loadImage(source, () => readyVolumeTexture(texture, image, useShadowColor));
+        return texture;
     }
     function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depth, depthOffset) {
-        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+        const textures = timeline.map(() => createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset));
+        const texture = createAnimationTexture(textures, timeline, new Date().getTime(), loop);
         const image = loadImage(source, () => {
-            const source1 = document.createElement("canvas");
-            source1.width = width;
-            source1.height = image.height;
-            const context = source1.getContext("2d");
-            if (context === null)
-                throw new Error("failed to get context-2d");
-            context.drawImage(image, 0, 0);
-            readyVolumeTexture(texture, image, useShadowColor);
+            textures.forEach((texture, i) => {
+                const source = document.createElement("canvas");
+                source.width = width;
+                source.height = image.height;
+                const context = source.getContext("2d");
+                if (context === null)
+                    throw new Error("failed to get context-2d");
+                context.drawImage(image, width * i, 0, width, image.height, 0, 0, width, image.height);
+                readyVolumeTexture(texture, source, useShadowColor);
+            });
         });
         return texture;
         /*
@@ -312,11 +317,18 @@ function createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset
         depthOffset,
     };
 }
-function createAnimationTexture() {
+function createAnimationTexture(textures, timeline, timestamp, loop) {
+    return {
+        type: "animation",
+        textures,
+        timeline,
+        timestamp,
+        loop,
+    };
 }
-function cloneAndReplayTexture(texture, animationEndCallback = () => { }) {
-    if (texture.type === "image") {
-        return Object.assign(Object.assign({}, texture), { animationTimestamp: new Date().getTime(), animationEndCallback });
+function cloneAndReplayTexture(texture) {
+    if (texture.type === "animation") {
+        return Object.assign(Object.assign({}, texture), { timestamp: new Date().getTime() });
     }
     // いちおうコピーするけど意味なさそう
     else
@@ -368,27 +380,41 @@ function drawTexture(texture, x, y, renderer) {
                 }
             }
             break;
-        case "image": {
-            const elapse = new Date().getTime() - texture.animationTimestamp;
-            const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
-            let frame = texture.timeline.findIndex(t => phase < t);
-            if (frame === -1) {
-                texture.animationEndCallback();
-                frame = Math.max(0, texture.timeline.length - 1);
+        case "image":
+            {
+                const elapse = new Date().getTime() - texture.animationTimestamp;
+                const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+                let frame = texture.timeline.findIndex(t => phase < t);
+                if (frame === -1) {
+                    texture.animationEndCallback();
+                    frame = Math.max(0, texture.timeline.length - 1);
+                }
+                renderer.lightColor.drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
+                0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
+                0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                for (let i = 0; i < texture.depth; i++) {
+                    renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
+                    (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
+                    texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                    renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
+                    (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
+                    texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                }
             }
-            renderer.lightColor.drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
-            0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-            renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
-            0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-            for (let i = 0; i < texture.depth; i++) {
-                renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
-                (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
-                texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-                renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
-                (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
-                texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+            break;
+        case "animation":
+            {
+                const elapse = new Date().getTime() - texture.timestamp;
+                const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
+                let frame = texture.timeline.findIndex(t => phase < t);
+                if (frame === -1) {
+                    //texture.animationEndCallback();
+                    frame = Math.max(0, texture.timeline.length - 1);
+                }
+                drawTexture(texture.textures[frame], x, y, renderer);
             }
-        }
+            break;
     }
 }
 const resources = loadResources();
@@ -1052,6 +1078,7 @@ var Camera;
 let field = createField();
 let player = Player.create();
 let camera = Camera.create();
+let renderer; //デバッグ用に外に出した
 function animationLoop(renderer, mainScreen, resources) {
     if (resources._progress.isFinished()) {
         camera = Camera.update(camera, player, field, renderer);
@@ -1074,7 +1101,7 @@ window.onload = () => {
     const mainScreen = canvas.getContext("2d");
     if (mainScreen === null)
         throw new Error("context2d not found");
-    const renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
+    renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
         //const x = ev.clientX - canvas.offsetLeft;

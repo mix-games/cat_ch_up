@@ -1,6 +1,7 @@
 let field: Field = createField();
 let player: Player = Player.create();
 let camera: Camera = Camera.create();
+let renderer; //デバッグ用に外に出した
 
 function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
     if (resources._progress.isFinished()) {
@@ -30,7 +31,7 @@ window.onload = () => {
     if (mainScreen === null)
         throw new Error("context2d not found");
 
-    const renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
+    renderer = Renderer.create(mainScreen.canvas.width / 2, mainScreen.canvas.height / 2);
 
     /*
     canvas.addEventListener("click", (ev: MouseEvent) => {
