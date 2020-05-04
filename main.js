@@ -84,6 +84,7 @@ var Renderer;
         // 残りの部分に光色
         renderer.compositScreen.globalCompositeOperation = "destination-over";
         renderer.compositScreen.drawImage(renderer.lightColor.canvas, -Renderer.marginLeft, -Renderer.marginTop);
+        renderer.compositScreen.globalCompositeOperation = "source-over";
         renderer.compositScreen.drawImage(renderer.uiScreen.canvas, 0, 0);
         // メインスクリーン（本番のcanvas）にスムージングなしで拡大
         mainScreen.imageSmoothingEnabled = false;

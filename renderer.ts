@@ -96,6 +96,7 @@ namespace Renderer {
         renderer.compositScreen.globalCompositeOperation = "destination-over";
         renderer.compositScreen.drawImage(renderer.lightColor.canvas, -marginLeft, -marginTop);
 
+        renderer.compositScreen.globalCompositeOperation = "source-over";
         renderer.compositScreen.drawImage(renderer.uiScreen.canvas, 0, 0);
 
         // メインスクリーン（本番のcanvas）にスムージングなしで拡大
