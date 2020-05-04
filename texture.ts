@@ -159,6 +159,25 @@ function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | H
     }
 }
 
+function getAnimationLength(texture: Texture): number{
+    switch (texture.type) {
+        case "empty": return 0;
+        case "rect": return 0;
+        case "volume": return 0;
+        case "animation": return texture.loop ? Infinity : texture.timeline[texture.timeline.length - 1];
+        case "offset": return getAnimationLength(texture.texture);
+        //網羅チェック
+        default: return texture;
+    }
+}
+
+function joinAnimation(textures: Texture[], loop: boolean): AnimationTexture {
+    const timeline = textures
+    .map(t=>getAnimationLength(t))
+    .reduce((acc, cur)=>[...acc, cur + acc[acc.length-1]], [0]).slice(1);
+    return createAnimationTexture(textures, timeline, loop);
+}
+
 function drawTexture(texture: Texture, x: number, y: number, elapse:number, renderer: Renderer): void {
     switch (texture.type) {
         case "rect": {
@@ -204,7 +223,7 @@ function drawTexture(texture: Texture, x: number, y: number, elapse:number, rend
                 //texture.animationEndCallback();
                 frame = Math.max(0, texture.timeline.length - 1);
             }
-            drawTexture(texture.textures[frame], x, y, elapse - texture.timeline[frame], renderer);
+            drawTexture(texture.textures[frame], x, y, frame === 0 ? elapse : elapse - texture.timeline[frame - 1], renderer);
         } break;
         case "offset": {
             drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, elapse, renderer);
