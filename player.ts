@@ -51,11 +51,11 @@ namespace Player {
     }
 
     //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
-    function canEnter(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
+    export function canEnter(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
         return checkState(coord, terrain, isSmall) !== null;
     }
     //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-    function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
+    export function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
         return checkState(coord, terrain, isSmall) !== null
             && checkState(coord, terrain, isSmall) !== "drop";
     }
@@ -68,7 +68,7 @@ namespace Player {
         return (drop(downCoord(coord), checkState(downCoord(coord), terrain, isSmall), terrain, isSmall));
     }
 
-    function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkLeft(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 左が空いているならそこ
         const leftState = checkState(leftCoord(coord), terrain, isSmall);
         if (leftState !== null) {
@@ -83,7 +83,7 @@ namespace Player {
             };
         return null;
     }
-    function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkRight(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 右が空いているならそこ
         const rightState = checkState(rightCoord(coord), terrain, isSmall);
         if (rightState !== null) {
@@ -98,7 +98,7 @@ namespace Player {
             };
         return null;
     }
-    function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkUp(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 上半身が梯子で、かつ真上に留まれるなら登る？
         if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder" &&
             canStand(upCoord(coord), terrain, isSmall))
@@ -108,7 +108,7 @@ namespace Player {
             };
         return null;
     }
-    function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkDown(coord: Coord, terrain: Terrain, isSmall: boolean): MoveResult | null {
         // 真下が空いてるなら（飛び）下りる？
         const downState = checkState(downCoord(coord), terrain, isSmall);
         if (downState !== null)
