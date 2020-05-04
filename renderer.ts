@@ -4,6 +4,8 @@ interface Renderer {
     readonly lightLayers: readonly CanvasRenderingContext2D[];
     readonly shadowLayers: readonly CanvasRenderingContext2D[];
     readonly compositScreen: CanvasRenderingContext2D;
+    
+    readonly uiScreen: CanvasRenderingContext2D;
 
     readonly width: number,
     readonly height: number,
@@ -32,6 +34,8 @@ namespace Renderer {
         for (let i = 0; i < layerNum; i++)
             shadowLayers.push(create2dScreen(marginLeft + width + marginRignt, marginTop + height + marginBottom));
 
+            
+        const uiScreen = create2dScreen(width, height);
         const compositScreen = create2dScreen(width, height);
 
         return {
@@ -40,6 +44,7 @@ namespace Renderer {
             lightLayers,
             shadowLayers,
 
+            uiScreen,
             compositScreen,
 
             width,
@@ -90,6 +95,8 @@ namespace Renderer {
         // 残りの部分に光色
         renderer.compositScreen.globalCompositeOperation = "destination-over";
         renderer.compositScreen.drawImage(renderer.lightColor.canvas, -marginLeft, -marginTop);
+
+        renderer.compositScreen.drawImage(renderer.uiScreen.canvas, 0, 0);
 
         // メインスクリーン（本番のcanvas）にスムージングなしで拡大
         mainScreen.imageSmoothingEnabled = false;
