@@ -14,7 +14,7 @@ function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D,
 
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
-        drawDigraphForTest(camera, renderer.lightColor);
+        drawDigraphForTest(camera, renderer.uiScreen);
 
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
         

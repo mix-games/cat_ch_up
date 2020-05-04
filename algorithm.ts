@@ -138,17 +138,17 @@ function drawDigraphForTest(camera: Camera, screen: CanvasRenderingContext2D): v
     trafficDigraphForTest.forEach((vertex: DigraphVertex): void => {
         vertex.outflow.forEach((to: DigraphVertex): void => {
             drawArrow(
-                camera.offsetX + Renderer.marginLeft +  (vertex.coord.x) * blockSize,
-                camera.offsetY + Renderer.marginTop - (vertex.coord.y) * blockSize,
-                camera.offsetX + Renderer.marginLeft + + (to.coord.x) * blockSize,
-                camera.offsetY + Renderer.marginTop - (to.coord.y) * blockSize);
+                camera.offsetX +  (vertex.coord.x) * blockSize,
+                camera.offsetY - (vertex.coord.y) * blockSize,
+                camera.offsetX + (to.coord.x) * blockSize,
+                camera.offsetY - (to.coord.y) * blockSize);
         });
     });
     screen.fillStyle = "black";
     Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
         screen.fillText(componentIndex.toString(),
-            camera.offsetX + Renderer.marginLeft + (vertex.coord.x - 0.5) * blockSize,
-            camera.offsetY + Renderer.marginTop - (vertex.coord.y - 0.5) * blockSize);
+            camera.offsetX + (vertex.coord.x - 0.5) * blockSize,
+            camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
 
     //alert("こんにちは")

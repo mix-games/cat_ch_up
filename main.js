@@ -114,12 +114,12 @@ function drawDigraphForTest(camera, screen) {
     screen.fillStyle = "lightgray";
     trafficDigraphForTest.forEach((vertex) => {
         vertex.outflow.forEach((to) => {
-            drawArrow(camera.offsetX + Renderer.marginLeft + (vertex.coord.x) * blockSize, camera.offsetY + Renderer.marginTop - (vertex.coord.y) * blockSize, camera.offsetX + Renderer.marginLeft + +(to.coord.x) * blockSize, camera.offsetY + Renderer.marginTop - (to.coord.y) * blockSize);
+            drawArrow(camera.offsetX + (vertex.coord.x) * blockSize, camera.offsetY - (vertex.coord.y) * blockSize, camera.offsetX + (to.coord.x) * blockSize, camera.offsetY - (to.coord.y) * blockSize);
         });
     });
     screen.fillStyle = "black";
     Array.from(new Set(sccs.values())).forEach((component, componentIndex) => component.vertexes.forEach(vertex => {
-        screen.fillText(componentIndex.toString(), camera.offsetX + Renderer.marginLeft + (vertex.coord.x - 0.5) * blockSize, camera.offsetY + Renderer.marginTop - (vertex.coord.y - 0.5) * blockSize);
+        screen.fillText(componentIndex.toString(), camera.offsetX + (vertex.coord.x - 0.5) * blockSize, camera.offsetY - (vertex.coord.y - 0.5) * blockSize);
     }));
     //alert("こんにちは")
     //camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize
@@ -1085,7 +1085,7 @@ function animationLoop(renderer, mainScreen, resources) {
         camera = Camera.update(camera, player, field, renderer);
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
-        drawDigraphForTest(camera, renderer.lightColor);
+        drawDigraphForTest(camera, renderer.uiScreen);
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
         Renderer.composit(renderer, mainScreen);
         requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
