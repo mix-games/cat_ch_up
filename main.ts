@@ -10,6 +10,8 @@ function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D,
 
         drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
+        
+        if(getAnimationLength(player.texture) < tick - player.animationTimestamp) player = Player.transitionEnd(player, field);
 
         drawTexture(resources.player_walk_left_texture, 0, 0, 0, renderer);
         
@@ -53,7 +55,7 @@ window.onload = () => {
 
         switch (event.code) {
             case "KeyZ": {
-                player = Player.shrink(player);
+                player = Player.shrink(player, field);
             } break;
             case "ArrowLeft": {
                 [player, field] = Player.move(player, field, "input_left");

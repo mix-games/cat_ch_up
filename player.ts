@@ -6,6 +6,7 @@ interface Player extends GameObject {
     readonly state: "stand" | "ladder";
     readonly facingDirection: FacingDirection;
     readonly smallCount: number;
+    readonly acceptInput: boolean;
 }
 
 type FacingDirection = "facing_left" | "facing_right";
@@ -16,10 +17,11 @@ namespace Player {
         return {
             state: "stand",
             coord: createCoord(0, 0),
-            facingDirection: "facing_left",
+            facingDirection: "facing_right",
             smallCount: 0,
             animationTimestamp: 0,
             texture: resources.player_stand_right_texture,
+            acceptInput: true,
         };
     }
 
@@ -69,7 +71,7 @@ namespace Player {
         transition: TextureVariants;
     };
 
-    export function drop(coord: Coord, terrain: Terrain, isSmall: boolean): { coord:Coord, state: "stand" | "ladder" } {
+    export function drop(coord: Coord, terrain: Terrain, isSmall: boolean): { coord: Coord, state: "stand" | "ladder"; } {
         const state = checkState(downCoord(coord), terrain, isSmall);
         if (state === "stand" || state === "ladder") return { coord:downCoord(coord), state };
         return (drop(downCoord(coord), terrain, isSmall));
@@ -83,351 +85,315 @@ namespace Player {
         }
         Textures.push(landingTexture);
 
-        return joinAnimation(Textures, false)
+        return joinAnimation(Textures, false);
     }
 
-    export function check(coord: Coord, terrain: Terrain, isSmall: boolean, direction: InputDirection): MoveResult | null {
-        const currentState = checkState(coord, terrain, isSmall);
+    export function checkLeft(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+        const leftState = checkState(leftCoord(coord), terrain, isSmall);
+        switch (leftState) {
+            //左に立てるなら
+            case "stand": switch (currentState) {
+                //いま立っているなら歩き
+                case "stand": return {
+                    coord: leftCoord(coord),
+                    state: leftState,
+                    transition: {
+                        small: resources.player_small_walk_left_texture,
+                        normal: resources.player_walk_left_texture,
+                    },
+                };
+                //いま梯子なら降りる
+                case "ladder": return {
+                    coord: leftCoord(coord),
+                    state: leftState,
+                    transition: {
+                        small: resources.player_small_walk_left_texture,
+                        normal: resources.player_walk_left_texture,
+                    },
+                };
+            } break;
+            //左に梯子があるなら
+            case "ladder": switch (currentState) {
+                // いま立っているなら掴まる
+                case "stand": return {
+                    coord: leftCoord(coord),
+                    state: leftState,
+                    transition: {
+                        small: resources.player_small_walk_left_texture,
+                        normal: resources.player_walk_left_texture,
+                    },
+                };
+                // いま梯子なら梯子上移動
+                case "ladder": return {
+                    coord: leftCoord(coord),
+                    state: leftState,
+                    transition: {
+                        small: resources.player_small_walk_left_texture,
+                        normal: resources.player_walk_left_texture,
+                    },
+                };
+            } break;
+            //左が空いてるなら飛び降りる
+            case "drop": {
+                const dropResult = drop(leftCoord(coord), terrain, isSmall);
 
-        //埋まってる場合
-        if (currentState === null || currentState === "drop") {
-            const dropResult = drop(coord, terrain, isSmall);
+                const jumpOff = {
+                    "stand": {
+                        normal: resources.player_walk_left_texture,
+                        small: resources.player_small_walk_left_texture,
+                    },
+                    "ladder": {
+                        normal: resources.player_walk_left_texture,
+                        small: resources.player_small_walk_left_texture,
+                    },
+                }[currentState];
+                const landing = {
+                    "stand": {
+                        normal: resources.player_climb_down_texture,
+                        small: resources.player_small_climb_down_texture,
+                    },
+                    "ladder": {
+                        normal: resources.player_climb_down_texture,
+                        small: resources.player_small_climb_down_texture,
+                    },
+                }[dropResult.state];
 
-            const landing = {
-                "stand": {
-                    normal: resources.player_walk_left_texture,
-                    small: resources.player_small_walk_left_texture,
-                },
-                "ladder": {
-                    normal: resources.player_walk_left_texture,
-                    small: resources.player_small_walk_left_texture,
-                },
-            }[dropResult.state];
-
-            return {
-                coord: dropResult.coord,
-                state: dropResult.state,
-                transition: {
-                    normal: generateDropAnimation(
-                        createEmptyTexture(),
-                        resources.player_drop_left_texture,
-                        landing.normal,
-                        coord.y - dropResult.coord.y),
-                    small: generateDropAnimation(
-                        createEmptyTexture(),
-                        resources.player_small_drop_left_texture,
-                        landing.normal,
-                        coord.y - dropResult.coord.y),
-                },
-            }
+                return {
+                    coord: dropResult.coord,
+                    state: dropResult.state,
+                    transition: {
+                        normal: generateDropAnimation(
+                            jumpOff.normal,
+                            resources.player_drop_left_texture,
+                            landing.normal,
+                            coord.y - dropResult.coord.y),
+                        small: generateDropAnimation(
+                            jumpOff.small,
+                            resources.player_small_drop_left_texture,
+                            landing.normal,
+                            coord.y - dropResult.coord.y),
+                    },
+                };
+            } break;
+            //左がふさがっていたらよじ登りを試す
+            case null: if (currentState === "stand"
+                && checkState(upCoord(coord), terrain, isSmall) !== null
+                && checkState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
+                return {
+                    coord: leftCoord(upCoord(coord)),
+                    state: "stand",
+                    transition: {
+                        small: resources.player_small_climb_left_texture,
+                        normal: resources.player_climb_left_texture,
+                    },
+                };
         }
-        switch (direction) {
-            case "input_left": {
-                const leftState = checkState(leftCoord(coord), terrain, isSmall);
-                switch (leftState) {
-                    //左に立てるなら
-                    case "stand": switch (currentState) {
-                        //いま立っているなら歩き
-                        case "stand": return {
-                            coord: leftCoord(coord),
-                            state: leftState,
-                            transition: {
-                                small: resources.player_small_walk_left_texture,
-                                normal: resources.player_walk_left_texture,
-                            },
-                        };
-                        //いま梯子なら降りる
-                        case "ladder": return {
-                            coord: leftCoord(coord),
-                            state: leftState,
-                            transition: {
-                                small: resources.player_small_walk_left_texture,
-                                normal: resources.player_walk_left_texture,
-                            },
-                        };
-                    } break;
-                    //左に梯子があるなら
-                    case "ladder": switch (currentState) {
-                        // いま立っているなら掴まる
-                        case "stand": return {
-                            coord: leftCoord(coord),
-                            state: leftState,
-                            transition: {
-                                small: resources.player_small_walk_left_texture,
-                                normal: resources.player_walk_left_texture,
-                            },
-                        };
-                        // いま梯子なら梯子上移動
-                        case "ladder": return {
-                            coord: leftCoord(coord),
-                            state: leftState,
-                            transition: {
-                                small: resources.player_small_walk_left_texture,
-                                normal: resources.player_walk_left_texture,
-                            },
-                        };
-                    } break;
-                    //左が空いてるなら飛び降りる
-                    case "drop": {
-                        const dropResult = drop(leftCoord(coord), terrain, isSmall);
-                        
-                        const jumpOff = {
-                            "stand": {
-                                normal: resources.player_walk_left_texture,
-                                small: resources.player_small_walk_left_texture,
-                            },
-                            "ladder": {
-                                normal: resources.player_walk_left_texture,
-                                small: resources.player_small_walk_left_texture,
-                            },
-                        }[currentState];
-                        const landing = {
-                            "stand": {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            },
-                            "ladder": {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            },
-                        }[dropResult.state];
+        return null;
+    }
+    
+    export function checkRight(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+        const rightState = checkState(rightCoord(coord), terrain, isSmall);
+        switch (rightState) {
+            //右に立てるなら
+            case "stand": switch (currentState) {
+                //いま立っているなら歩き
+                case "stand": return {
+                    coord: rightCoord(coord),
+                    state: rightState,
+                    transition: {
+                        small: resources.player_small_walk_right_texture,
+                        normal: resources.player_walk_right_texture,
+                    },
+                };
+                //いま梯子なら降りる
+                case "ladder": return {
+                    coord: rightCoord(coord),
+                    state: rightState,
+                    transition: {
+                        small: resources.player_small_walk_right_texture,
+                        normal: resources.player_walk_right_texture,
+                    },
+                };
+            } break;
+            //右に梯子があるなら
+            case "ladder": switch (currentState) {
+                // いま立っているなら掴まる
+                case "stand": return {
+                    coord: rightCoord(coord),
+                    state: rightState,
+                    transition: {
+                        small: resources.player_small_walk_right_texture,
+                        normal: resources.player_walk_right_texture,
+                    },
+                };
+                // いま梯子なら梯子上移動
+                case "ladder": return {
+                    coord: rightCoord(coord),
+                    state: rightState,
+                    transition: {
+                        small: resources.player_small_walk_right_texture,
+                        normal: resources.player_walk_right_texture,
+                    },
+                };
+            } break;
+            //右が空いてるなら飛び降りる
+            case "drop": {
+                const dropResult = drop(rightCoord(coord), terrain, isSmall);
+                const jumpOff = {
+                    "stand": {
+                        normal: resources.player_walk_right_texture,
+                        small: resources.player_small_walk_right_texture,
+                    },
+                    "ladder": {
+                        normal: resources.player_walk_right_texture,
+                        small: resources.player_small_walk_right_texture,
+                    },
+                }[currentState];
+                const landing = {
+                    "stand": {
+                        normal: resources.player_climb_down_texture,
+                        small: resources.player_small_climb_down_texture,
+                    },
+                    "ladder": {
+                        normal: resources.player_climb_down_texture,
+                        small: resources.player_small_climb_down_texture,
+                    },
+                }[dropResult.state];
 
-                        return {
-                            coord: dropResult.coord,
-                            state: dropResult.state,
-                            transition: {
-                                normal: generateDropAnimation(
-                                    jumpOff.normal,
-                                    resources.player_drop_left_texture,
-                                    landing.normal,
-                                    coord.y - dropResult.coord.y),
-                                small: generateDropAnimation(
-                                    jumpOff.small,
-                                    resources.player_small_drop_left_texture,
-                                    landing.normal,
-                                    coord.y - dropResult.coord.y),
-                            },
-                        };
-                    } break;
-                    //左がふさがっていたらよじ登りを試す
-                    case null: if (currentState === "stand"
-                        && checkState(upCoord(coord), terrain, isSmall) !== null
-                        && checkState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
-                        return {
-                            coord: leftCoord(upCoord(coord)),
-                            state: "stand",
-                            transition: {
-                                small: resources.player_small_climb_left_texture,
-                                normal: resources.player_climb_left_texture,
-                            },
-                        };
-                }
-                return null;
+                return {
+                    coord: dropResult.coord,
+                    state: dropResult.state,
+                    transition: {
+                        normal: generateDropAnimation(
+                            jumpOff.normal,
+                            resources.player_drop_right_texture,
+                            landing.normal,
+                            coord.y - dropResult.coord.y),
+                        small: generateDropAnimation(
+                            jumpOff.small,
+                            resources.player_small_drop_right_texture,
+                            landing.normal,
+                            coord.y - dropResult.coord.y),
+                    },
+                };
             } break;
-            case "input_right": {
-                const rightState = checkState(rightCoord(coord), terrain, isSmall);
-                switch (rightState) {
-                    //右に立てるなら
-                    case "stand": switch (currentState) {
-                        //いま立っているなら歩き
-                        case "stand": return {
-                            coord: rightCoord(coord),
-                            state: rightState,
-                            transition: {
-                                small: resources.player_small_walk_right_texture,
-                                normal: resources.player_walk_right_texture,
-                            },
-                        };
-                        //いま梯子なら降りる
-                        case "ladder": return {
-                            coord: rightCoord(coord),
-                            state: rightState,
-                            transition: {
-                                small: resources.player_small_walk_right_texture,
-                                normal: resources.player_walk_right_texture,
-                            },
-                        };
-                    } break;
-                    //右に梯子があるなら
-                    case "ladder": switch (currentState) {
-                        // いま立っているなら掴まる
-                        case "stand": return {
-                            coord: rightCoord(coord),
-                            state: rightState,
-                            transition: {
-                                small: resources.player_small_walk_right_texture,
-                                normal: resources.player_walk_right_texture,
-                            },
-                        };
-                        // いま梯子なら梯子上移動
-                        case "ladder": return {
-                            coord: rightCoord(coord),
-                            state: rightState,
-                            transition: {
-                                small: resources.player_small_walk_right_texture,
-                                normal: resources.player_walk_right_texture,
-                            },
-                        };
-                    } break;
-                    //右が空いてるなら飛び降りる
-                    case "drop": {
-                        const dropResult = drop(rightCoord(coord), terrain, isSmall);
-                        const jumpOff = {
-                            "stand": {
-                                normal: resources.player_walk_right_texture,
-                                small: resources.player_small_walk_right_texture,
-                            },
-                            "ladder": {
-                                normal: resources.player_walk_right_texture,
-                                small: resources.player_small_walk_right_texture,
-                            },
-                        }[currentState];
-                        const landing = {
-                            "stand": {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            },
-                            "ladder": {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            },
-                        }[dropResult.state];
-
-                        return {
-                            coord: dropResult.coord,
-                            state: dropResult.state,
-                            transition: {
-                                normal: generateDropAnimation(
-                                    jumpOff.normal,
-                                    resources.player_drop_right_texture,
-                                    landing.normal,
-                                    coord.y - dropResult.coord.y),
-                                small: generateDropAnimation(
-                                    jumpOff.small,
-                                    resources.player_small_drop_right_texture,
-                                    landing.normal,
-                                    coord.y - dropResult.coord.y),
-                            },
-                        };
-                    } break;
-                    //右がふさがっていたらよじ登りを試す
-                    case null: if (currentState === "stand"
-                        && checkState(upCoord(coord), terrain, isSmall) !== null
-                        && checkState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
-                        return {
-                            coord: rightCoord(upCoord(coord)),
-                            state: "stand",
-                            transition: {
-                                small: resources.player_small_climb_right_texture,
-                                normal: resources.player_climb_right_texture,
-                            },
-                        };
-                }
-                return null;
-            } break;
-            case "input_up": {
-                //真上移動は梯子に登るときのみ？
-                const upState = checkState(upCoord(coord), terrain, isSmall);
-                switch (upState) {
-                    case "ladder": switch (currentState) {
-                        //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
-                        case "stand": if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder") {
-                            return {
-                                coord: upCoord(coord),
-                                state: "ladder",
-                                transition: {
-                                    small: resources.player_small_climb_up_texture,
-                                    normal: resources.player_climb_up_texture,
-                                },
-                            };
-                        } break;
-                        //いま梯子なら登る
-                        case "ladder": return {
-                            coord: upCoord(coord),
-                            state: "ladder",
-                            transition: {
-                                small: resources.player_small_climb_up_texture,
-                                normal: resources.player_climb_up_texture,
-                            },
-                        };
-                    } break;
-                }
-                return null;
-            } break;
-            case "input_down": {
-                //下移動は梯子につかまってる時のみ
-                if(currentState !== "ladder") return null;
-                const downState = checkState(downCoord(coord), terrain, isSmall);
-                switch(downState) {
-                    //下に立てるなら降りる
-                    case "stand": {
-                        return {
-                            coord: downCoord(coord),
-                            state: "stand",
-                            transition: {
-                                small: resources.player_small_climb_down_texture,
-                                normal: resources.player_climb_down_texture,
-                            },
-                        };
-                    } break;
-                    // 下でも梯子なら移動
-                    case "ladder": {
-                        return {
-                            coord: downCoord(coord),
-                            state: "stand",
-                            transition: {
-                                small: resources.player_small_climb_down_texture,
-                                normal: resources.player_climb_down_texture,
-                            },
-                        };
-                    } break;
-                    //下が空いているなら飛び降りる
-                    case "drop": {
-                        const dropResult = drop(downCoord(coord), terrain, isSmall);
-                        const jumpOff = {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            };
-                        const landing = {
-                            "stand": {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            },
-                            "ladder": {
-                                normal: resources.player_climb_down_texture,
-                                small: resources.player_small_climb_down_texture,
-                            },
-                        }[dropResult.state];
-
-                        return {
-                            coord: dropResult.coord,
-                            state: dropResult.state,
-                            transition: {
-                                normal: generateDropAnimation(
-                                    jumpOff.normal,
-                                    resources.player_drop_right_texture,
-                                    landing.normal,
-                                    coord.y - dropResult.coord.y),
-                                small: generateDropAnimation(
-                                    jumpOff.small,
-                                    resources.player_small_drop_right_texture,
-                                    landing.normal,
-                                    coord.y - dropResult.coord.y),
-                            },
-                        };
-                    } break;
-                }
-                return null;
-            } break;
-            default: return direction;
+            //右がふさがっていたらよじ登りを試す
+            case null: if (currentState === "stand"
+                && checkState(upCoord(coord), terrain, isSmall) !== null
+                && checkState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+                return {
+                    coord: rightCoord(upCoord(coord)),
+                    state: "stand",
+                    transition: {
+                        small: resources.player_small_climb_right_texture,
+                        normal: resources.player_climb_right_texture,
+                    },
+                };
         }
+        return null;
+    }
+    
+    export function checkUp(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+        //真上移動は梯子に登るときのみ？
+        const upState = checkState(upCoord(coord), terrain, isSmall);
+        switch (upState) {
+            case "ladder": switch (currentState) {
+                //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
+                case "stand": if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder") {
+                    return {
+                        coord: upCoord(coord),
+                        state: "ladder",
+                        transition: {
+                            small: resources.player_small_climb_up_texture,
+                            normal: resources.player_climb_up_texture,
+                        },
+                    };
+                } break;
+                //いま梯子なら登る
+                case "ladder": return {
+                    coord: upCoord(coord),
+                    state: "ladder",
+                    transition: {
+                        small: resources.player_small_climb_up_texture,
+                        normal: resources.player_climb_up_texture,
+                    },
+                };
+            } break;
+        }
+        return null;
     }
 
-    export function shrink(player: Player): Player {
-        return updateTexture({
+    export function checkDown(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+        //下移動は梯子につかまってる時のみ
+        if (currentState !== "ladder") return null;
+        const downState = checkState(downCoord(coord), terrain, isSmall);
+        switch (downState) {
+            //下に立てるなら降りる
+            case "stand": {
+                return {
+                    coord: downCoord(coord),
+                    state: "stand",
+                    transition: {
+                        small: resources.player_small_climb_down_texture,
+                        normal: resources.player_climb_down_texture,
+                    },
+                };
+            } break;
+            // 下でも梯子なら移動
+            case "ladder": {
+                return {
+                    coord: downCoord(coord),
+                    state: "stand",
+                    transition: {
+                        small: resources.player_small_climb_down_texture,
+                        normal: resources.player_climb_down_texture,
+                    },
+                };
+            } break;
+            //下が空いているなら飛び降りる
+            case "drop": {
+                const dropResult = drop(downCoord(coord), terrain, isSmall);
+                const jumpOff = {
+                    normal: resources.player_climb_down_texture,
+                    small: resources.player_small_climb_down_texture,
+                };
+                const landing = {
+                    "stand": {
+                        normal: resources.player_climb_down_texture,
+                        small: resources.player_small_climb_down_texture,
+                    },
+                    "ladder": {
+                        normal: resources.player_climb_down_texture,
+                        small: resources.player_small_climb_down_texture,
+                    },
+                }[dropResult.state];
+
+                return {
+                    coord: dropResult.coord,
+                    state: dropResult.state,
+                    transition: {
+                        normal: generateDropAnimation(
+                            jumpOff.normal,
+                            resources.player_drop_right_texture,
+                            landing.normal,
+                            coord.y - dropResult.coord.y),
+                        small: generateDropAnimation(
+                            jumpOff.small,
+                            resources.player_small_drop_right_texture,
+                            landing.normal,
+                            coord.y - dropResult.coord.y),
+                    },
+                };
+            } break;
+        }
+        return null;
+    }
+
+    export function shrink(player: Player, field: Field): Player {
+        return transitionEnd({
             ...player,
             smallCount: 5,
-        });
+        }, field);
     }
 
     interface TextureVariants {
@@ -441,15 +407,61 @@ namespace Player {
         return textureVariants[0 < smallCount ? "small" : "normal"];
     }
 
-    //プレイヤーのstateを見てテクスチャを更新する。
-    function updateTexture(player: Player): Player {
-        const textureSet = getStateTexture(player.state, player.facingDirection);
+    // 遷移アニメーション再生後にプレイヤーのstateを見てsmallCountとテクスチャを更新する。
+    export function transitionEnd(player: Player, field: Field): Player {
+        const smallCount = Math.max(0, player.smallCount - 1);
 
-        return {
-            ...player,
-            animationTimestamp: tick,
-            texture: selectTexture(textureSet, player.smallCount),
-        };
+        const currentState = checkState(player.coord, field.terrain, 0 < smallCount);
+
+        //埋まってなければテクスチャを更新するだけ
+        if (currentState === "stand" || currentState === "ladder") {
+            const textureSet = getStateTexture(player.state, player.facingDirection);
+
+            return {
+                ...player,
+                animationTimestamp: tick,
+                texture: selectTexture(textureSet, player.smallCount),
+                acceptInput: true,
+                smallCount: smallCount,
+            };
+        }
+        else {
+            //埋まっていたら落とさなきゃいけない
+            const dropResult = drop(player.coord, field.terrain, 0 < smallCount);
+
+            const landing = {
+                "stand": {
+                    normal: resources.player_climb_down_texture,
+                    small: resources.player_small_climb_down_texture,
+                },
+                "ladder": {
+                    normal: resources.player_climb_down_texture,
+                    small: resources.player_small_climb_down_texture,
+                },
+            }[dropResult.state];
+
+            const transitionTexture = selectTexture({
+                normal: generateDropAnimation(
+                    createEmptyTexture(),
+                    resources.player_drop_left_texture,
+                    landing.normal,
+                    player.coord.y - dropResult.coord.y),
+                small: generateDropAnimation(
+                    createEmptyTexture(),
+                    resources.player_small_drop_left_texture,
+                    landing.normal,
+                    player.coord.y - dropResult.coord.y),
+            }, smallCount);
+
+            return {
+                ...player,
+                texture: transitionTexture,
+                coord: dropResult.coord,
+                state: dropResult.state,
+                acceptInput: false,
+                smallCount: smallCount,
+            };
+        }
     }
 
     function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): TextureVariants {
@@ -476,7 +488,12 @@ namespace Player {
 
     //与えられたMoveResult | nullに従ってプレイヤーを動かす
     export function move(player: Player, field: Field, direction: InputDirection): [Player, Field] {
-        const result = check(player.coord, field.terrain, 0 < player.smallCount, direction);
+        const result = {
+            input_left: checkLeft,
+            input_right: checkRight,
+            input_up: checkUp,
+            input_down: checkDown,
+        }[direction](player.coord, player.state, field.terrain, 0 < player.smallCount);
 
         if (result === null) return [player, field];
 
@@ -484,20 +501,14 @@ namespace Player {
             result.transition,
             player.smallCount);
 
-        const stateTexture = selectTexture(
-            getStateTexture(result.state, direction === "input_left" ? "facing_left" : "facing_right"),
-            Math.max(0, player.smallCount - 1));
-
         return [{
             ...player,
-            texture: joinAnimation([transitionTexture, stateTexture], false),
+            texture: transitionTexture,
             animationTimestamp: tick,
             coord: result.coord,
             state: result.state,
-            //左に移動したときのみ左を向く。無標（上下移動）では右
-            facingDirection: result.coord.x < player.coord.x ? "facing_left" : "facing_right",
-
-            smallCount: Math.max(0, player.smallCount - 1),
+            facingDirection: direction === "input_left" ? "facing_left" : "facing_right",
+            acceptInput: false,
         }, turn(field, player)];
     }
 }
