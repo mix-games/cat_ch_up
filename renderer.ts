@@ -111,6 +111,7 @@ namespace Renderer {
             clearScreen(renderer.lightLayers[i]);
             clearScreen(renderer.shadowLayers[i]);
         }
+        clearScreen(renderer.uiScreen);
         clearScreen(renderer.compositScreen);
 
         function clearScreen(screen: CanvasRenderingContext2D): void {
