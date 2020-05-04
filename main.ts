@@ -17,7 +17,7 @@ function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D,
         drawDigraphForTest(camera, renderer.lightColor);
 
         drawTexture(resources.player_walk_left_texture, 0, 0, renderer);
-
+        
         Renderer.composit(renderer, mainScreen);
         requestAnimationFrame(() => animationLoop(renderer, mainScreen, resources));
     }
