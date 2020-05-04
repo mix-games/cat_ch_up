@@ -111,17 +111,15 @@ function createEmptyTexture() {
         type: "empty"
     };
 }
-function createRectTexture(color, width, height, offsetX, offsetY) {
+function createRectTexture(color, width, height) {
     return {
         type: "rect",
         color,
         width,
         height,
-        offsetX,
-        offsetY,
     };
 }
-function createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset) {
+function createVolumeTexture(width, height, depth, depthOffset) {
     const lightColor = document.createElement("canvas");
     const shadowColor = document.createElement("canvas");
     lightColor.width = width;
@@ -146,8 +144,6 @@ function createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset
         shadowLayers,
         width,
         height,
-        offsetX,
-        offsetY,
         depth,
         depthOffset,
     };
@@ -159,6 +155,14 @@ function createAnimationTexture(textures, timeline, timestamp, loop) {
         timeline,
         timestamp,
         loop,
+    };
+}
+function createOffsetTexture(texture, offsetX, offsetY) {
+    return {
+        type: "offset",
+        texture,
+        offsetX,
+        offsetY,
     };
 }
 function cloneAndReplayTexture(texture) {
@@ -200,41 +204,18 @@ function drawTexture(texture, x, y, renderer) {
         case "rect":
             {
                 renderer.lightColor.fillStyle = texture.color;
-                renderer.lightColor.fillRect(Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                renderer.lightColor.fillRect(Renderer.marginLeft + x, Renderer.marginTop + y, texture.width, texture.height);
                 renderer.shadowColor.fillStyle = texture.color;
-                renderer.shadowColor.fillRect(Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                renderer.shadowColor.fillRect(Renderer.marginLeft + x, Renderer.marginTop + y, texture.width, texture.height);
             }
             break;
         case "volume":
             {
-                renderer.lightColor.drawImage(texture.lightColor, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY);
-                renderer.shadowColor.drawImage(texture.shadowColor, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY);
+                renderer.lightColor.drawImage(texture.lightColor, Renderer.marginLeft + x, Renderer.marginTop + y);
+                renderer.shadowColor.drawImage(texture.shadowColor, Renderer.marginLeft + x, Renderer.marginTop + y);
                 for (let i = 0; i < texture.depth; i++) {
-                    renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightLayers[i], Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY);
-                    renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowLayers[i], Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY);
-                }
-            }
-            break;
-        case "image":
-            {
-                const elapse = new Date().getTime() - texture.animationTimestamp;
-                const phase = texture.loop ? elapse % texture.timeline[texture.timeline.length - 1] : elapse;
-                let frame = texture.timeline.findIndex(t => phase < t);
-                if (frame === -1) {
-                    texture.animationEndCallback();
-                    frame = Math.max(0, texture.timeline.length - 1);
-                }
-                renderer.lightColor.drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
-                0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-                renderer.shadowColor.drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
-                0, texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-                for (let i = 0; i < texture.depth; i++) {
-                    renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightColor, texture.width * frame, // アニメーションによる横位置
-                    (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
-                    texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
-                    renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowColor, texture.width * frame, // アニメーションによる横位置
-                    (i + 1) * texture.height, // （色を除いて）上からi枚目の画像
-                    texture.width, texture.height, Renderer.marginLeft + x - texture.offsetX, Renderer.marginTop + y - texture.offsetY, texture.width, texture.height);
+                    renderer.lightLayers[i + texture.depthOffset].drawImage(texture.lightLayers[i], Renderer.marginLeft + x, Renderer.marginTop + y);
+                    renderer.shadowLayers[i + texture.depthOffset].drawImage(texture.shadowLayers[i], Renderer.marginLeft + x, Renderer.marginTop + y);
                 }
             }
             break;
@@ -248,6 +229,11 @@ function drawTexture(texture, x, y, renderer) {
                     frame = Math.max(0, texture.timeline.length - 1);
                 }
                 drawTexture(texture.textures[frame], x, y, renderer);
+            }
+            break;
+        case "offset":
+            {
+                drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, renderer);
             }
             break;
     }
@@ -323,13 +309,13 @@ function loadResources() {
         return audio;
     }
     function loadStaticTexture(source, width, height, offsetX, offsetY, useShadowColor, depth, depthOffset) {
-        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+        const texture = createVolumeTexture(width, height, depth, depthOffset);
         const image = loadImage(source, () => readyVolumeTexture(texture, image, useShadowColor));
-        return texture;
+        return createOffsetTexture(texture, offsetX, offsetY);
     }
     function loadAnimationTexture(source, width, height, offsetX, offsetY, useShadowColor, timeline, loop, depth, depthOffset) {
-        const textures = timeline.map(() => createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset));
-        const texture = createAnimationTexture(textures, timeline, new Date().getTime(), loop);
+        const textures = timeline.map(() => createVolumeTexture(width, height, depth, depthOffset));
+        const texture = createAnimationTexture(textures.map(t => createOffsetTexture(t, offsetX, offsetY)), timeline, new Date().getTime(), loop);
         const image = loadImage(source, () => {
             textures.forEach((texture, i) => {
                 const source = document.createElement("canvas");
@@ -358,7 +344,7 @@ function createNeko() {
     return {
         type: "neko",
         coord: createCoord(0, 5),
-        texture: createRectTexture("blue", blockSize - 4, blockSize - 2, blockSize / 2 - 2, -2)
+        texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2)
     };
 }
 function canNekoEnter(coord, terrain) {
@@ -488,7 +474,7 @@ function drawField(field, camera, renderer) {
             if (field.terrain.length <= y)
                 continue;
             const coord = createCoord(x, y);
-            drawTexture(createRectTexture("red", 1, 1, 0, 0), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
+            drawTexture(createRectTexture("red", 1, 1), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, renderer);
         }
     } //*/
     field.entities.forEach(e => drawGameObject(e, camera, renderer));

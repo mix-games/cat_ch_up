@@ -76,15 +76,15 @@ function loadResources() {
     }
 
 
-    function loadStaticTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, depth: number, depthOffset: number): VolumeTexture {
-        const texture = createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset);
+    function loadStaticTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, depth: number, depthOffset: number): Texture {
+        const texture = createVolumeTexture(width, height, depth, depthOffset);
         const image = loadImage(source, () => readyVolumeTexture(texture, image, useShadowColor));
-        return texture;
+        return createOffsetTexture(texture, offsetX, offsetY);
     }
 
-    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): AnimationTexture {
-        const textures = timeline.map(() => createVolumeTexture(width, height, offsetX, offsetY, depth, depthOffset));
-        const texture = createAnimationTexture(textures, timeline, new Date().getTime(), loop);
+    function loadAnimationTexture(source: string, width: number, height: number, offsetX: number, offsetY: number, useShadowColor: boolean, timeline: number[], loop: boolean, depth: number, depthOffset: number): Texture {
+        const textures = timeline.map(() => createVolumeTexture(width, height, depth, depthOffset));
+        const texture = createAnimationTexture(textures.map(t => createOffsetTexture(t, offsetX, offsetY)), timeline, new Date().getTime(), loop);
 
         const image = loadImage(source, () => {
             textures.forEach((texture, i) => {

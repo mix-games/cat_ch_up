@@ -144,7 +144,7 @@ function drawField(field: Field, camera: Camera, renderer: Renderer): void {
             if (field.terrain.length <= y) continue;
             const coord = createCoord(x, y);
             drawTexture(
-                createRectTexture("red", 1, 1, 0, 0),
+                createRectTexture("red", 1, 1),
                 camera.offsetX + coord.x * blockSize,
                 camera.offsetY - coord.y * blockSize,
                 renderer
