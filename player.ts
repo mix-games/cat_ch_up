@@ -130,8 +130,15 @@ namespace Player {
         });
     }
 
-    function selectTexture(textureSet: { normal: Texture, small: Texture; }, smallCount: number): Texture {
-        return textureSet[0 < smallCount ? "small" : "normal"];
+    interface TextureVariants {
+        small: Texture,
+        normal: Texture,
+    };
+    function selectTexture(textureVariants: TextureVariants, smallCount: number): Texture {
+        if(smallCount === 1) {
+            return createFlashTexture(textureVariants.small, textureVariants.normal);
+        }
+        return textureVariants[0 < smallCount ? "small" : "normal"];
     }
 
     //プレイヤーのstateを見てテクスチャを更新する。
@@ -145,7 +152,7 @@ namespace Player {
         };
     }
 
-    function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
+    function getStateTexture(state: "stand" | "ladder", facingDirection: FacingDirection): TextureVariants {
         switch (state) {
             case "stand": {
                 switch (facingDirection) {
@@ -167,10 +174,10 @@ namespace Player {
         }
     }
 
-    function getTransitionTexture(oldState: "stand" | "ladder", newState: "stand" | "ladder", dx: number, dy: number, facingDirection: FacingDirection): { normal: Texture, small: Texture; } {
+    function getTransitionTexture(oldState: "stand" | "ladder", newState: "stand" | "ladder", dx: number, dy: number, facingDirection: FacingDirection): TextureVariants {
         // 梯子真下移動を除く下方向の移動は飛び降りとして処理
         if (dy <= -1 && !(oldState === "ladder" && newState === "ladder" && dx === 0 && dy === -1)) {
-            let startTexture = null;
+            let startTexture: TextureVariants;
             switch (oldState) {
                 case "stand": switch (dx) {
                     //足場から左に落ちた
@@ -187,6 +194,7 @@ namespace Player {
                             normal: resources.player_walk_right_texture,
                         };
                         break;
+                    default: throw new Error("unexpected texture requested");
                 } break;
                 case "ladder": switch (dx) {
                     //梯子から左に落ちた
@@ -210,14 +218,13 @@ namespace Player {
                             normal: resources.player_walk_right_texture,
                         };
                         break;
+                    default: throw new Error("unexpected texture requested");
                 } break;
+                //網羅チェック
+                default: startTexture = oldState; 
             }
-            if (startTexture === null) throw new Error("unexpected texture requested");
 
-            let midTexture: {
-                small: Texture,
-                normal: Texture,
-            };
+            let midTexture: TextureVariants;
             switch (facingDirection) {
                 case "facing_left":
                     midTexture = {
@@ -234,10 +241,7 @@ namespace Player {
                 default: midTexture = facingDirection;
             }
 
-            let endTexture: {
-                small: Texture,
-                normal: Texture,
-            };
+            let endTexture: TextureVariants;
             switch (newState) {
                 case "stand": switch (facingDirection) {
                     //左を向いて足場に着地
@@ -435,7 +439,7 @@ namespace Player {
 
         const stateTexture = selectTexture(
             getStateTexture(result.state, direction === "input_left" ? "facing_left" : "facing_right"),
-            player.smallCount);
+            Math.max(0, player.smallCount - 1));
 
         return [{
             ...player,

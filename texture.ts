@@ -1,4 +1,4 @@
-type Texture = EmptyTexture | RectTexture | VolumeTexture | AnimationTexture | OffsetTexture;
+type Texture = EmptyTexture | RectTexture | VolumeTexture | AnimationTexture | OffsetTexture | FlashTexture;
 
 interface EmptyTexture {
     readonly type: "empty";
@@ -34,7 +34,11 @@ interface OffsetTexture {
     readonly offsetX: number;
     readonly offsetY: number;
     readonly texture: Texture;
-
+}
+interface FlashTexture {
+    readonly type: "flash";
+    readonly texture1: Texture;
+    readonly texture2: Texture;
 }
 
 function createEmptyTexture(): EmptyTexture {
@@ -97,6 +101,14 @@ function createOffsetTexture(texture: Texture, offsetX: number, offsetY: number)
         texture,
         offsetX,
         offsetY,
+    }
+}
+
+function createFlashTexture(texture1: Texture, texture2: Texture): FlashTexture {
+    return {
+        type: "flash",
+        texture1, 
+        texture2,
     }
 }
 
@@ -166,6 +178,7 @@ function getAnimationLength(texture: Texture): number{
         case "volume": return 0;
         case "animation": return texture.loop ? Infinity : texture.timeline[texture.timeline.length - 1];
         case "offset": return getAnimationLength(texture.texture);
+        case "flash": return Math.max(getAnimationLength(texture.texture1), getAnimationLength(texture.texture1));
         //網羅チェック
         default: return texture;
     }
@@ -180,6 +193,8 @@ function joinAnimation(textures: Texture[], loop: boolean): AnimationTexture {
 
 function drawTexture(texture: Texture, x: number, y: number, elapse:number, renderer: Renderer): void {
     switch (texture.type) {
+        case "empty": {
+        } break;
         case "rect": {
             renderer.lightColor.fillStyle = texture.color;
             renderer.lightColor.fillRect(
@@ -228,6 +243,10 @@ function drawTexture(texture: Texture, x: number, y: number, elapse:number, rend
         case "offset": {
             drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, elapse, renderer);
         } break;
+        case "flash": {
+            drawTexture(elapse % 2 === 0 ? texture.texture1 : texture.texture2, x, y, elapse, renderer);
+        } break;
+        default: const never: never = texture;
     }
 }
 

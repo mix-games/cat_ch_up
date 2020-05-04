@@ -165,6 +165,13 @@ function createOffsetTexture(texture, offsetX, offsetY) {
         offsetY,
     };
 }
+function createFlashTexture(texture1, texture2) {
+    return {
+        type: "flash",
+        texture1,
+        texture2,
+    };
+}
 function readyVolumeTexture(texture, image, useShadowColor) {
     const lightColorScreen = texture.lightColor.getContext("2d");
     if (lightColorScreen === null)
@@ -198,6 +205,7 @@ function getAnimationLength(texture) {
         case "volume": return 0;
         case "animation": return texture.loop ? Infinity : texture.timeline[texture.timeline.length - 1];
         case "offset": return getAnimationLength(texture.texture);
+        case "flash": return Math.max(getAnimationLength(texture.texture1), getAnimationLength(texture.texture1));
         //網羅チェック
         default: return texture;
     }
@@ -210,6 +218,10 @@ function joinAnimation(textures, loop) {
 }
 function drawTexture(texture, x, y, elapse, renderer) {
     switch (texture.type) {
+        case "empty":
+            {
+            }
+            break;
         case "rect":
             {
                 renderer.lightColor.fillStyle = texture.color;
@@ -244,6 +256,12 @@ function drawTexture(texture, x, y, elapse, renderer) {
                 drawTexture(texture.texture, x - texture.offsetX, y - texture.offsetY, elapse, renderer);
             }
             break;
+        case "flash":
+            {
+                drawTexture(elapse % 2 === 0 ? texture.texture1 : texture.texture2, x, y, elapse, renderer);
+            }
+            break;
+        default: const never = texture;
     }
 }
 const resources = loadResources();
@@ -612,8 +630,12 @@ var Player;
         return updateTexture(Object.assign(Object.assign({}, player), { smallCount: 5 }));
     }
     Player.shrink = shrink;
-    function selectTexture(textureSet, smallCount) {
-        return textureSet[0 < smallCount ? "small" : "normal"];
+    ;
+    function selectTexture(textureVariants, smallCount) {
+        if (smallCount === 1) {
+            return createFlashTexture(textureVariants.small, textureVariants.normal);
+        }
+        return textureVariants[0 < smallCount ? "small" : "normal"];
     }
     //プレイヤーのstateを見てテクスチャを更新する。
     function updateTexture(player) {
@@ -652,7 +674,7 @@ var Player;
     function getTransitionTexture(oldState, newState, dx, dy, facingDirection) {
         // 梯子真下移動を除く下方向の移動は飛び降りとして処理
         if (dy <= -1 && !(oldState === "ladder" && newState === "ladder" && dx === 0 && dy === -1)) {
-            let startTexture = null;
+            let startTexture;
             switch (oldState) {
                 case "stand":
                     switch (dx) {
@@ -670,6 +692,7 @@ var Player;
                                 normal: resources.player_walk_right_texture,
                             };
                             break;
+                        default: throw new Error("unexpected texture requested");
                     }
                     break;
                 case "ladder":
@@ -695,11 +718,12 @@ var Player;
                                 normal: resources.player_walk_right_texture,
                             };
                             break;
+                        default: throw new Error("unexpected texture requested");
                     }
                     break;
+                //網羅チェック
+                default: startTexture = oldState;
             }
-            if (startTexture === null)
-                throw new Error("unexpected texture requested");
             let midTexture;
             switch (facingDirection) {
                 case "facing_left":
@@ -976,7 +1000,7 @@ var Player;
         if (result === null)
             return [player, field];
         const transitionTexture = selectTexture(getTransitionTexture(player.state, result.state, result.coord.x - player.coord.x, result.coord.y - player.coord.y, player.facingDirection), player.smallCount);
-        const stateTexture = selectTexture(getStateTexture(result.state, direction === "input_left" ? "facing_left" : "facing_right"), player.smallCount);
+        const stateTexture = selectTexture(getStateTexture(result.state, direction === "input_left" ? "facing_left" : "facing_right"), Math.max(0, player.smallCount - 1));
         return [Object.assign(Object.assign({}, player), { texture: joinAnimation([transitionTexture, stateTexture], false), animationTimestamp: tick, coord: result.coord, state: result.state, 
                 //左に移動したときのみ左を向く。無標（上下移動）では右
                 facingDirection: result.coord.x < player.coord.x ? "facing_left" : "facing_right", smallCount: Math.max(0, player.smallCount - 1) }), turn(field, player)];
