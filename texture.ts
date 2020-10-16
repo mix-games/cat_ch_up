@@ -144,9 +144,9 @@ function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | H
 
 function getAnimationLength(texture: Texture): number{
     switch (texture.type) {
-        case "empty": return 0;
-        case "rect": return 0;
-        case "volume": return 0;
+        case "empty": return Infinity;
+        case "rect": return Infinity;
+        case "volume": return Infinity;
         case "animation": return texture.loop ? Infinity : texture.timeline[texture.timeline.length - 1];
         case "offset": return getAnimationLength(texture.texture);
         case "flash": return Math.max(getAnimationLength(texture.texture1), getAnimationLength(texture.texture1));

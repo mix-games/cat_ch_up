@@ -184,9 +184,9 @@ function readyVolumeTexture(texture, image, useShadowColor) {
 }
 function getAnimationLength(texture) {
     switch (texture.type) {
-        case "empty": return 0;
-        case "rect": return 0;
-        case "volume": return 0;
+        case "empty": return Infinity;
+        case "rect": return Infinity;
+        case "volume": return Infinity;
         case "animation": return texture.loop ? Infinity : texture.timeline[texture.timeline.length - 1];
         case "offset": return getAnimationLength(texture.texture);
         case "flash": return Math.max(getAnimationLength(texture.texture1), getAnimationLength(texture.texture1));
@@ -1230,6 +1230,7 @@ var Player;
     // 遷移アニメーション再生後にプレイヤーのstateを見てsmallCountとテクスチャを更新する。
     function transitionEnd(player, field) {
         const smallCount = Math.max(0, player.smallCount - 1);
+        console.log(smallCount);
         const currentState = checkState(player.coord, field.terrain, 0 < smallCount);
         //埋まってなければテクスチャを更新するだけ
         if (currentState === "stand" || currentState === "ladder") {

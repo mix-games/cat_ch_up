@@ -416,7 +416,7 @@ namespace Player {
     // 遷移アニメーション再生後にプレイヤーのstateを見てsmallCountとテクスチャを更新する。
     export function transitionEnd(player: Player, field: Field): Player {
         const smallCount = Math.max(0, player.smallCount - 1);
-
+        console.log(smallCount);
         const currentState = checkState(player.coord, field.terrain, 0 < smallCount);
 
         //埋まってなければテクスチャを更新するだけ
