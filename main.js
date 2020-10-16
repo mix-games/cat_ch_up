@@ -267,29 +267,29 @@ function loadResources() {
         background_texture: loadStaticTexture("image/background.png", 400, 400, 200, 200, false, 1, 0),
         terrain_wall_texture: loadStaticTexture("image/terrain/wall.png", 24, 24, 10, 0, true, 1, 0),
         terrain_ladder_texture: loadStaticTexture("image/terrain/ladder.png", 24, 24, 11, 0, true, 3, 0),
-        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [30, 60, 90], true, 7, 0),
+        terrain_condenser_texture: loadAnimationTexture("image/terrain/condenser.png", 36, 24, 13, 0, true, [10, 20, 30], true, 7, 0),
         player_stand_right_texture: loadStaticTexture("image/player/stand_right.png", 24, 48, 12, 24, true, 1, 3),
         player_stand_left_texture: loadStaticTexture("image/player/stand_left.png", 24, 48, 12, 24, true, 1, 3),
         player_hold_texture: loadStaticTexture("image/player/hold.png", 24, 48, 12, 24, true, 1, 3),
-        player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_right_texture: loadAnimationTexture("image/player/climb_right.png", 48, 72, 36, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
-        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
-        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [30, 60, 90, 120], false, 1, 3),
+        player_walk_right_texture: loadAnimationTexture("image/player/walk_right.png", 48, 48, 36, 24, true, [10, 20, 30, 40], false, 1, 3),
+        player_walk_left_texture: loadAnimationTexture("image/player/walk_left.png", 48, 48, 12, 24, true, [10, 20, 30, 40], false, 1, 3),
+        player_climb_right_texture: loadAnimationTexture("image/player/climb_right.png", 48, 72, 36, 24, true, [10, 20, 30, 40], false, 1, 3),
+        player_climb_left_texture: loadAnimationTexture("image/player/climb_left.png", 48, 72, 12, 24, true, [10, 20, 30, 40], false, 1, 3),
+        player_climb_up_texture: loadAnimationTexture("image/player/climb_up.png", 24, 72, 12, 24, true, [10, 20, 30, 40], false, 1, 3),
+        player_climb_down_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [10, 20, 30, 40], false, 1, 3),
+        player_drop_left_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [5, 10, 15, 20], false, 1, 3),
+        player_drop_right_texture: loadAnimationTexture("image/player/climb_down.png", 24, 72, 12, 48, true, [5, 10, 15, 20], false, 1, 3),
         player_small_stand_right_texture: loadStaticTexture("image/player_small/stand_right.png", 24, 24, 12, 0, true, 1, 3),
         player_small_stand_left_texture: loadStaticTexture("image/player_small/stand_left.png", 24, 24, 12, 0, true, 1, 3),
         player_small_hold_texture: loadStaticTexture("image/player_small/hold.png", 24, 24, 12, 0, true, 1, 3),
-        player_small_walk_right_texture: loadAnimationTexture("image/player_small/walk_right.png", 48, 24, 36, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_walk_left_texture: loadAnimationTexture("image/player_small/walk_left.png", 48, 24, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_right_texture: loadAnimationTexture("image/player_small/climb_right.png", 48, 48, 36, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
-        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [30, 60, 90, 120], false, 1, 3),
+        player_small_walk_right_texture: loadAnimationTexture("image/player_small/walk_right.png", 48, 24, 36, 0, true, [10, 20, 30, 40], false, 1, 3),
+        player_small_walk_left_texture: loadAnimationTexture("image/player_small/walk_left.png", 48, 24, 12, 0, true, [10, 20, 30, 40], false, 1, 3),
+        player_small_climb_right_texture: loadAnimationTexture("image/player_small/climb_right.png", 48, 48, 36, 0, true, [10, 20, 30, 40], false, 1, 3),
+        player_small_climb_left_texture: loadAnimationTexture("image/player_small/climb_left.png", 48, 48, 12, 0, true, [10, 20, 30, 40], false, 1, 3),
+        player_small_climb_up_texture: loadAnimationTexture("image/player_small/climb_up.png", 24, 48, 12, 0, true, [10, 20, 30, 40], false, 1, 3),
+        player_small_climb_down_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [10, 20, 30, 40], false, 1, 3),
+        player_small_drop_left_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [5, 10, 15, 20], false, 1, 3),
+        player_small_drop_right_texture: loadAnimationTexture("image/player_small/climb_down.png", 24, 48, 12, 24, true, [5, 10, 15, 20], false, 1, 3),
     };
     function loadImage(source, onload = () => { }) {
         const image = new Image();
@@ -492,30 +492,37 @@ var Field;
         return annexRow(Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)) }), Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5)));
     }
     Field.turn = turn;
-    function canEnter(terrain, x, y) {
-        return getCollision(terrain, { x, y }) !== Field.Collision.Block && getCollision(terrain, { x, y: y + 1 }) !== Field.Collision.Block;
+    /*
+        function canEnter(terrain: Terrain, x: number, y: number): boolean {
+            return getCollision(terrain, { x, y }) !== Collision.Block && getCollision(terrain, { x, y: y + 1 }) !== Collision.Block;
+        }
+        function canStay(terrain: Terrain, x: number, y: number): boolean {
+            return canEnter(terrain, x, y) && (getCollision(terrain, { x, y: y - 1 }) == Collision.Block || getCollision(terrain, { x, y }) == Collision.Ladder);
+        }
+    function canGoUp(terrain: Terrain, x: number, y: number): boolean {
+        return Player.checkUp({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && canStand(terrain, x, y + 1);
     }
-    function canStand(terrain, x, y) {
-        return canEnter(terrain, x, y) && (getCollision(terrain, { x, y: y - 1 }) == Field.Collision.Block || getCollision(terrain, { x, y }) == Field.Collision.Ladder);
+    function canGoDown(terrain: Terrain, x: number, y: number): boolean {
+        return Player.checkDown({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canEnter(terrain, x, y - 1);
     }
-    function canGoUp(terrain, x, y) {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canStand(terrain, x, y + 1);
+    function canGoLeft(terrain: Terrain, x: number, y: number): boolean {
+        return Player.checkLeft({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x - 1, y);
     }
-    function canGoDown(terrain, x, y) {
-        return canEnter(terrain, x, y) && canEnter(terrain, x, y - 1);
+    function canGoRight(terrain: Terrain, x: number, y: number): boolean {
+        return Player.checkRight({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x + 1, y);
     }
-    function canGoLeft(terrain, x, y) {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x - 1, y);
+    function canGoLeftUp(terrain: Terrain, x: number, y: number): boolean {
+        return Player.checkLeftUp({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x - 1, y }) == Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x - 1, y + 1);
     }
-    function canGoRight(terrain, x, y) {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x + 1, y);
-    }
-    function canGoLeftUp(terrain, x, y) {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x - 1, y }) == Field.Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x - 1, y + 1);
-    }
-    function canGoRightUp(terrain, x, y) {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x + 1, y }) == Field.Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x + 1, y + 1);
-    }
+    function canGoRightUp(terrain: Terrain, x: number, y: number): boolean {
+        return Player.checkRightUp({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x + 1, y }) == Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x + 1, y + 1);
+    }*/
     // 配列をシャッフルした配列を返す
     function shuffle(array) {
         const array2 = [...array];
@@ -662,27 +669,25 @@ var Field;
         let graph2 = concatGraph(new Array(fieldWidth).fill(0).map(_ => []), field.trafficGraph);
         const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Field.Collision.Block ? Field.Collision.Block : !(x & Field.Collision.Ladder) ? Field.Collision.Air : Field.Collision.Ladder))];
         // 上下移動を繋ぐ
-        for (let i = 0; i < fieldWidth; i++) {
-            if (canGoUp(tempTerrain, i, terrain2.length - 2))
-                graph2[i + fieldWidth].push(i);
-            if (canGoDown(tempTerrain, i, terrain2.length - 1))
-                graph2[i].push(i + fieldWidth);
-        }
-        // 左右、斜め移動を繋ぐ
-        for (let i = 0; i < fieldWidth - 1; i++) {
-            if (canGoRight(tempTerrain, i, terrain2.length - 1))
-                graph2[i].push(i + 1);
-            if (canGoLeft(tempTerrain, i + 1, terrain2.length - 1))
-                graph2[i + 1].push(i);
+        for (let x = 0; x < fieldWidth; x++) {
+            if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x);
+            if (Player.checkDown({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null
+                || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, false) === "drop")
+                graph2[x].push(x + fieldWidth);
+            if (Player.checkRight({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
+                graph2[x].push(x + 1);
+            if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
+                graph2[x].push(x - 1);
             //　前の行では未確定だった左右移動があるかもしれないので追加
-            if (canGoRight(tempTerrain, i, terrain2.length - 2))
-                graph2[i + fieldWidth].push(i + 1 + fieldWidth);
-            if (canGoLeft(tempTerrain, i + 1, terrain2.length - 2))
-                graph2[i + 1 + fieldWidth].push(i + fieldWidth);
-            if (canGoRightUp(tempTerrain, i, terrain2.length - 2))
-                graph2[i + fieldWidth].push(i + 1);
-            if (canGoLeftUp(tempTerrain, i + 1, terrain2.length - 2))
-                graph2[i + 1 + fieldWidth].push(i);
+            if (Player.checkRight({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x + 1 + fieldWidth);
+            if (Player.checkLeft({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x - 1 + fieldWidth);
+            if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x + 1);
+            if (Player.checkLeftUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x - 1);
         }
         // 推移閉包を取った上で、後ろに入れておいた古い頂点を落とす
         graph2 = dropGraph(transclosure(graph2), fieldWidth);
@@ -721,7 +726,7 @@ var Field;
                 const list = [];
                 points.forEach(x => {
                     // 立ち入れない点は孤立点だが出口を作る必要はない
-                    if (!canEnter(tempTerrain, x, terrain2.length - 1))
+                    if (!Player.canEnter({ x: x, y: terrain2.length - 1 }, tempTerrain, false))
                         return;
                     //上2個がブロックでなければ入り口になる
                     list.push({ pattern: [[~Field.Collision.Block], [~Field.Collision.Block]], offsetX: x });
@@ -732,10 +737,10 @@ var Field;
                 const list = [];
                 points.forEach(x => {
                     // 立ち入れない点は孤立点だが出口を作る必要はない
-                    if (!canEnter(tempTerrain, x, terrain2.length - 1))
+                    if (!Player.canEnter({ x: x, y: terrain2.length - 1 }, tempTerrain, false))
                         return;
                     // 立てない点に出口を作っても手遅れ
-                    if (!canStand(tempTerrain, x, terrain2.length - 1))
+                    if (!Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false))
                         return;
                     //上に梯子を作れば出口になる
                     list.push({ pattern: [[Field.Collision.Ladder]], offsetX: x });
@@ -778,36 +783,38 @@ var Field;
         const field2 = Object.assign(Object.assign({}, field), { textures: terrain2.map(row => assignTexture(row)), terrain: terrain2, pendingTerrain: pendingTerrain3, trafficGraph: graph2 });
         // 以下デバッグ表示
         console.log(graph2);
-        const entranceId1 = new Array(fieldWidth).fill("  ");
-        const entranceId2 = new Array(fieldWidth).fill("  ");
-        componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1))
-            entranceId1[x] = i < 10 ? " " + i : "" + i; }));
-        console.log("entrance↓");
-        //console.log(entranceList);
-        console.log(" " + entranceId1.join(""));
-        console.log("(" + entranceId2.join("") + ")");
-        const exitId1 = new Array(fieldWidth).fill("  ");
-        const exitId2 = new Array(fieldWidth).fill("  ");
-        componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1))
-            exitId1[x] = i < 10 ? " " + i : "" + i; }));
-        console.log("exit↑");
-        //console.log(exitList);
-        console.log(" " + exitId1.join(""));
-        console.log("(" + exitId2.join("") + ")");
-        show(field2);
-        function show(field) {
-            function collisionToString(coll) {
-                switch (coll) {
-                    case Field.Collision.Air: return "  ";
-                    case Field.Collision.Block: return "[]";
-                    case Field.Collision.Ladder: return "|=";
+        /*
+                const entranceId1 = new Array(fieldWidth).fill("  ");
+                const entranceId2 = new Array(fieldWidth).fill("  ");
+                componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1)) entranceId1[x] = i < 10 ? " " + i : "" + i; }));
+                console.log("entrance↓");
+                //console.log(entranceList);
+                console.log(" " + entranceId1.join(""));
+                console.log("(" + entranceId2.join("") + ")");
+        
+                const exitId1 = new Array(fieldWidth).fill("  ");
+                const exitId2 = new Array(fieldWidth).fill("  ");
+                componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1)) exitId1[x] = i < 10 ? " " + i : "" + i; }));
+                console.log("exit↑");
+                //console.log(exitList);
+                console.log(" " + exitId1.join(""));
+                console.log("(" + exitId2.join("") + ")");
+        
+                show(field2);
+                function show(field: Field) {
+                    function collisionToString(coll: Collision) {
+                        switch (coll) {
+                            case Collision.Air: return "  ";
+                            case Collision.Block: return "[]";
+                            case Collision.Ladder: return "|=";
+                        }
+                    }
+                    console.log("terrain:");
+                    [...field.terrain].reverse().forEach(line => console.log(":" + line.map(collisionToString).join("") + ":"));
                 }
-            }
-            console.log("terrain:");
-            [...field.terrain].reverse().forEach(line => console.log(":" + line.map(collisionToString).join("") + ":"));
-        }
-        if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "")
-            throw new Error("no Exit or Entrance");
+        
+                if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "") throw new Error("no Exit or Entrance");
+        */
         return field2;
     }
 })(Field || (Field = {}));
@@ -852,23 +859,26 @@ var Player;
                 return null;
             if (ground === Field.Collision.Block)
                 return "stand";
-            if (head === Field.Collision.Ladder)
+            if (foot === Field.Collision.Ladder || head === Field.Collision.Ladder)
                 return "ladder";
-            if (head === Field.Collision.Air)
+            if (foot === Field.Collision.Air)
                 return "drop";
             //意味わからんけど網羅チェックとして機能するらしい
-            return head;
+            return foot;
         }
     }
+    Player.checkState = checkState;
     //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
     function canEnter(coord, terrain, isSmall) {
         return checkState(coord, terrain, isSmall) !== null;
     }
+    Player.canEnter = canEnter;
     //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-    function canStand(coord, terrain, isSmall) {
+    function canStay(coord, terrain, isSmall) {
         return checkState(coord, terrain, isSmall) !== null
             && checkState(coord, terrain, isSmall) !== "drop";
     }
+    Player.canStay = canStay;
     //checkState(coord)が"drop"かnullであることを確認してから呼ぶ
     function drop(coord, terrain, isSmall, jumpoffState, direction, distance = 1) {
         const state = checkState(downCoord(coord), terrain, isSmall);
@@ -935,7 +945,10 @@ var Player;
         }
     }
     Player.drop = drop;
-    function checkLeft(coord, currentState, terrain, isSmall) {
+    function checkLeft(coord, terrain, isSmall) {
+        const currentState = checkState(coord, terrain, isSmall);
+        if (currentState == "drop" || currentState == null)
+            return null;
         const leftState = checkState(leftCoord(coord), terrain, isSmall);
         switch (leftState) {
             //左に立てるなら
@@ -990,23 +1003,31 @@ var Player;
                     return drop(leftCoord(coord), terrain, isSmall, currentState, "left");
                 }
                 break;
-            //左がふさがっていたらよじ登りを試す
-            case null: if (currentState === "stand"
-                && checkState(upCoord(coord), terrain, isSmall) !== null
-                && checkState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
-                return {
-                    coord: leftCoord(upCoord(coord)),
-                    state: "stand",
-                    transition: {
-                        small: resources.player_small_climb_left_texture,
-                        normal: resources.player_climb_left_texture,
-                    },
-                };
         }
         return null;
     }
     Player.checkLeft = checkLeft;
-    function checkRight(coord, currentState, terrain, isSmall) {
+    //左がふさがっていたらよじ登りを試す
+    function checkLeftUp(coord, terrain, isSmall) {
+        if (canStay(coord, terrain, isSmall)
+            && checkState(leftCoord(coord), terrain, isSmall) === null
+            && checkState(upCoord(coord), terrain, isSmall) !== null
+            && checkState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
+            return {
+                coord: leftCoord(upCoord(coord)),
+                state: "stand",
+                transition: {
+                    small: resources.player_small_climb_left_texture,
+                    normal: resources.player_climb_left_texture,
+                },
+            };
+        return null;
+    }
+    Player.checkLeftUp = checkLeftUp;
+    function checkRight(coord, terrain, isSmall) {
+        const currentState = checkState(coord, terrain, isSmall);
+        if (currentState == "drop" || currentState == null)
+            return null;
         const rightState = checkState(rightCoord(coord), terrain, isSmall);
         switch (rightState) {
             //右に立てるなら
@@ -1077,9 +1098,28 @@ var Player;
         return null;
     }
     Player.checkRight = checkRight;
-    function checkUp(coord, currentState, terrain, isSmall) {
+    function checkRightUp(coord, terrain, isSmall) {
+        if (canStay(coord, terrain, isSmall)
+            && checkState(rightCoord(coord), terrain, isSmall) === null
+            && checkState(upCoord(coord), terrain, isSmall) !== null
+            && checkState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+            return {
+                coord: rightCoord(upCoord(coord)),
+                state: "stand",
+                transition: {
+                    small: resources.player_small_climb_right_texture,
+                    normal: resources.player_climb_right_texture,
+                },
+            };
+        return null;
+    }
+    Player.checkRightUp = checkRightUp;
+    function checkUp(coord, terrain, isSmall) {
         //真上移動は梯子に登るときのみ？
+        const currentState = checkState(coord, terrain, isSmall);
         const upState = checkState(upCoord(coord), terrain, isSmall);
+        if (currentState == "drop" || currentState == null)
+            return null;
         switch (upState) {
             case "ladder":
                 switch (currentState) {
@@ -1111,8 +1151,11 @@ var Player;
         return null;
     }
     Player.checkUp = checkUp;
-    function checkDown(coord, currentState, terrain, isSmall) {
+    function checkDown(coord, terrain, isSmall) {
         //下移動は梯子につかまってる時のみ
+        const currentState = checkState(coord, terrain, isSmall);
+        if (currentState == "drop" || currentState == null)
+            return null;
         if (currentState !== "ladder")
             return null;
         const downState = checkState(downCoord(coord), terrain, isSmall);
@@ -1153,6 +1196,26 @@ var Player;
         return null;
     }
     Player.checkDown = checkDown;
+    function inputLeft(coord, terrain, isSmall) {
+        const leftResult = checkLeft(coord, terrain, isSmall);
+        if (leftResult !== null)
+            return leftResult;
+        const leftUpResult = checkLeftUp(coord, terrain, isSmall);
+        if (leftUpResult !== null)
+            return leftUpResult;
+        return null;
+    }
+    Player.inputLeft = inputLeft;
+    function inputRight(coord, terrain, isSmall) {
+        const rightResult = checkRight(coord, terrain, isSmall);
+        if (rightResult !== null)
+            return rightResult;
+        const rightUpResult = checkRightUp(coord, terrain, isSmall);
+        if (rightUpResult !== null)
+            return rightUpResult;
+        return null;
+    }
+    Player.inputRight = inputRight;
     function shrink(player, field) {
         return transitionEnd(Object.assign(Object.assign({}, player), { smallCount: 5 }), field);
     }
@@ -1228,11 +1291,11 @@ var Player;
     //与えられたMoveResult | nullに従ってプレイヤーを動かす
     function move(player, field, direction) {
         const result = {
-            input_left: checkLeft,
-            input_right: checkRight,
+            input_left: inputLeft,
+            input_right: inputRight,
             input_up: checkUp,
             input_down: checkDown,
-        }[direction](player.coord, player.state, field.terrain, 0 < player.smallCount);
+        }[direction](player.coord, field.terrain, 0 < player.smallCount);
         if (result === null)
             return [player, field];
         const transitionTexture = selectTexture(result.transition, player.smallCount);

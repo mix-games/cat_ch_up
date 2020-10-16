@@ -166,31 +166,37 @@ namespace Field {
         }, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5)));
     }
 
-
-    function canEnter(terrain: Terrain, x: number, y: number): boolean {
-        return getCollision(terrain, { x, y }) !== Collision.Block && getCollision(terrain, { x, y: y + 1 }) !== Collision.Block;
-    }
-    function canStand(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && (getCollision(terrain, { x, y: y - 1 }) == Collision.Block || getCollision(terrain, { x, y }) == Collision.Ladder);
-    }
+    /*
+        function canEnter(terrain: Terrain, x: number, y: number): boolean {
+            return getCollision(terrain, { x, y }) !== Collision.Block && getCollision(terrain, { x, y: y + 1 }) !== Collision.Block;
+        }
+        function canStay(terrain: Terrain, x: number, y: number): boolean {
+            return canEnter(terrain, x, y) && (getCollision(terrain, { x, y: y - 1 }) == Collision.Block || getCollision(terrain, { x, y }) == Collision.Ladder);
+        }
     function canGoUp(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canStand(terrain, x, y + 1);
+        return Player.checkUp({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && canStand(terrain, x, y + 1);
     }
     function canGoDown(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && canEnter(terrain, x, y - 1);
+        return Player.checkDown({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canEnter(terrain, x, y - 1);
     }
     function canGoLeft(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x - 1, y);
+        return Player.checkLeft({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x - 1, y);
     }
     function canGoRight(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x + 1, y);
+        return Player.checkRight({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x + 1, y);
     }
     function canGoLeftUp(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x - 1, y }) == Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x - 1, y + 1);
+        return Player.checkLeftUp({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x - 1, y }) == Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x - 1, y + 1);
     }
     function canGoRightUp(terrain: Terrain, x: number, y: number): boolean {
-        return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x + 1, y }) == Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x + 1, y + 1);
-    }
+        return Player.checkRightUp({ x, y }, terrain, false) !== null;
+        //return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x + 1, y }) == Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x + 1, y + 1);
+    }*/
 
     // 配列をシャッフルした配列を返す
     function shuffle<T>(array: T[]): T[] {
@@ -348,23 +354,30 @@ namespace Field {
         // 生成されたterrainに合わせてgraphを更新
         // 後ろに下の段の頂点を追加しておく
         let graph2: Graph = concatGraph(new Array(fieldWidth).fill(0).map(_ => []), field.trafficGraph);
-        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row=>row.map(x=>x&Collision.Block?Collision.Block:!(x&Collision.Ladder)?Collision.Air:Collision.Ladder))];
+        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Collision.Block ? Collision.Block : !(x & Collision.Ladder) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
-        for (let i = 0; i < fieldWidth; i++) {
-            if (canGoUp(tempTerrain, i, terrain2.length - 2)) graph2[i + fieldWidth].push(i);
-            if (canGoDown(tempTerrain, i, terrain2.length - 1)) graph2[i].push(i + fieldWidth);
-        }
-        // 左右、斜め移動を繋ぐ
-        for (let i = 0; i < fieldWidth - 1; i++) {
-            if (canGoRight(tempTerrain, i, terrain2.length - 1)) graph2[i].push(i + 1);
-            if (canGoLeft(tempTerrain, i + 1, terrain2.length - 1)) graph2[i + 1].push(i);
+        for (let x = 0; x < fieldWidth; x++) {
+            if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x);
+            if (Player.checkDown({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null
+                || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, false) === "drop")
+                graph2[x].push(x + fieldWidth);
+
+            if (Player.checkRight({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
+                graph2[x].push(x + 1);
+            if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
+                graph2[x].push(x - 1);
 
             //　前の行では未確定だった左右移動があるかもしれないので追加
-            if (canGoRight(tempTerrain, i, terrain2.length - 2)) graph2[i + fieldWidth].push(i + 1 + fieldWidth);
-            if (canGoLeft(tempTerrain, i + 1, terrain2.length - 2)) graph2[i + 1 + fieldWidth].push(i + fieldWidth);
+            if (Player.checkRight({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x + 1 + fieldWidth);
+            if (Player.checkLeft({ x, y: terrain2.length - 2 },
+                tempTerrain, false) !== null) graph2[x + fieldWidth].push(x - 1 + fieldWidth);
 
-            if (canGoRightUp(tempTerrain, i, terrain2.length - 2)) graph2[i + fieldWidth].push(i + 1);
-            if (canGoLeftUp(tempTerrain, i + 1, terrain2.length - 2)) graph2[i + 1 + fieldWidth].push(i);
+            if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+                graph2[x + fieldWidth].push(x + 1);
+            if (Player.checkLeftUp({ x, y: terrain2.length - 2 },
+                tempTerrain, false) !== null) graph2[x + fieldWidth].push(x - 1);
         }
 
         // 推移閉包を取った上で、後ろに入れておいた古い頂点を落とす
@@ -409,7 +422,7 @@ namespace Field {
                 const list: { pattern: number[][], offsetX: number; }[] = [];
                 points.forEach(x => {
                     // 立ち入れない点は孤立点だが出口を作る必要はない
-                    if (!canEnter(tempTerrain, x, terrain2.length - 1)) return;
+                    if (!Player.canEnter({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) return;
                     //上2個がブロックでなければ入り口になる
                     list.push({ pattern: [[~Collision.Block], [~Collision.Block]], offsetX: x });
                 });
@@ -419,9 +432,9 @@ namespace Field {
                 const list: { pattern: number[][], offsetX: number; }[] = [];
                 points.forEach(x => {
                     // 立ち入れない点は孤立点だが出口を作る必要はない
-                    if (!canEnter(tempTerrain, x, terrain2.length - 1)) return;
+                    if (!Player.canEnter({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) return;
                     // 立てない点に出口を作っても手遅れ
-                    if (!canStand(tempTerrain, x, terrain2.length - 1)) return;
+                    if (!Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) return;
 
                     //上に梯子を作れば出口になる
                     list.push({ pattern: [[Collision.Ladder]], offsetX: x });
@@ -474,38 +487,38 @@ namespace Field {
         // 以下デバッグ表示
 
         console.log(graph2);
-
-        const entranceId1 = new Array(fieldWidth).fill("  ");
-        const entranceId2 = new Array(fieldWidth).fill("  ");
-        componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1)) entranceId1[x] = i < 10 ? " " + i : "" + i; }));
-        console.log("entrance↓");
-        //console.log(entranceList);
-        console.log(" " + entranceId1.join(""));
-        console.log("(" + entranceId2.join("") + ")");
-
-        const exitId1 = new Array(fieldWidth).fill("  ");
-        const exitId2 = new Array(fieldWidth).fill("  ");
-        componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1)) exitId1[x] = i < 10 ? " " + i : "" + i; }));
-        console.log("exit↑");
-        //console.log(exitList);
-        console.log(" " + exitId1.join(""));
-        console.log("(" + exitId2.join("") + ")");
-
-        show(field2);
-        function show(field: Field) {
-            function collisionToString(coll: Collision) {
-                switch (coll) {
-                    case Collision.Air: return "  ";
-                    case Collision.Block: return "[]";
-                    case Collision.Ladder: return "|=";
+        /*
+                const entranceId1 = new Array(fieldWidth).fill("  ");
+                const entranceId2 = new Array(fieldWidth).fill("  ");
+                componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1)) entranceId1[x] = i < 10 ? " " + i : "" + i; }));
+                console.log("entrance↓");
+                //console.log(entranceList);
+                console.log(" " + entranceId1.join(""));
+                console.log("(" + entranceId2.join("") + ")");
+        
+                const exitId1 = new Array(fieldWidth).fill("  ");
+                const exitId2 = new Array(fieldWidth).fill("  ");
+                componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1)) exitId1[x] = i < 10 ? " " + i : "" + i; }));
+                console.log("exit↑");
+                //console.log(exitList);
+                console.log(" " + exitId1.join(""));
+                console.log("(" + exitId2.join("") + ")");
+        
+                show(field2);
+                function show(field: Field) {
+                    function collisionToString(coll: Collision) {
+                        switch (coll) {
+                            case Collision.Air: return "  ";
+                            case Collision.Block: return "[]";
+                            case Collision.Ladder: return "|=";
+                        }
+                    }
+                    console.log("terrain:");
+                    [...field.terrain].reverse().forEach(line => console.log(":" + line.map(collisionToString).join("") + ":"));
                 }
-            }
-            console.log("terrain:");
-            [...field.terrain].reverse().forEach(line => console.log(":" + line.map(collisionToString).join("") + ":"));
-        }
-
-        if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "") throw new Error("no Exit or Entrance");
-
+        
+                if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "") throw new Error("no Exit or Entrance");
+        */
         return field2;
     }
 }
