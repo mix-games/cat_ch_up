@@ -19,11 +19,11 @@ function createNeko(): Neko {
     };
 }
 
-function canNekoEnter(coord: Coord, terrain: Terrain): boolean {
-    return !(getBlock(terrain, coord).collision === "solid");
+function canNekoEnter(coord: Coord, terrain: Field.Terrain): boolean {
+    return !(Field.getCollision(terrain, coord) === Field.Collision.Block);
 }
-function canNekoStand(coord: Coord, terrain: Terrain): boolean {
-    return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid"
+function canNekoStand(coord: Coord, terrain: Field.Terrain): boolean {
+    return canNekoEnter(coord, terrain) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Block
 }
 
 function controlNeko(neko: Neko, field: Field, player: Player): Neko {

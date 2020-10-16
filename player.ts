@@ -26,28 +26,28 @@ namespace Player {
     }
 
     // その場所でプレイヤーがどのようにあるべきか
-    function checkState(coord: Coord, terrain: Terrain, isSmall: boolean): "stand" | "ladder" | "drop" | null {
+    function checkState(coord: Coord, terrain: Field.Terrain, isSmall: boolean): "stand" | "ladder" | "drop" | null {
         if (isSmall) {
-            const ground = getBlock(terrain, downCoord(coord)).collision;
-            const body = getBlock(terrain, coord).collision;
+            const ground = Field.getCollision(terrain, downCoord(coord));
+            const body = Field.getCollision(terrain, coord);
 
-            if (body === "solid") return null;
-            if (ground === "solid") return "stand";
-            if (body === "ladder") return "ladder";
-            if (body === "air") return "drop";
+            if (body === Field.Collision.Block) return null;
+            if (ground === Field.Collision.Block) return "stand";
+            if (body === Field.Collision.Ladder) return "ladder";
+            if (body === Field.Collision.Air) return "drop";
 
             //意味わからんけど網羅チェックとして機能するらしい
             return body;
         }
         else {
-            const ground = getBlock(terrain, downCoord(coord)).collision;
-            const foot = getBlock(terrain, coord).collision;
-            const head = getBlock(terrain, upCoord(coord)).collision;
+            const ground = Field.getCollision(terrain, downCoord(coord));
+            const foot = Field.getCollision(terrain, coord);
+            const head = Field.getCollision(terrain, upCoord(coord));
 
-            if (head === "solid" || foot === "solid") return null;
-            if (ground === "solid") return "stand";
-            if (head === "ladder") return "ladder";
-            if (head === "air") return "drop";
+            if (head === Field.Collision.Block || foot === Field.Collision.Block) return null;
+            if (ground === Field.Collision.Block) return "stand";
+            if (head === Field.Collision.Ladder) return "ladder";
+            if (head === Field.Collision.Air) return "drop";
 
             //意味わからんけど網羅チェックとして機能するらしい
             return head;
@@ -55,11 +55,11 @@ namespace Player {
     }
 
     //そこにプレイヤーが入るスペースがあるか判定。空中でもtrue
-    function canEnter(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
+    function canEnter(coord: Coord, terrain: Field.Terrain, isSmall: boolean): boolean {
         return checkState(coord, terrain, isSmall) !== null;
     }
     //その場に立てるか判定。上半身か下半身、足の下がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
-    function canStand(coord: Coord, terrain: Terrain, isSmall: boolean): boolean {
+    function canStand(coord: Coord, terrain: Field.Terrain, isSmall: boolean): boolean {
         return checkState(coord, terrain, isSmall) !== null
             && checkState(coord, terrain, isSmall) !== "drop";
     }
@@ -72,7 +72,7 @@ namespace Player {
     };
 
     //checkState(coord)が"drop"かnullであることを確認してから呼ぶ
-    export function drop(coord: Coord, terrain: Terrain, isSmall: boolean, jumpoffState: "stand" | "ladder", direction: "left" | "right" | "down", distance: number = 1): MoveResult {
+    export function drop(coord: Coord, terrain: Field.Terrain, isSmall: boolean, jumpoffState: "stand" | "ladder", direction: "left" | "right" | "down", distance: number = 1): MoveResult {
         const state = checkState(downCoord(coord), terrain, isSmall);
         if (state === "drop" || state === null)
             return (drop(downCoord(coord), terrain, isSmall, jumpoffState, direction, distance + 1));
@@ -150,7 +150,7 @@ namespace Player {
         }
     }
 
-    export function checkLeft(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkLeft(coord: Coord, currentState: "stand" | "ladder", terrain: Field.Terrain, isSmall: boolean): MoveResult | null {
         const leftState = checkState(leftCoord(coord), terrain, isSmall);
         switch (leftState) {
             //左に立てるなら
@@ -215,7 +215,7 @@ namespace Player {
         return null;
     }
 
-    export function checkRight(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkRight(coord: Coord, currentState: "stand" | "ladder", terrain: Field.Terrain, isSmall: boolean): MoveResult | null {
         const rightState = checkState(rightCoord(coord), terrain, isSmall);
         switch (rightState) {
             //右に立てるなら
@@ -280,13 +280,13 @@ namespace Player {
         return null;
     }
 
-    export function checkUp(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkUp(coord: Coord, currentState: "stand" | "ladder", terrain: Field.Terrain, isSmall: boolean): MoveResult | null {
         //真上移動は梯子に登るときのみ？
         const upState = checkState(upCoord(coord), terrain, isSmall);
         switch (upState) {
             case "ladder": switch (currentState) {
                 //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
-                case "stand": if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder") {
+                case "stand": if (Field.getCollision(terrain, isSmall ? coord : upCoord(coord)) === Field.Collision.Ladder) {
                     return {
                         coord: upCoord(coord),
                         state: "ladder",
@@ -310,7 +310,7 @@ namespace Player {
         return null;
     }
 
-    export function checkDown(coord: Coord, currentState: "stand" | "ladder", terrain: Terrain, isSmall: boolean): MoveResult | null {
+    export function checkDown(coord: Coord, currentState: "stand" | "ladder", terrain: Field.Terrain, isSmall: boolean): MoveResult | null {
         //下移動は梯子につかまってる時のみ
         if (currentState !== "ladder") return null;
         const downState = checkState(downCoord(coord), terrain, isSmall);
@@ -444,6 +444,6 @@ namespace Player {
             facingDirection: direction === "input_left" ? "facing_left" : "facing_right",
             animationTimestamp: tick,
             acceptInput: false,
-        }, turn(field, player)];
+        }, Field.turn(field, player)];
     }
 }

@@ -357,10 +357,10 @@ function createNeko() {
     };
 }
 function canNekoEnter(coord, terrain) {
-    return !(getBlock(terrain, coord).collision === "solid");
+    return !(Field.getCollision(terrain, coord) === Field.Collision.Block);
 }
 function canNekoStand(coord, terrain) {
-    return canNekoEnter(coord, terrain) && getBlock(terrain, downCoord(coord)).collision === "solid";
+    return canNekoEnter(coord, terrain) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Block;
 }
 function controlNeko(neko, field, player) {
     // 近づいたら
@@ -381,117 +381,436 @@ function controlEntity(entity, field, player) {
 /// <reference path="./coord.ts" />
 /// <reference path="./player.ts" />
 /// <reference path="./entity.ts" />
-function createField() {
-    const protoTerrain = [[], []];
-    for (let x = 0; x < fieldWidth; x++) {
-        if (Math.random() < 0.7)
-            protoTerrain[0][x] = { collision: "air" };
-        else
-            protoTerrain[0][x] = { collision: "ladder" };
+var Field;
+(function (Field) {
+    Field.Collision = { Air: 1, Block: 2, Ladder: 4 };
+    const anyCollision = Field.Collision.Air | Field.Collision.Block | Field.Collision.Ladder;
+    function createField() {
+        const x = Math.floor(Math.random() * fieldWidth);
+        return annexRow({
+            terrain: [
+                new Array(fieldWidth).fill(0).map(_ => Field.Collision.Air),
+            ],
+            pendingTerrain: [
+                new Array(fieldWidth).fill(0).map((_, i) => i == x ? Field.Collision.Ladder : ~Field.Collision.Block),
+                new Array(fieldWidth).fill(0).map(_ => anyCollision),
+            ],
+            trafficGraph: new Array(fieldWidth).fill(0).map(_ => []),
+            textures: [],
+            entities: [createNeko()],
+            backgroundTexture: resources.background_texture,
+        }, 10);
     }
-    for (let x = 0; x < fieldWidth; x++) {
-        if (protoTerrain[0][x].collision === "ladder")
-            protoTerrain[1][x] = { collision: "ladder" };
-        else
-            protoTerrain[1][x] = { collision: "air" };
+    Field.createField = createField;
+    const fieldWidth = 10;
+    //Y座標は下から数える
+    function annexRow(field, targetHeight) {
+        if (targetHeight <= field.textures.length)
+            return field;
+        return annexRow(generate(field), targetHeight);
     }
-    return {
-        terrain: annexRow(protoTerrain.map((protoRow) => assignTexture(protoRow, [])), 10),
-        entities: [createNeko()],
-        backgroundTexture: resources.background_texture,
-    };
-}
-const fieldWidth = 10;
-//Y座標は下から数える
-function annexRow(terrain, targetHeight) {
-    if (targetHeight <= terrain.length)
-        return terrain;
-    const protoRow = [];
-    for (let x = 0; x < fieldWidth; x++) {
-        if (Math.random() < 0.7)
-            protoRow[x] = { collision: "air" };
-        else if (Math.random() < 0.5)
-            protoRow[x] = { collision: "solid" };
-        else
-            protoRow[x] = { collision: "ladder" };
+    Field.annexRow = annexRow;
+    function assignTexture(row) {
+        return row.map((collision) => {
+            switch (collision) {
+                case Field.Collision.Ladder:
+                    return {
+                        texture0: resources.terrain_wall_texture,
+                        texture1: resources.terrain_ladder_texture,
+                    };
+                case Field.Collision.Block:
+                    return {
+                        texture0: resources.terrain_wall_texture,
+                        texture1: resources.terrain_condenser_texture,
+                    };
+                case Field.Collision.Air:
+                    return {
+                        texture0: resources.terrain_wall_texture,
+                        texture1: createEmptyTexture()
+                    };
+            }
+        });
     }
-    return annexRow([...terrain, assignTexture(protoRow, terrain)], targetHeight);
-}
-function assignTexture(protoRow, terrain) {
-    return protoRow.map((bwt) => {
-        switch (bwt.collision) {
-            case "ladder":
-                return {
-                    collision: "ladder",
-                    texture0: resources.terrain_wall_texture,
-                    texture1: resources.terrain_ladder_texture,
-                };
-            case "solid":
-                return {
-                    collision: "solid",
-                    texture0: resources.terrain_wall_texture,
-                    texture1: resources.terrain_condenser_texture,
-                };
-            case "air":
-                return {
-                    collision: "air",
-                    texture0: resources.terrain_wall_texture,
-                    texture1: createEmptyTexture()
-                };
+    function getCollision(terrain, coord) {
+        if (terrain.length <= coord.y)
+            throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
+        if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
+            return Field.Collision.Block;
+        return terrain[coord.y][coord.x];
+    }
+    Field.getCollision = getCollision;
+    function getBlockTexture(field, coord) {
+        if (field.textures.length <= coord.y)
+            throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
+        if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
+            return {
+                texture0: createEmptyTexture(),
+                texture1: createEmptyTexture()
+            };
+        return field.textures[coord.y][coord.x];
+    }
+    Field.getBlockTexture = getBlockTexture;
+    function drawField(field, camera, renderer) {
+        drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, tick, renderer);
+        const xRange = Math.ceil(renderer.width / blockSize / 2);
+        const yRange = Math.ceil(renderer.height / blockSize / 2);
+        const x1 = Math.floor(camera.centerX / blockSize) - xRange;
+        const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
+        const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
+        const y2 = Math.ceil(-camera.centerY / blockSize) + yRange;
+        for (var x = x1; x <= x2; x++) {
+            for (var y = y1; y <= y2; y++) {
+                if (field.terrain.length <= y)
+                    continue;
+                const coord = createCoord(x, y);
+                drawTexture(getBlockTexture(field, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
+            }
         }
-    });
-}
-function getBlock(terrain, coord) {
-    if (terrain.length <= coord.y)
-        throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
-    if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
-        return {
-            collision: "solid",
-            texture0: createEmptyTexture(),
-            texture1: createEmptyTexture()
-        };
-    return terrain[coord.y][coord.x];
-}
-function drawField(field, camera, renderer) {
-    drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, tick, renderer);
-    const xRange = Math.ceil(renderer.width / blockSize / 2);
-    const yRange = Math.ceil(renderer.height / blockSize / 2);
-    const x1 = Math.floor(camera.centerX / blockSize) - xRange;
-    const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
-    const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
-    const y2 = Math.ceil(-camera.centerY / blockSize) + yRange;
-    for (var x = x1; x <= x2; x++) {
-        for (var y = y1; y <= y2; y++) {
-            if (field.terrain.length <= y)
+        for (var x = x1; x <= x2; x++) {
+            for (var y = y1; y <= y2; y++) {
+                if (field.terrain.length <= y)
+                    continue;
+                const coord = createCoord(x, y);
+                drawTexture(getBlockTexture(field, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
+            }
+        }
+        // デバッグ用の赤い点
+        //*
+        for (var x = x1; x <= x2; x++) {
+            for (var y = y1; y <= y2; y++) {
+                if (field.terrain.length <= y)
+                    continue;
+                const coord = createCoord(x, y);
+                drawTexture(createRectTexture("red", 1, 1), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
+            }
+        } //*/
+        field.entities.forEach(e => drawGameObject(e, camera, renderer));
+    }
+    Field.drawField = drawField;
+    // プレイヤー行動後の敵などの処理はここ
+    function turn(field, player) {
+        return annexRow(Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)) }), Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5)));
+    }
+    Field.turn = turn;
+    function canEnter(terrain, x, y) {
+        return getCollision(terrain, { x, y }) !== Field.Collision.Block && getCollision(terrain, { x, y: y + 1 }) !== Field.Collision.Block;
+    }
+    function canStand(terrain, x, y) {
+        return canEnter(terrain, x, y) && (getCollision(terrain, { x, y: y - 1 }) == Field.Collision.Block || getCollision(terrain, { x, y }) == Field.Collision.Ladder);
+    }
+    function canGoUp(terrain, x, y) {
+        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canStand(terrain, x, y + 1);
+    }
+    function canGoDown(terrain, x, y) {
+        return canEnter(terrain, x, y) && canEnter(terrain, x, y - 1);
+    }
+    function canGoLeft(terrain, x, y) {
+        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x - 1, y);
+    }
+    function canGoRight(terrain, x, y) {
+        return canEnter(terrain, x, y) && canStand(terrain, x, y) && canEnter(terrain, x + 1, y);
+    }
+    function canGoLeftUp(terrain, x, y) {
+        return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x - 1, y }) == Field.Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x - 1, y + 1);
+    }
+    function canGoRightUp(terrain, x, y) {
+        return canEnter(terrain, x, y) && canStand(terrain, x, y) && getCollision(terrain, { x: x + 1, y }) == Field.Collision.Block && canEnter(terrain, x, y + 1) && canEnter(terrain, x + 1, y + 1);
+    }
+    // 配列をシャッフルした配列を返す
+    function shuffle(array) {
+        const array2 = [...array];
+        for (let i = 0; i < array2.length; i++) {
+            const j = i + Math.floor(Math.random() * (array2.length - i));
+            const t = array2[i];
+            array2[i] = array2[j];
+            array2[j] = t;
+        }
+        return array2;
+    }
+    // 二つのグラフを合わせたグラフを作る
+    function concatGraph(a, b) {
+        const newGraph = new Array(a.length + b.length).fill(0).map(_ => []);
+        a.forEach((v, from) => v.forEach(to => newGraph[from].push(to)));
+        b.forEach((v, from) => v.forEach(to => newGraph[from + a.length].push(to + a.length)));
+        return newGraph;
+    }
+    // n 以降の頂点とそれにつながる辺を削除する
+    function dropGraph(graph, n) {
+        return graph.slice(0, n).map(v => v.filter(to => to < n));
+    }
+    // 推移閉包を作成
+    function transclosure(graph) {
+        const newGraph = new Array(graph.length).fill(0).map(_ => []);
+        function dfs(now, root, visited) {
+            if (visited[now])
+                return;
+            visited[now] = true;
+            newGraph[root].push(now);
+            graph[now].forEach(x => dfs(x, root, visited));
+        }
+        graph.forEach((v, i) => v.forEach(j => dfs(j, i, new Array(graph.length).fill(false))));
+        return newGraph.map(x => Array.from(new Set(x)));
+    }
+    // 辺の向きをすべて逆転したグラフを得る
+    function reverse(graph) {
+        const reversed = [];
+        graph.forEach((vertex) => {
+            reversed.push([]);
+        });
+        graph.forEach((vertex, i) => {
+            vertex.forEach(j => reversed[j].push(i));
+        });
+        return reversed;
+    }
+    // 強連結成分分解
+    function strongComponents(graph) {
+        const reversed = reverse(graph);
+        // dfs1で到達したら1、dfs2も到達したら2、いずれも未到達なら0
+        const visited = new Array(graph.length).fill(0);
+        // component[i] = i番目の頂点が属する強連結成分の番号
+        const component = new Array(graph.length);
+        let componentCount = 0;
+        // 連結でないグラフに対応するためにはたぶんここをループする必要がある
+        for (var i = 0; i < graph.length; i++) {
+            if (visited[i] !== 0)
                 continue;
-            const coord = createCoord(x, y);
-            drawTexture(getBlock(field.terrain, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
+            // 深さ優先探索 i<j⇒log[i] log[j]間に辺がある
+            const order = [];
+            function dfs1(now) {
+                if (visited[now] !== 0)
+                    return;
+                visited[now] = 1;
+                graph[now].forEach(x => dfs1(x));
+                order.unshift(now);
+            }
+            dfs1(i);
+            function dfs2(now) {
+                if (visited[now] !== 1)
+                    return;
+                visited[now] = 2;
+                component[now] = componentCount;
+                reversed[now].forEach(x => dfs2(x));
+            }
+            for (var j = 0; j < order.length; j++) {
+                if (visited[order[j]] !== 1)
+                    continue;
+                dfs2(order[j]);
+                componentCount++;
+            }
         }
+        return [component, componentCount];
     }
-    for (var x = x1; x <= x2; x++) {
-        for (var y = y1; y <= y2; y++) {
-            if (field.terrain.length <= y)
-                continue;
-            const coord = createCoord(x, y);
-            drawTexture(getBlock(field.terrain, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
+    function generate(field) {
+        const newRow = new Array(fieldWidth);
+        // とりあえず確定してるところを置く
+        field.pendingTerrain[0].forEach((pending, x) => {
+            if (pending == Field.Collision.Air)
+                newRow[x] = Field.Collision.Air;
+            if (pending == Field.Collision.Block)
+                newRow[x] = Field.Collision.Block;
+            if (pending == Field.Collision.Ladder)
+                newRow[x] = Field.Collision.Ladder;
+        });
+        // 自由にしていいブロックを勝手に決める。
+        // 左右の対称性を保つために決定順をシャッフルする。
+        shuffle(new Array(fieldWidth).fill(0).map((_, i) => i)).forEach(x => {
+            const pending = field.pendingTerrain[0][x];
+            if (pending == Field.Collision.Air ||
+                pending == Field.Collision.Block ||
+                pending == Field.Collision.Ladder)
+                return;
+            const candidate = [];
+            if ((pending & Field.Collision.Air) !== 0) {
+                // 梯子を相対的に少なくしたい
+                candidate.push(Field.Collision.Air, Field.Collision.Air, Field.Collision.Air);
+            }
+            if ((pending & Field.Collision.Block) !== 0) {
+                // 梯子を相対的に少なくしたい
+                candidate.push(Field.Collision.Block, Field.Collision.Block);
+                // ブロックの左右隣接を好む
+                if (newRow[x - 1] === Field.Collision.Block || newRow[x + 1] === Field.Collision.Block)
+                    candidate.push(Field.Collision.Block, Field.Collision.Block);
+            }
+            // 梯子、特に左右隣り合わせを嫌う
+            if ((pending & Field.Collision.Ladder) !== 0) {
+                if (newRow[x - 1] !== Field.Collision.Ladder && newRow[x + 1] !== Field.Collision.Ladder)
+                    candidate.push(Field.Collision.Ladder);
+            }
+            newRow[x] = candidate[Math.floor(Math.random() * candidate.length)];
+        });
+        // 新しい行を追加
+        const terrain2 = [...field.terrain, newRow];
+        let pendingTerrain2 = [...field.pendingTerrain.slice(1), new Array(fieldWidth).fill(0).map((_, i) => anyCollision)];
+        // ここからは追加した行に合わせて graphを更新したりpendingTerrainに条件を追加したり
+        pendingTerrain2 = [pendingTerrain2[0].map((pending, x) => {
+                // ブロックの上にブロックでないマスがあったらその上は高確率でブロックでない
+                if (terrain2[terrain2.length - 2][x] === Field.Collision.Block &&
+                    terrain2[terrain2.length - 1][x] !== Field.Collision.Block &&
+                    Math.random() < 0.9)
+                    pending &= ~Field.Collision.Block;
+                // 梯子があったらその上は必ずブロックでない
+                if (terrain2[terrain2.length - 1][x] === Field.Collision.Ladder)
+                    pending &= ~Field.Collision.Block;
+                // 長さ1の梯子を生成しない
+                if (terrain2[terrain2.length - 1][x] === Field.Collision.Ladder &&
+                    terrain2[terrain2.length - 2][x] !== Field.Collision.Ladder)
+                    pending &= Field.Collision.Ladder;
+                return pending;
+            }), ...pendingTerrain2.slice(1)];
+        // 生成されたterrainに合わせてgraphを更新
+        // 後ろに下の段の頂点を追加しておく
+        let graph2 = concatGraph(new Array(fieldWidth).fill(0).map(_ => []), field.trafficGraph);
+        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Field.Collision.Block ? Field.Collision.Block : !(x & Field.Collision.Ladder) ? Field.Collision.Air : Field.Collision.Ladder))];
+        // 上下移動を繋ぐ
+        for (let i = 0; i < fieldWidth; i++) {
+            if (canGoUp(tempTerrain, i, terrain2.length - 2))
+                graph2[i + fieldWidth].push(i);
+            if (canGoDown(tempTerrain, i, terrain2.length - 1))
+                graph2[i].push(i + fieldWidth);
         }
+        // 左右、斜め移動を繋ぐ
+        for (let i = 0; i < fieldWidth - 1; i++) {
+            if (canGoRight(tempTerrain, i, terrain2.length - 1))
+                graph2[i].push(i + 1);
+            if (canGoLeft(tempTerrain, i + 1, terrain2.length - 1))
+                graph2[i + 1].push(i);
+            //　前の行では未確定だった左右移動があるかもしれないので追加
+            if (canGoRight(tempTerrain, i, terrain2.length - 2))
+                graph2[i + fieldWidth].push(i + 1 + fieldWidth);
+            if (canGoLeft(tempTerrain, i + 1, terrain2.length - 2))
+                graph2[i + 1 + fieldWidth].push(i + fieldWidth);
+            if (canGoRightUp(tempTerrain, i, terrain2.length - 2))
+                graph2[i + fieldWidth].push(i + 1);
+            if (canGoLeftUp(tempTerrain, i + 1, terrain2.length - 2))
+                graph2[i + 1 + fieldWidth].push(i);
+        }
+        // 推移閉包を取った上で、後ろに入れておいた古い頂点を落とす
+        graph2 = dropGraph(transclosure(graph2), fieldWidth);
+        // graphにあわせてpendingを更新
+        // 強連結成分分解
+        const [component, componentCount] = strongComponents(graph2);
+        //各辺を見て、各強連結成分にいくつの入り口と出口があるか数える
+        const entranceCount = new Array(componentCount).fill(0);
+        const exitCount = new Array(componentCount).fill(0);
+        graph2.forEach((v, from) => {
+            v.forEach(to => {
+                if (component[from] !== component[to]) {
+                    exitCount[component[from]]++;
+                    entranceCount[component[to]]++;
+                }
+            });
+        });
+        const componentsWithoutEntrance = [];
+        const componentsWithoutExit = [];
+        //入り口のない強連結成分、出口のない成分のメンバーを成分ごとに分けてリストアップする
+        for (let i = 0; i < componentCount; i++) {
+            if (exitCount[i] !== 0 && entranceCount[i] !== 0)
+                continue;
+            const members = [];
+            for (let j = 0; j < field.trafficGraph.length; j++)
+                if (component[j] === i)
+                    members.push(j);
+            if (exitCount[i] === 0)
+                componentsWithoutExit.push([...members]);
+            if (entranceCount[i] === 0)
+                componentsWithoutEntrance.push([...members]);
+        }
+        // 制約パターンの組み合わせを列挙（二次元配列の各行から一つずつ選べればOK）
+        const patternList = [
+            ...componentsWithoutEntrance.map(points => {
+                const list = [];
+                points.forEach(x => {
+                    // 立ち入れない点は孤立点だが出口を作る必要はない
+                    if (!canEnter(tempTerrain, x, terrain2.length - 1))
+                        return;
+                    //上2個がブロックでなければ入り口になる
+                    list.push({ pattern: [[~Field.Collision.Block], [~Field.Collision.Block]], offsetX: x });
+                });
+                return list;
+            }),
+            ...componentsWithoutExit.map(points => {
+                const list = [];
+                points.forEach(x => {
+                    // 立ち入れない点は孤立点だが出口を作る必要はない
+                    if (!canEnter(tempTerrain, x, terrain2.length - 1))
+                        return;
+                    // 立てない点に出口を作っても手遅れ
+                    if (!canStand(tempTerrain, x, terrain2.length - 1))
+                        return;
+                    //上に梯子を作れば出口になる
+                    list.push({ pattern: [[Field.Collision.Ladder]], offsetX: x });
+                    //隣がブロックなら斜め上に立ち位置を作れば出口になる
+                    if (terrain2[terrain2.length - 1][x - 1] == Field.Collision.Block)
+                        list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x - 1 });
+                    if (terrain2[terrain2.length - 1][x + 1] == Field.Collision.Block)
+                        list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x });
+                });
+                return list;
+            }),
+        ].filter(x => 0 < x.length).map(x => shuffle(x));
+        function putCollisionPattern(pendingTerrain, pattern, offsetX) {
+            const pendingTerrain2 = pendingTerrain.map((row, y) => row.map((a, x) => {
+                return a & (pattern[y] !== undefined && pattern[y][x - offsetX] !== undefined ? pattern[y][x - offsetX] : anyCollision);
+            }));
+            if (pendingTerrain2.some(row => row.some(p => p == 0)))
+                return null;
+            return pendingTerrain2;
+        }
+        // 制約パターンが矛盾しないような組み合わせを探して設置する（多分どう選んでも矛盾しないけど）
+        function rec(pendingTerrain, patternList) {
+            if (patternList.length === 0)
+                return pendingTerrain;
+            const head = patternList[0];
+            const tail = patternList.slice(1);
+            for (let i = 0; i < head.length; i++) {
+                const pendingTerrain2 = putCollisionPattern(pendingTerrain, head[i].pattern, head[i].offsetX);
+                if (pendingTerrain2 == null)
+                    return null;
+                const result = rec(pendingTerrain2, tail);
+                if (result !== null)
+                    return result;
+            }
+            return null;
+        }
+        const pendingTerrain3 = rec(pendingTerrain2, patternList);
+        if (pendingTerrain3 === null)
+            throw new Error();
+        const field2 = Object.assign(Object.assign({}, field), { textures: terrain2.map(row => assignTexture(row)), terrain: terrain2, pendingTerrain: pendingTerrain3, trafficGraph: graph2 });
+        // 以下デバッグ表示
+        console.log(graph2);
+        const entranceId1 = new Array(fieldWidth).fill("  ");
+        const entranceId2 = new Array(fieldWidth).fill("  ");
+        componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1))
+            entranceId1[x] = i < 10 ? " " + i : "" + i; }));
+        console.log("entrance↓");
+        //console.log(entranceList);
+        console.log(" " + entranceId1.join(""));
+        console.log("(" + entranceId2.join("") + ")");
+        const exitId1 = new Array(fieldWidth).fill("  ");
+        const exitId2 = new Array(fieldWidth).fill("  ");
+        componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (canEnter(tempTerrain, x, terrain2.length - 1))
+            exitId1[x] = i < 10 ? " " + i : "" + i; }));
+        console.log("exit↑");
+        //console.log(exitList);
+        console.log(" " + exitId1.join(""));
+        console.log("(" + exitId2.join("") + ")");
+        show(field2);
+        function show(field) {
+            function collisionToString(coll) {
+                switch (coll) {
+                    case Field.Collision.Air: return "  ";
+                    case Field.Collision.Block: return "[]";
+                    case Field.Collision.Ladder: return "|=";
+                }
+            }
+            console.log("terrain:");
+            [...field.terrain].reverse().forEach(line => console.log(":" + line.map(collisionToString).join("") + ":"));
+        }
+        if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "")
+            throw new Error("no Exit or Entrance");
+        return field2;
     }
-    // デバッグ用の赤い点
-    //*
-    for (var x = x1; x <= x2; x++) {
-        for (var y = y1; y <= y2; y++) {
-            if (field.terrain.length <= y)
-                continue;
-            const coord = createCoord(x, y);
-            drawTexture(createRectTexture("red", 1, 1), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
-        }
-    } //*/
-    field.entities.forEach(e => drawGameObject(e, camera, renderer));
-}
-// プレイヤー行動後の敵などの処理はここ
-function turn(field, player) {
-    return Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)), terrain: annexRow(field.terrain, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5))) });
-}
+})(Field || (Field = {}));
 /// <reference path="./resources.ts" />
 /// <reference path="./gameobject.ts" />
 /// <reference path="./field.ts" />
@@ -512,30 +831,30 @@ var Player;
     // その場所でプレイヤーがどのようにあるべきか
     function checkState(coord, terrain, isSmall) {
         if (isSmall) {
-            const ground = getBlock(terrain, downCoord(coord)).collision;
-            const body = getBlock(terrain, coord).collision;
-            if (body === "solid")
+            const ground = Field.getCollision(terrain, downCoord(coord));
+            const body = Field.getCollision(terrain, coord);
+            if (body === Field.Collision.Block)
                 return null;
-            if (ground === "solid")
+            if (ground === Field.Collision.Block)
                 return "stand";
-            if (body === "ladder")
+            if (body === Field.Collision.Ladder)
                 return "ladder";
-            if (body === "air")
+            if (body === Field.Collision.Air)
                 return "drop";
             //意味わからんけど網羅チェックとして機能するらしい
             return body;
         }
         else {
-            const ground = getBlock(terrain, downCoord(coord)).collision;
-            const foot = getBlock(terrain, coord).collision;
-            const head = getBlock(terrain, upCoord(coord)).collision;
-            if (head === "solid" || foot === "solid")
+            const ground = Field.getCollision(terrain, downCoord(coord));
+            const foot = Field.getCollision(terrain, coord);
+            const head = Field.getCollision(terrain, upCoord(coord));
+            if (head === Field.Collision.Block || foot === Field.Collision.Block)
                 return null;
-            if (ground === "solid")
+            if (ground === Field.Collision.Block)
                 return "stand";
-            if (head === "ladder")
+            if (head === Field.Collision.Ladder)
                 return "ladder";
-            if (head === "air")
+            if (head === Field.Collision.Air)
                 return "drop";
             //意味わからんけど網羅チェックとして機能するらしい
             return head;
@@ -766,7 +1085,7 @@ var Player;
                 switch (currentState) {
                     //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
                     case "stand":
-                        if (getBlock(terrain, isSmall ? coord : upCoord(coord)).collision === "ladder") {
+                        if (Field.getCollision(terrain, isSmall ? coord : upCoord(coord)) === Field.Collision.Ladder) {
                             return {
                                 coord: upCoord(coord),
                                 state: "ladder",
@@ -925,7 +1244,7 @@ var Player;
                 facingDirection: direction === "input_left" ? "facing_left" : "facing_right",
                 animationTimestamp: tick,
                 acceptInput: false,
-            }, turn(field, player)];
+            }, Field.turn(field, player)];
     }
     Player.move = move;
 })(Player || (Player = {}));
@@ -980,7 +1299,7 @@ var Camera;
     }
     Camera.update = update;
 })(Camera || (Camera = {}));
-let field = createField();
+let field = Field.createField();
 let player = Player.create();
 let camera = Camera.create();
 let renderer; //デバッグ用に外に出した
@@ -988,7 +1307,7 @@ let tick = 0;
 function animationLoop(renderer, mainScreen, resources) {
     if (resources._progress.isFinished()) {
         camera = Camera.update(camera, player, field, renderer);
-        drawField(field, camera, renderer);
+        Field.drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
         if (getAnimationLength(player.texture) < tick - player.animationTimestamp)
             player = Player.transitionEnd(player, field);

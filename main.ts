@@ -1,4 +1,4 @@
-let field: Field = createField();
+let field: Field = Field.createField();
 let player: Player = Player.create();
 let camera: Camera = Camera.create();
 let renderer; //デバッグ用に外に出した
@@ -8,7 +8,7 @@ function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D,
     if (resources._progress.isFinished()) {
         camera = Camera.update(camera, player, field, renderer);
 
-        drawField(field, camera, renderer);
+        Field.drawField(field, camera, renderer);
         drawGameObject(player, camera, renderer);
         
         if(getAnimationLength(player.texture) < tick - player.animationTimestamp) player = Player.transitionEnd(player, field);
