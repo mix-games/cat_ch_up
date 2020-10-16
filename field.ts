@@ -28,14 +28,6 @@ namespace Field {
     }
     export type Terrain = readonly (readonly Collision[])[];
 
-    interface MutableField {
-        terrain: Field.Collision[][];
-        pendingTerrain: number[][];
-        textures: (Field.BlockTexture[])[];
-        entities: Entity[];
-        backgroundTexture: Texture;
-        trafficGraph: Field.Graph;
-    }
 
     export function createField(): Field {
         const x = Math.floor(Math.random() * fieldWidth);
