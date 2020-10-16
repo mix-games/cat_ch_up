@@ -335,8 +335,8 @@ namespace Field {
 
         // 生成されたterrainに合わせてgraphを更新
         // 後ろに下の段の頂点を追加しておく
-        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Collision.Block ? Collision.Block : !(x & Collision.Ladder) ? Collision.Air : Collision.Ladder))];
         graph2 = concatGraph(new Array(fieldWidth).fill(0).map(_ => []), graph2);
+        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Collision.Block ? Collision.Block : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
             if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
