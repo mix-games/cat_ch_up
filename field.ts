@@ -105,8 +105,8 @@ namespace Field {
             renderer
         );
 
-        const xRange = Math.ceil(renderer.width / blockSize / 2);
-        const yRange = Math.ceil(renderer.height / blockSize / 2);
+        const xRange = Math.ceil(renderer.width / blockSize / 2) + 1;
+        const yRange = Math.ceil(renderer.height / blockSize / 2) + 1;
         const x1 = Math.floor(camera.centerX / blockSize) - xRange;
         const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
         const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
@@ -164,7 +164,7 @@ namespace Field {
         return annexRow({
             ...field,
             entities: field.entities.map(e => controlEntity(e, field, player))
-        }, Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5)));
+        }, Math.max(player.coord.y + 7, ...field.entities.map(e => e.coord.y + 7)));
     }
 
     // 配列をシャッフルした配列を返す
