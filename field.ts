@@ -183,7 +183,7 @@ namespace Field {
     function createGraph(length: number): Graph {
         return new Array(length).fill(0).map(_ => new Array(length).fill(false));
     }
-    
+
     // 辺の向きをすべて逆転したグラフを得る
     function cloneGraph(graph: Graph) {
         return graph.map(row => row.map(f => f));
@@ -257,7 +257,6 @@ namespace Field {
 
     function generate(field: Field): Field {
         const terrain2: Collision[][] = field.terrain.map(row => [...row]);
-        let graph2: Graph = field.trafficGraph;
         const pendingTerrain2: number[][] = field.pendingTerrain.map(row => [...row]);
 
         const newRow: Collision[] = new Array(fieldWidth);
@@ -277,7 +276,7 @@ namespace Field {
                 pending == Collision.Block ||
                 pending == Collision.Ladder) return;
             const candidate: Collision[] = [];
-            
+
             //長い梯子の脇にはブロックを置いてあげたい
             if ((pending & Collision.Block) !== 0
                 && newRow[x - 1] === Collision.Ladder
@@ -350,8 +349,8 @@ namespace Field {
 
         // 生成されたterrainに合わせてgraphを更新
         // 後ろに下の段の頂点を追加しておく
-        graph2 = concatGraph(createGraph(fieldWidth), graph2);
-        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Collision.Block ? Collision.Block : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
+        let graph2 = concatGraph(createGraph(fieldWidth), cloneGraph(field.trafficGraph));
+        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => (x & Collision.Block) ? Collision.Block : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
             if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
@@ -381,8 +380,8 @@ namespace Field {
         //各辺を見て、各強連結成分にいくつの入り口と出口があるか数える
         const entranceCount: number[] = new Array(componentCount).fill(0);
         const exitCount: number[] = new Array(componentCount).fill(0);
-        graph2.forEach((v, from) => {
-            v.forEach((f, to) => {
+        graph2.forEach((row, from) => {
+            row.forEach((f, to) => {
                 if (f && component[from] !== component[to]) {
                     exitCount[component[from]]++;
                     entranceCount[component[to]]++;
@@ -409,10 +408,13 @@ namespace Field {
         // 制約パターンの組み合わせを列挙（二次元配列の各行から一つずつ選べればOK）
         const patternList = [
             ...componentsWithoutEntrance.map(points => {
+                // 孤立点（ブロックのマス）を除く
+                if (points.length === 1 &&
+                    !Player.canEnter({ x: points[0], y: terrain2.length - 1 }, tempTerrain, false))
+                    return null;
+
                 const list: { pattern: number[][], offsetX: number; }[] = [];
                 points.forEach(x => {
-                    // 立ち入れない点は孤立点だが出口を作る必要はない
-                    if (!Player.canEnter({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) return;
                     //上2個がブロックでなければ入り口になる
                     list.push({ pattern: [[~Collision.Block], [~Collision.Block]], offsetX: x });
                 });
@@ -420,24 +422,27 @@ namespace Field {
             }),
             ...componentsWithoutExit.map(points => {
                 const list: { pattern: number[][], offsetX: number; }[] = [];
-                points.forEach(x => {
-                    // 立ち入れない点は孤立点だが出口を作る必要はない
-                    if (!Player.canEnter({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) return;
-                    // 立てない点に出口を作っても手遅れ
-                    if (!Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) return;
+                // 孤立点（ブロックのマス）を除く
+                if (points.length === 1 &&
+                    !Player.canEnter({ x: points[0], y: terrain2.length - 1 }, tempTerrain, false))
+                    return null;
 
+                points.forEach(x => {
                     //上に梯子を作れば出口になる
                     list.push({ pattern: [[Collision.Ladder]], offsetX: x });
 
-                    //隣がブロックなら斜め上に立ち位置を作れば出口になる
-                    if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Block)
-                        list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
-                    if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Collision.Block)
-                        list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                    // 立てない点には出口を作れない
+                    if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
+                        //隣がブロックなら斜め上に立ち位置を作れば出口になる
+                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Block)
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
+                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Collision.Block)
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                    }
                 });
                 return list;
             }),
-        ].filter(x => 0 < x.length).map(x => shuffle(x));
+        ].filter((x): x is { pattern: number[][], offsetX: number; }[] => x !== null).map(x => shuffle(x));
 
         function putCollisionPattern(pendingTerrain: readonly (readonly number[])[], pattern: number[][], offsetX: number): readonly (readonly number[])[] | null {
             const pendingTerrain2 = pendingTerrain.map((row, y) => row.map((a, x) => {
