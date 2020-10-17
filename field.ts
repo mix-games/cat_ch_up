@@ -309,10 +309,9 @@ namespace Field {
         // ここからは追加した行に合わせて graphを更新したりpendingTerrainに条件を追加したり
 
         for (let x = 0; x < fieldWidth; x++) {
-            // ブロックの上にブロックでないマスがあったらその上は高確率でブロックでない
+            // ブロックの上にブロックでないマスがあったらその上は必ずブロックでない
             if (terrain2[terrain2.length - 2][x] === Collision.Block &&
-                terrain2[terrain2.length - 1][x] !== Collision.Block &&
-                Math.random() < 0.9)
+                terrain2[terrain2.length - 1][x] !== Collision.Block)
                 pendingTerrain2[0][x] &= ~Collision.Block;
 
             // 梯子があったらその上は必ずブロックでない
@@ -341,12 +340,6 @@ namespace Field {
                 graph2[x].push(x + 1);
             if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
                 graph2[x].push(x - 1);
-
-            //　前の行では未確定だった左右移動があるかもしれないので追加
-            if (Player.checkRight({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
-                graph2[x + fieldWidth].push(x + 1 + fieldWidth);
-            if (Player.checkLeft({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
-                graph2[x + fieldWidth].push(x - 1 + fieldWidth);
 
             if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
                 graph2[x + fieldWidth].push(x + 1);
