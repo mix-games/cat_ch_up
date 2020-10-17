@@ -503,44 +503,41 @@ var Field;
         }
         return array2;
     }
+    function createGraph(length) {
+        return new Array(length).fill(0).map(_ => new Array(length).fill(false));
+    }
+    // 辺の向きをすべて逆転したグラフを得る
+    function cloneGraph(graph) {
+        return graph.map(row => row.map(f => f));
+    }
+    // 辺の向きをすべて逆転したグラフを得る
+    function reverseGraph(graph) {
+        return graph.map((row, from) => row.map((f, to) => graph[to][from]));
+    }
     // 二つのグラフを合わせたグラフを作る
     function concatGraph(a, b) {
-        const newGraph = new Array(a.length + b.length).fill(0).map(_ => []);
-        a.forEach((v, from) => v.forEach(to => newGraph[from].push(to)));
-        b.forEach((v, from) => v.forEach(to => newGraph[from + a.length].push(to + a.length)));
+        const newGraph = createGraph(a.length + b.length);
+        a.forEach((row, from) => row.forEach((f, to) => newGraph[from][to] = f));
+        b.forEach((row, from) => row.forEach((f, to) => newGraph[from + a.length][to + a.length] = f));
         return newGraph;
     }
     // n 以降の頂点とそれにつながる辺を削除する
     function dropGraph(graph, n) {
-        return graph.slice(0, n).map(v => v.filter(to => to < n));
+        return graph.slice(0, n).map(row => row.slice(0, n));
     }
     // 推移閉包を作成
     function transclosure(graph) {
-        const newGraph = new Array(graph.length).fill(0).map(_ => []);
-        function dfs(now, root, visited) {
-            if (visited[now])
-                return;
-            visited[now] = true;
-            newGraph[root].push(now);
-            graph[now].forEach(x => dfs(x, root, visited));
-        }
-        graph.forEach((v, i) => v.forEach(j => dfs(j, i, new Array(graph.length).fill(false))));
-        return newGraph.map(x => Array.from(new Set(x)));
-    }
-    // 辺の向きをすべて逆転したグラフを得る
-    function reverse(graph) {
-        const reversed = [];
-        graph.forEach((vertex) => {
-            reversed.push([]);
-        });
-        graph.forEach((vertex, i) => {
-            vertex.forEach(j => reversed[j].push(i));
-        });
-        return reversed;
+        const newGraph = cloneGraph(graph);
+        for (let k = 0; k < graph.length; k++)
+            for (let i = 0; i < graph.length; i++)
+                for (let j = 0; j < graph.length; j++)
+                    if (newGraph[i][k] && newGraph[k][j])
+                        newGraph[i][j] = true;
+        return newGraph;
     }
     // 強連結成分分解
     function strongComponents(graph) {
-        const reversed = reverse(graph);
+        const reversed = reverseGraph(graph);
         // dfs1で到達したら1、dfs2も到達したら2、いずれも未到達なら0
         const visited = new Array(graph.length).fill(0);
         // component[i] = i番目の頂点が属する強連結成分の番号
@@ -556,7 +553,8 @@ var Field;
                 if (visited[now] !== 0)
                     return;
                 visited[now] = 1;
-                graph[now].forEach(x => dfs1(x));
+                graph[now].forEach((f, to) => { if (f)
+                    dfs1(to); });
                 order.unshift(now);
             }
             dfs1(i);
@@ -565,7 +563,8 @@ var Field;
                     return;
                 visited[now] = 2;
                 component[now] = componentCount;
-                reversed[now].forEach(x => dfs2(x));
+                reversed[now].forEach((f, to) => { if (f)
+                    dfs2(to); });
             }
             for (var j = 0; j < order.length; j++) {
                 if (visited[order[j]] !== 1)
@@ -669,23 +668,23 @@ var Field;
         }
         // 生成されたterrainに合わせてgraphを更新
         // 後ろに下の段の頂点を追加しておく
-        graph2 = concatGraph(new Array(fieldWidth).fill(0).map(_ => []), graph2);
+        graph2 = concatGraph(createGraph(fieldWidth), graph2);
         const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => x & Field.Collision.Block ? Field.Collision.Block : (x & Field.Collision.Air) ? Field.Collision.Air : Field.Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
             if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
-                graph2[x + fieldWidth].push(x);
+                graph2[x + fieldWidth][x] = true;
             if (Player.checkDown({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null
                 || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, false) === "drop")
-                graph2[x].push(x + fieldWidth);
+                graph2[x][x + fieldWidth] = true;
             if (Player.checkRight({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
-                graph2[x].push(x + 1);
+                graph2[x][x + 1] = true;
             if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
-                graph2[x].push(x - 1);
+                graph2[x][x - 1] = true;
             if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
-                graph2[x + fieldWidth].push(x + 1);
+                graph2[x + fieldWidth][x + 1] = true;
             if (Player.checkLeftUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
-                graph2[x + fieldWidth].push(x - 1);
+                graph2[x + fieldWidth][x - 1] = true;
         }
         // 推移閉包を取った上で、後ろに入れておいた古い頂点を落とす
         graph2 = dropGraph(transclosure(graph2), fieldWidth);
@@ -696,8 +695,8 @@ var Field;
         const entranceCount = new Array(componentCount).fill(0);
         const exitCount = new Array(componentCount).fill(0);
         graph2.forEach((v, from) => {
-            v.forEach(to => {
-                if (component[from] !== component[to]) {
+            v.forEach((f, to) => {
+                if (f && component[from] !== component[to]) {
                     exitCount[component[from]]++;
                     entranceCount[component[to]]++;
                 }
