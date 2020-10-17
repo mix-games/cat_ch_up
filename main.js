@@ -870,8 +870,8 @@ var Player;
     Player.canEnter = canEnter;
     //その場に立てるか判定。上半身か下半身がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
     function canStay(coord, terrain, isSmall) {
-        return checkState(coord, terrain, isSmall) !== null
-            && checkState(coord, terrain, isSmall) !== "drop";
+        const state = checkState(coord, terrain, isSmall);
+        return state !== null && state !== "drop";
     }
     Player.canStay = canStay;
     //checkState(coord)が"drop"かnullであることを確認してから呼ぶ
