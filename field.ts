@@ -280,11 +280,28 @@ namespace Field {
                 pending == Collision.Ladder) return;
             const candidate: Collision[] = [];
 
-            if ((pending & Collision.Block) !== 0) { newRow[x] = Collision.Block; return; }
+            //長い梯子の脇にはブロックを置いてあげたい
+            if ((pending & Collision.Block) !== 0
+                && newRow[x - 1] === Collision.Ladder
+                && getCollision(terrain2, { x: x - 1, y: terrain2.length - 1 }) === Collision.Ladder
+                && getCollision(terrain2, { x: x - 1, y: terrain2.length - 2 }) === Collision.Ladder
+                && getCollision(terrain2, { x: x - 1, y: terrain2.length - 3 }) === Collision.Ladder
+                && getCollision(terrain2, { x: x - 1, y: terrain2.length - 4 }) === Collision.Ladder
+                && Math.random() < 0.8) { newRow[x] = Collision.Block; return; }
+
+            if ((pending & Collision.Block) !== 0
+                && newRow[x + 1] === Collision.Ladder
+                && getCollision(terrain2, { x: x + 1, y: terrain2.length - 1 }) === Collision.Ladder
+                && getCollision(terrain2, { x: x + 1, y: terrain2.length - 2 }) === Collision.Ladder
+                && getCollision(terrain2, { x: x + 1, y: terrain2.length - 3 }) === Collision.Ladder
+                && getCollision(terrain2, { x: x + 1, y: terrain2.length - 4 }) === Collision.Ladder
+                && Math.random() < 0.8) { newRow[x] = Collision.Block; return; }
 
             if ((pending & Collision.Air) !== 0) {
                 // 梯子を相対的に少なくしたい
                 candidate.push(Collision.Air, Collision.Air, Collision.Air);
+                // ブロックの左右隣接を好む
+                if (newRow[x - 1] === Collision.Air || newRow[x + 1] === Collision.Air) candidate.push(Collision.Air, Collision.Air);
             }
             if ((pending & Collision.Block) !== 0) {
                 // 梯子を相対的に少なくしたい
@@ -305,6 +322,15 @@ namespace Field {
         terrain2.push(newRow);
         pendingTerrain2.shift();
         pendingTerrain2.push(new Array(fieldWidth).fill(0).map((_, i) => anyCollision));
+
+        // 肉抜き
+        for (let x = 0; x < fieldWidth; x++) {
+            if (terrain2[terrain2.length - 1][x] === Collision.Block
+                && terrain2[terrain2.length - 2][x] === Collision.Block
+                && terrain2[terrain2.length - 3][x] === Collision.Air
+                && Math.random() < 0.8)
+                terrain2[terrain2.length - 2][x] = Collision.Air;
+        }
 
         // ここからは追加した行に合わせて graphを更新したりpendingTerrainに条件を追加したり
 
