@@ -316,8 +316,9 @@ namespace Player {
         if (currentState == "drop" || currentState == null) return null;
         switch (upState) {
             case "ladder": switch (currentState) {
+                //小さい時は頭の上の梯子にも掴まれる（そうしないと不便なので）
                 //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
-                case "stand": if (Field.getCollision(terrain, isSmall ? coord : upCoord(coord)) === Field.Collision.Ladder) {
+                case "stand": if (isSmall || Field.getCollision(terrain, upCoord(coord)) === Field.Collision.Ladder) {
                     return {
                         coord: upCoord(coord),
                         state: "ladder",

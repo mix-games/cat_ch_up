@@ -452,8 +452,8 @@ var Field;
     Field.getBlockTexture = getBlockTexture;
     function drawField(field, camera, renderer) {
         drawTexture(field.backgroundTexture, renderer.width / 2, renderer.height / 2, tick, renderer);
-        const xRange = Math.ceil(renderer.width / blockSize / 2);
-        const yRange = Math.ceil(renderer.height / blockSize / 2);
+        const xRange = Math.ceil(renderer.width / blockSize / 2) + 1;
+        const yRange = Math.ceil(renderer.height / blockSize / 2) + 1;
         const x1 = Math.floor(camera.centerX / blockSize) - xRange;
         const x2 = Math.ceil(camera.centerX / blockSize) + xRange;
         const y1 = Math.floor(-camera.centerY / blockSize) - yRange;
@@ -489,7 +489,7 @@ var Field;
     Field.drawField = drawField;
     // プレイヤー行動後の敵などの処理はここ
     function turn(field, player) {
-        return annexRow(Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)) }), Math.max(player.coord.y + 5, ...field.entities.map(e => e.coord.y + 5)));
+        return annexRow(Object.assign(Object.assign({}, field), { entities: field.entities.map(e => controlEntity(e, field, player)) }), Math.max(player.coord.y + 7, ...field.entities.map(e => e.coord.y + 7)));
     }
     Field.turn = turn;
     // 配列をシャッフルした配列を返す
@@ -1119,9 +1119,10 @@ var Player;
         switch (upState) {
             case "ladder":
                 switch (currentState) {
+                    //小さい時は頭の上の梯子にも掴まれる（そうしないと不便なので）
                     //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
                     case "stand":
-                        if (Field.getCollision(terrain, isSmall ? coord : upCoord(coord)) === Field.Collision.Ladder) {
+                        if (isSmall || Field.getCollision(terrain, upCoord(coord)) === Field.Collision.Ladder) {
                             return {
                                 coord: upCoord(coord),
                                 state: "ladder",
