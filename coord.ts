@@ -19,4 +19,8 @@ function rightCoord(coord: Coord): Coord {
     return createCoord(coord.x + 1, coord.y);
 }
 
+function equalsCoord(a:Coord, b:Coord) {
+    return a.x == b.x && a.y == b.y;
+}
+
 const blockSize = 24;
