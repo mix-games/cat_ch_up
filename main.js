@@ -627,7 +627,7 @@ var Field;
             }
             if ((pending & Field.Collision.Block) !== 0) {
                 // 梯子を相対的に少なくしたい
-                candidate.push(Field.Collision.Block, Field.Collision.Block);
+                candidate.push(Field.Collision.Block, Field.Collision.Block, Field.Collision.Block, Field.Collision.Block);
                 // ブロックの左右隣接を好む
                 if (newRow[x - 1] === Field.Collision.Block || newRow[x + 1] === Field.Collision.Block)
                     candidate.push(Field.Collision.Block, Field.Collision.Block);
@@ -742,10 +742,20 @@ var Field;
                     // 立てない点には出口を作れない
                     if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
                         //隣がブロックなら斜め上に立ち位置を作れば出口になる
-                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Field.Collision.Block)
+                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Field.Collision.Block) {
                             list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x - 1 });
-                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Field.Collision.Block)
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x - 1 });
+                        }
+                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Field.Collision.Block) {
                             list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Field.Collision.Block, ~Field.Collision.Block], [~Field.Collision.Block, ~Field.Collision.Block, ~Field.Collision.Block]], offsetX: x });
+                        }
                     }
                 });
                 return list;

@@ -302,7 +302,7 @@ namespace Field {
             }
             if ((pending & Collision.Block) !== 0) {
                 // 梯子を相対的に少なくしたい
-                candidate.push(Collision.Block, Collision.Block);
+                candidate.push(Collision.Block, Collision.Block, Collision.Block, Collision.Block);
                 // ブロックの左右隣接を好む
                 if (newRow[x - 1] === Collision.Block || newRow[x + 1] === Collision.Block) candidate.push(Collision.Block, Collision.Block);
             }
@@ -434,10 +434,20 @@ namespace Field {
                     // 立てない点には出口を作れない
                     if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
                         //隣がブロックなら斜め上に立ち位置を作れば出口になる
-                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Block)
+                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Block) {
                             list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
-                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Collision.Block)
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
+                        }
+                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Collision.Block) {
                             list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                        }
                     }
                 });
                 return list;
