@@ -349,7 +349,7 @@ namespace Field {
 
                 points.forEach(x => {
                     //上に梯子を作れば出口になる
-                    list.push({ pattern: [[Collision.Ladder]], offsetX: x - 1 });
+                    list.push({ pattern: [[Collision.Ladder]], offsetX: x });
 
                     // 立てない点には出口を作れない
                     if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {

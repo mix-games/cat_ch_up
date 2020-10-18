@@ -745,7 +745,7 @@ var Field;
                     return null;
                 points.forEach(x => {
                     //上に梯子を作れば出口になる
-                    list.push({ pattern: [[Field.Collision.Ladder]], offsetX: x - 1 });
+                    list.push({ pattern: [[Field.Collision.Ladder]], offsetX: x });
                     // 立てない点には出口を作れない
                     if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
                         //隣がブロックなら斜め上に立ち位置を作れば出口になる
