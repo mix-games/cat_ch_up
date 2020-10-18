@@ -1,6 +1,7 @@
 /// <reference path="./resources.ts" />
 /// <reference path="./coord.ts" />
 /// <reference path="./player.ts" />
+/// <reference path="./graph.ts" />
 /// <reference path="./entity.ts" />
 
 interface Field {
@@ -9,13 +10,11 @@ interface Field {
     readonly textures: readonly (readonly Field.BlockTexture[])[];
     readonly entities: readonly Entity[];
     readonly backgroundTexture: Texture;
-    readonly trafficGraph: Field.Graph;
+    readonly trafficGraph: Graph;
 }
 
 namespace Field {
     //隣接行列表現のグラフ
-    export type Graph = boolean[][];
-
     export const Collision = { Air: 1 as const, Block: 2 as const, Ladder: 4 as const };
 
     export type Collision = typeof Collision[keyof typeof Collision];
@@ -31,7 +30,7 @@ namespace Field {
 
     export function createField(): Field {
         const x = Math.floor(Math.random() * fieldWidth);
-        return annexRow({
+        return generate({
             terrain: [
                 new Array(fieldWidth).fill(0).map(_ => Collision.Air),
             ],
@@ -43,17 +42,11 @@ namespace Field {
             textures: [],
             entities: [createNeko()],
             backgroundTexture: resources.background_texture,
-        }, 10);
+        }, 12);
     }
 
     const fieldWidth = 10;
 
-    //Y座標は下から数える
-    export function annexRow(field: Field, targetHeight: number): Field {
-        if (targetHeight <= field.textures.length) return field;
-
-        return annexRow(generate(field), targetHeight);
-    }
     function assignTexture(row: readonly Collision[]): BlockTexture[] {
         return row.map((collision: Collision): BlockTexture => {
             switch (collision) {
@@ -161,7 +154,7 @@ namespace Field {
 
     // プレイヤー行動後の敵などの処理はここ
     export function turn(field: Field, player: Player): Field {
-        return annexRow({
+        return generate({
             ...field,
             entities: field.entities.map(e => controlEntity(e, field, player))
         }, Math.max(player.coord.y + 7, ...field.entities.map(e => e.coord.y + 7)));
@@ -180,82 +173,9 @@ namespace Field {
         return array2;
     }
 
-    function createGraph(length: number): Graph {
-        return new Array(length).fill(0).map(_ => new Array(length).fill(false));
-    }
+    function generate(field: Field, targetHeight: number): Field {
+        if (targetHeight <= field.textures.length) return field;
 
-    // 辺の向きをすべて逆転したグラフを得る
-    function cloneGraph(graph: Graph) {
-        return graph.map(row => row.map(f => f));
-    }
-
-    // 辺の向きをすべて逆転したグラフを得る
-    function reverseGraph(graph: Graph) {
-        return graph.map((row, from) => row.map((f, to) => graph[to][from]));
-    }
-
-    // 二つのグラフを合わせたグラフを作る
-    function concatGraph(a: Graph, b: Graph) {
-        const newGraph = createGraph(a.length + b.length);
-        a.forEach((row, from) => row.forEach((f, to) => newGraph[from][to] = f));
-        b.forEach((row, from) => row.forEach((f, to) => newGraph[from + a.length][to + a.length] = f));
-        return newGraph;
-    }
-
-    // n 以降の頂点とそれにつながる辺を削除する
-    function dropGraph(graph: Graph, n: number) {
-        return graph.slice(0, n).map(row => row.slice(0, n));
-    }
-
-    // 推移閉包を作成
-    function transclosure(graph: Graph) {
-        const newGraph: Graph = cloneGraph(graph);
-        for (let k = 0; k < graph.length; k++)
-            for (let i = 0; i < graph.length; i++)
-                for (let j = 0; j < graph.length; j++)
-                    if (newGraph[i][k] && newGraph[k][j])
-                        newGraph[i][j] = true;
-        return newGraph;
-    }
-
-    // 強連結成分分解
-    function strongComponents(graph: Graph): [number[], number] {
-        const reversed = reverseGraph(graph);
-        // dfs1で到達したら1、dfs2も到達したら2、いずれも未到達なら0
-        const visited: (0 | 1 | 2)[] = new Array(graph.length).fill(0);
-        // component[i] = i番目の頂点が属する強連結成分の番号
-        const component: number[] = new Array(graph.length);
-        let componentCount = 0;
-
-        // 連結でないグラフに対応するためにはたぶんここをループする必要がある
-        for (var i = 0; i < graph.length; i++) {
-            if (visited[i] !== 0) continue;
-            // 深さ優先探索 i<j⇒log[i] log[j]間に辺がある
-            const order: number[] = [];
-            function dfs1(now: number) {
-                if (visited[now] !== 0) return;
-                visited[now] = 1;
-                graph[now].forEach((f, to) => { if (f) dfs1(to); });
-                order.unshift(now);
-            }
-            dfs1(i);
-
-            function dfs2(now: number) {
-                if (visited[now] !== 1) return;
-                visited[now] = 2;
-                component[now] = componentCount;
-                reversed[now].forEach((f, to) => { if (f) dfs2(to); });
-            }
-            for (var j = 0; j < order.length; j++) {
-                if (visited[order[j]] !== 1) continue;
-                dfs2(order[j]);
-                componentCount++;
-            }
-        }
-        return [component, componentCount];
-    }
-
-    function generate(field: Field): Field {
         const terrain2: Collision[][] = field.terrain.map(row => [...row]);
         const pendingTerrain2: number[][] = field.pendingTerrain.map(row => [...row]);
 
@@ -349,7 +269,7 @@ namespace Field {
 
         // 生成されたterrainに合わせてgraphを更新
         // 後ろに下の段の頂点を追加しておく
-        let graph2 = concatGraph(createGraph(fieldWidth), cloneGraph(field.trafficGraph));
+        let graph2 = Graph.concat(Graph.create(fieldWidth), field.trafficGraph);
         const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => (x & Collision.Block) ? Collision.Block : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
@@ -371,11 +291,11 @@ namespace Field {
         }
 
         // 推移閉包を取った上で、後ろに入れておいた古い頂点を落とす
-        graph2 = dropGraph(transclosure(graph2), fieldWidth);
+        graph2 = Graph.drop(Graph.transclosure(graph2), fieldWidth);
 
         // graphにあわせてpendingを更新
         // 強連結成分分解
-        const [component, componentCount] = strongComponents(graph2);
+        const [component, componentCount] = Graph.strongComponents(graph2);
 
         //各辺を見て、各強連結成分にいくつの入り口と出口があるか数える
         const entranceCount: number[] = new Array(componentCount).fill(0);
@@ -429,7 +349,7 @@ namespace Field {
 
                 points.forEach(x => {
                     //上に梯子を作れば出口になる
-                    list.push({ pattern: [[Collision.Ladder]], offsetX: x });
+                    list.push({ pattern: [[Collision.Ladder]], offsetX: x - 1 });
 
                     // 立てない点には出口を作れない
                     if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
@@ -452,7 +372,7 @@ namespace Field {
                 });
                 return list;
             }),
-        ].filter((x): x is { pattern: number[][], offsetX: number; }[] => x !== null).map(x => shuffle(x));
+        ].filter((x): x is Exclude<typeof x, null> => x !== null).map(x => shuffle(x));
 
         function putCollisionPattern(pendingTerrain: readonly (readonly number[])[], pattern: number[][], offsetX: number): readonly (readonly number[])[] | null {
             const pendingTerrain2 = pendingTerrain.map((row, y) => row.map((a, x) => {
@@ -481,14 +401,6 @@ namespace Field {
         const pendingTerrain3 = rec(pendingTerrain2, patternList);
         if (pendingTerrain3 === null) throw new Error();
 
-        const field2 = {
-            ...field,
-            textures: terrain2.map(row => assignTexture(row)),
-            terrain: terrain2,
-            pendingTerrain: pendingTerrain3,
-            trafficGraph: graph2,
-        };
-
         // 以下デバッグ表示
 
         console.log(graph2);
@@ -508,7 +420,6 @@ namespace Field {
         console.log(" " + exitId1.join(""));
         console.log("(" + exitId2.join("") + ")");
 
-        show(field2);
         function show(field: Field) {
             function collisionToString(coll: Collision) {
                 switch (coll) {
@@ -523,6 +434,15 @@ namespace Field {
 
         if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "") throw new Error("no Exit or Entrance");
 
-        return field2;
+        
+        const field2 = {
+            ...field,
+            textures: terrain2.map(row => assignTexture(row)),
+            terrain: terrain2,
+            pendingTerrain: pendingTerrain3,
+            trafficGraph: graph2,
+        };
+        show(field2);
+        return generate(field2, targetHeight);
     }
 }
