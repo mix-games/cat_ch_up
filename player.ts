@@ -34,10 +34,8 @@ namespace Player {
             if (body === Field.Collision.Solid) return null;
             if (ground === Field.Collision.Solid) return "stand";
             if (body === Field.Collision.Ladder) return "ladder";
-            if (body === Field.Collision.Air) return "drop";
 
-            //意味わからんけど網羅チェックとして機能するらしい
-            return body;
+            return "drop";
         }
         else {
             const ground = Field.getCollision(terrain, downCoord(coord));
@@ -47,10 +45,8 @@ namespace Player {
             if (head === Field.Collision.Solid || foot === Field.Collision.Solid) return null;
             if (ground === Field.Collision.Solid) return "stand";
             if (foot === Field.Collision.Ladder || head === Field.Collision.Ladder) return "ladder";
-            if (foot === Field.Collision.Air) return "drop";
-
-            //意味わからんけど網羅チェックとして機能するらしい
-            return foot;
+            
+            return "drop";
         }
     }
 
