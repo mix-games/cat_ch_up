@@ -84,21 +84,21 @@ function createAnimationTexture(textures: Texture[], timeline: number[], loop: b
         loop,
     };
 }
-function createOffsetTexture(texture: Texture, offsetX: number, offsetY: number): OffsetTexture{
+function createOffsetTexture(texture: Texture, offsetX: number, offsetY: number): OffsetTexture {
     return {
         type: "offset",
         texture,
         offsetX,
         offsetY,
-    }
+    };
 }
 
 function createFlashTexture(texture1: Texture, texture2: Texture): FlashTexture {
     return {
         type: "flash",
-        texture1, 
+        texture1,
         texture2,
-    }
+    };
 }
 
 function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | HTMLImageElement, useShadowColor: boolean) {
@@ -142,7 +142,7 @@ function readyVolumeTexture(texture: VolumeTexture, image: HTMLCanvasElement | H
     }
 }
 
-function getAnimationLength(texture: Texture): number{
+function getAnimationLength(texture: Texture): number {
     switch (texture.type) {
         case "empty": return Infinity;
         case "rect": return Infinity;
@@ -157,23 +157,24 @@ function getAnimationLength(texture: Texture): number{
 
 function joinAnimation(textures: Texture[], loop: boolean): AnimationTexture {
     const timeline = textures
-    .map(t=>getAnimationLength(t))
-    .reduce((acc, cur)=>[...acc, cur + acc[acc.length-1]], [0]).slice(1);
+        .map(t => getAnimationLength(t))
+        .reduce((acc, cur) => [...acc, cur + acc[acc.length - 1]], [0]).slice(1);
     return createAnimationTexture(textures, timeline, loop);
 }
 
-function drawTexture(texture: Texture, x: number, y: number, elapse:number, renderer: Renderer): void {
+function drawTexture(texture: Texture, x: number, y: number, elapse: number, renderer: Renderer): void {
     switch (texture.type) {
         case "empty": {
         } break;
         case "rect": {
-            renderer.lightColor.fillStyle = texture.color;
-            renderer.lightColor.fillRect(
+            renderer.lightLayers[Renderer.layerNum - 1].fillStyle = texture.color;
+            renderer.lightLayers[Renderer.layerNum - 1].fillRect(
                 Renderer.marginLeft + x,
                 Renderer.marginTop + y,
                 texture.width, texture.height);
-            renderer.shadowColor.fillStyle = texture.color;
-            renderer.shadowColor.fillRect(
+
+            renderer.shadowLayers[Renderer.layerNum - 1].fillStyle = texture.color;
+            renderer.shadowLayers[Renderer.layerNum - 1].fillRect(
                 Renderer.marginLeft + x,
                 Renderer.marginTop + y,
                 texture.width, texture.height);

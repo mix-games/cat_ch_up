@@ -208,10 +208,10 @@ function drawTexture(texture, x, y, elapse, renderer) {
             break;
         case "rect":
             {
-                renderer.lightColor.fillStyle = texture.color;
-                renderer.lightColor.fillRect(Renderer.marginLeft + x, Renderer.marginTop + y, texture.width, texture.height);
-                renderer.shadowColor.fillStyle = texture.color;
-                renderer.shadowColor.fillRect(Renderer.marginLeft + x, Renderer.marginTop + y, texture.width, texture.height);
+                renderer.lightLayers[Renderer.layerNum - 1].fillStyle = texture.color;
+                renderer.lightLayers[Renderer.layerNum - 1].fillRect(Renderer.marginLeft + x, Renderer.marginTop + y, texture.width, texture.height);
+                renderer.shadowLayers[Renderer.layerNum - 1].fillStyle = texture.color;
+                renderer.shadowLayers[Renderer.layerNum - 1].fillRect(Renderer.marginLeft + x, Renderer.marginTop + y, texture.width, texture.height);
             }
             break;
         case "volume":
@@ -433,7 +433,7 @@ var Graph;
 function createNeko() {
     return {
         type: "neko",
-        coord: createCoord(0, 5),
+        coord: createCoord(0, 2),
         texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
         animationTimestamp: 0,
     };
