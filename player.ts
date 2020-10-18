@@ -31,8 +31,8 @@ namespace Player {
             const ground = Field.getCollision(terrain, downCoord(coord));
             const body = Field.getCollision(terrain, coord);
 
-            if (body === Field.Collision.Block) return null;
-            if (ground === Field.Collision.Block) return "stand";
+            if (body === Field.Collision.Solid) return null;
+            if (ground === Field.Collision.Solid) return "stand";
             if (body === Field.Collision.Ladder) return "ladder";
             if (body === Field.Collision.Air) return "drop";
 
@@ -44,8 +44,8 @@ namespace Player {
             const foot = Field.getCollision(terrain, coord);
             const head = Field.getCollision(terrain, upCoord(coord));
 
-            if (head === Field.Collision.Block || foot === Field.Collision.Block) return null;
-            if (ground === Field.Collision.Block) return "stand";
+            if (head === Field.Collision.Solid || foot === Field.Collision.Solid) return null;
+            if (ground === Field.Collision.Solid) return "stand";
             if (foot === Field.Collision.Ladder || head === Field.Collision.Ladder) return "ladder";
             if (foot === Field.Collision.Air) return "drop";
 

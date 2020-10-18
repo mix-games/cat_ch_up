@@ -15,11 +15,11 @@ interface Field {
 
 namespace Field {
     //隣接行列表現のグラフ
-    export const Collision = { Air: 1 as const, Block: 2 as const, Ladder: 4 as const };
+    export const Collision = { Air: 1 as const, Solid: 2 as const, Ladder: 4 as const };
 
     export type Collision = typeof Collision[keyof typeof Collision];
 
-    const anyCollision = Collision.Air | Collision.Block | Collision.Ladder;
+    const anyCollision = Collision.Air | Collision.Solid | Collision.Ladder;
 
     export interface BlockTexture {
         readonly texture0: Texture;
@@ -35,7 +35,7 @@ namespace Field {
                 new Array(fieldWidth).fill(0).map(_ => Collision.Air),
             ],
             pendingTerrain: [
-                new Array(fieldWidth).fill(0).map((_, i) => i == x ? Collision.Ladder : ~Collision.Block),
+                new Array(fieldWidth).fill(0).map((_, i) => i == x ? Collision.Ladder : ~Collision.Solid),
                 new Array(fieldWidth).fill(0).map(_ => anyCollision),
             ],
             trafficGraph: new Array(fieldWidth).fill(0).map(_ => []),
@@ -55,7 +55,7 @@ namespace Field {
                         texture0: resources.terrain_wall_texture,
                         texture1: resources.terrain_ladder_texture,
                     };
-                case Collision.Block:
+                case Collision.Solid:
                     return {
                         texture0: resources.terrain_wall_texture,
                         texture1: resources.terrain_condenser_texture,
@@ -73,7 +73,7 @@ namespace Field {
         if (terrain.length <= coord.y)
             throw new Error("The accessed row has not been generated. coord:" + JSON.stringify(coord));
         if (coord.y < 0 || coord.x < 0 || fieldWidth <= coord.x)
-            return Collision.Block;
+            return Collision.Solid;
         return terrain[coord.y][coord.x];
     }
 
@@ -184,7 +184,7 @@ namespace Field {
         // とりあえず確定してるところを置く
         pendingTerrain2[0].forEach((pending, x) => {
             if (pending == Collision.Air) newRow[x] = Collision.Air;
-            if (pending == Collision.Block) newRow[x] = Collision.Block;
+            if (pending == Collision.Solid) newRow[x] = Collision.Solid;
             if (pending == Collision.Ladder) newRow[x] = Collision.Ladder;
         });
 
@@ -193,26 +193,26 @@ namespace Field {
         shuffle(new Array(fieldWidth).fill(0).map((_, i) => i)).forEach(x => {
             const pending = pendingTerrain2[0][x];
             if (pending == Collision.Air ||
-                pending == Collision.Block ||
+                pending == Collision.Solid ||
                 pending == Collision.Ladder) return;
             const candidate: Collision[] = [];
 
             //長い梯子の脇にはブロックを置いてあげたい
-            if ((pending & Collision.Block) !== 0
+            if ((pending & Collision.Solid) !== 0
                 && newRow[x - 1] === Collision.Ladder
                 && getCollision(terrain2, { x: x - 1, y: terrain2.length - 1 }) === Collision.Ladder
                 && getCollision(terrain2, { x: x - 1, y: terrain2.length - 2 }) === Collision.Ladder
                 && getCollision(terrain2, { x: x - 1, y: terrain2.length - 3 }) === Collision.Ladder
                 && getCollision(terrain2, { x: x - 1, y: terrain2.length - 4 }) === Collision.Ladder
-                && Math.random() < 0.8) { newRow[x] = Collision.Block; return; }
+                && Math.random() < 0.8) { newRow[x] = Collision.Solid; return; }
 
-            if ((pending & Collision.Block) !== 0
+            if ((pending & Collision.Solid) !== 0
                 && newRow[x + 1] === Collision.Ladder
                 && getCollision(terrain2, { x: x + 1, y: terrain2.length - 1 }) === Collision.Ladder
                 && getCollision(terrain2, { x: x + 1, y: terrain2.length - 2 }) === Collision.Ladder
                 && getCollision(terrain2, { x: x + 1, y: terrain2.length - 3 }) === Collision.Ladder
                 && getCollision(terrain2, { x: x + 1, y: terrain2.length - 4 }) === Collision.Ladder
-                && Math.random() < 0.8) { newRow[x] = Collision.Block; return; }
+                && Math.random() < 0.8) { newRow[x] = Collision.Solid; return; }
 
             if ((pending & Collision.Air) !== 0) {
                 // 梯子を相対的に少なくしたい
@@ -220,11 +220,11 @@ namespace Field {
                 // ブロックの左右隣接を好む
                 if (newRow[x - 1] === Collision.Air || newRow[x + 1] === Collision.Air) candidate.push(Collision.Air, Collision.Air);
             }
-            if ((pending & Collision.Block) !== 0) {
+            if ((pending & Collision.Solid) !== 0) {
                 // 梯子を相対的に少なくしたい
-                candidate.push(Collision.Block, Collision.Block, Collision.Block, Collision.Block);
+                candidate.push(Collision.Solid, Collision.Solid, Collision.Solid, Collision.Solid);
                 // ブロックの左右隣接を好む
-                if (newRow[x - 1] === Collision.Block || newRow[x + 1] === Collision.Block) candidate.push(Collision.Block, Collision.Block);
+                if (newRow[x - 1] === Collision.Solid || newRow[x + 1] === Collision.Solid) candidate.push(Collision.Solid, Collision.Solid);
             }
             // 梯子、特に左右隣り合わせを嫌う
             if ((pending & Collision.Ladder) !== 0) {
@@ -242,8 +242,8 @@ namespace Field {
 
         // 肉抜き
         for (let x = 0; x < fieldWidth; x++) {
-            if (terrain2[terrain2.length - 1][x] === Collision.Block
-                && terrain2[terrain2.length - 2][x] === Collision.Block
+            if (terrain2[terrain2.length - 1][x] === Collision.Solid
+                && terrain2[terrain2.length - 2][x] === Collision.Solid
                 && terrain2[terrain2.length - 3][x] === Collision.Air
                 && Math.random() < 0.8)
                 terrain2[terrain2.length - 2][x] = Collision.Air;
@@ -253,13 +253,13 @@ namespace Field {
 
         for (let x = 0; x < fieldWidth; x++) {
             // ブロックの上にブロックでないマスがあったらその上は必ずブロックでない
-            if (terrain2[terrain2.length - 2][x] === Collision.Block &&
-                terrain2[terrain2.length - 1][x] !== Collision.Block)
-                pendingTerrain2[0][x] &= ~Collision.Block;
+            if (terrain2[terrain2.length - 2][x] === Collision.Solid &&
+                terrain2[terrain2.length - 1][x] !== Collision.Solid)
+                pendingTerrain2[0][x] &= ~Collision.Solid;
 
             // 梯子があったらその上は必ずブロックでない
             if (terrain2[terrain2.length - 1][x] === Collision.Ladder)
-                pendingTerrain2[0][x] &= ~Collision.Block;
+                pendingTerrain2[0][x] &= ~Collision.Solid;
 
             // 長さ1の梯子を生成しない
             if (terrain2[terrain2.length - 1][x] === Collision.Ladder &&
@@ -270,7 +270,7 @@ namespace Field {
         // 生成されたterrainに合わせてgraphを更新
         // 後ろに下の段の頂点を追加しておく
         let graph2 = Graph.concat(Graph.create(fieldWidth), field.trafficGraph);
-        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => (x & Collision.Block) ? Collision.Block : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
+        const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => (x & Collision.Solid) ? Collision.Solid : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
             if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
@@ -336,7 +336,7 @@ namespace Field {
                 const list: { pattern: number[][], offsetX: number; }[] = [];
                 points.forEach(x => {
                     //上2個がブロックでなければ入り口になる
-                    list.push({ pattern: [[~Collision.Block], [~Collision.Block]], offsetX: x });
+                    list.push({ pattern: [[~Collision.Solid], [~Collision.Solid]], offsetX: x });
                 });
                 return list;
             }),
@@ -354,19 +354,19 @@ namespace Field {
                     // 立てない点には出口を作れない
                     if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
                         //隣がブロックなら斜め上に立ち位置を作れば出口になる
-                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Block) {
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block]], offsetX: x - 1 });
+                        if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Solid) {
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid]], offsetX: x - 1 });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid]], offsetX: x - 1 });
                         }
-                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Collision.Block) {
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
-                            list.push({ pattern: [[~Collision.Block, ~Collision.Block], [~Collision.Block, ~Collision.Block, ~Collision.Block]], offsetX: x });
+                        if (x < fieldWidth - 1 && terrain2[terrain2.length - 1][x + 1] == Collision.Solid) {
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid, ~Collision.Solid]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid, ~Collision.Solid]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid, ~Collision.Solid]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid, ~Collision.Solid]], offsetX: x });
+                            list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid, ~Collision.Solid]], offsetX: x });
                         }
                     }
                 });
@@ -424,7 +424,7 @@ namespace Field {
             function collisionToString(coll: Collision) {
                 switch (coll) {
                     case Collision.Air: return "  ";
-                    case Collision.Block: return "[]";
+                    case Collision.Solid: return "[]";
                     case Collision.Ladder: return "|=";
                 }
             }

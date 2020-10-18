@@ -20,10 +20,10 @@ function createNeko(): Neko {
 }
 
 function canNekoEnter(coord: Coord, terrain: Field.Terrain): boolean {
-    return !(Field.getCollision(terrain, coord) === Field.Collision.Block);
+    return !(Field.getCollision(terrain, coord) === Field.Collision.Solid);
 }
 function canNekoStand(coord: Coord, terrain: Field.Terrain): boolean {
-    return canNekoEnter(coord, terrain) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Block
+    return canNekoEnter(coord, terrain) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid
 }
 
 function controlNeko(neko: Neko, field: Field, player: Player): Neko {
