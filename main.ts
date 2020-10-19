@@ -1,8 +1,8 @@
+let tick = 0;
 let field: Field = Field.createField();
 let player: Player = Player.create();
 let camera: Camera = Camera.create();
 let renderer; //デバッグ用に外に出した
-let tick = 0;
 
 function animationLoop(renderer: Renderer, mainScreen: CanvasRenderingContext2D, resources: Resources): void {
     if (resources._progress.isFinished()) {

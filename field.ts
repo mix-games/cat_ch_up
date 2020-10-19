@@ -273,20 +273,20 @@ namespace Field {
         const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => (x & Collision.Solid) ? Collision.Solid : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
-            if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+            if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
                 graph2[x + fieldWidth][x] = true;
-            if (Player.checkDown({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null
-                || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, false) === "drop")
+            if (Player.checkDown({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null
+                || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, 0) === "drop")
                 graph2[x][x + fieldWidth] = true;
 
-            if (Player.checkRight({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
+            if (Player.checkRight({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null)
                 graph2[x][x + 1] = true;
-            if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, false) !== null)
+            if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null)
                 graph2[x][x - 1] = true;
 
-            if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+            if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
                 graph2[x + fieldWidth][x + 1] = true;
-            if (Player.checkLeftUp({ x, y: terrain2.length - 2 }, tempTerrain, false) !== null)
+            if (Player.checkLeftUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
                 graph2[x + fieldWidth][x - 1] = true;
         }
 
@@ -330,7 +330,7 @@ namespace Field {
             ...componentsWithoutEntrance.map(points => {
                 // 孤立点（ブロックのマス）を除く
                 if (points.length === 1 &&
-                    !Player.canEnter({ x: points[0], y: terrain2.length - 1 }, tempTerrain, false))
+                    !Player.canEnter({ x: points[0], y: terrain2.length - 1 }, tempTerrain, 0))
                     return null;
 
                 const list: { pattern: number[][], offsetX: number; }[] = [];
@@ -344,7 +344,7 @@ namespace Field {
                 const list: { pattern: number[][], offsetX: number; }[] = [];
                 // 孤立点（ブロックのマス）を除く
                 if (points.length === 1 &&
-                    !Player.canEnter({ x: points[0], y: terrain2.length - 1 }, tempTerrain, false))
+                    !Player.canEnter({ x: points[0], y: terrain2.length - 1 }, tempTerrain, 0))
                     return null;
 
                 points.forEach(x => {
@@ -352,7 +352,7 @@ namespace Field {
                     list.push({ pattern: [[Collision.Ladder]], offsetX: x });
 
                     // 立てない点には出口を作れない
-                    if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, false)) {
+                    if (Player.canStay({ x: x, y: terrain2.length - 1 }, tempTerrain, 0)) {
                         //隣がブロックなら斜め上に立ち位置を作れば出口になる
                         if (1 <= x && terrain2[terrain2.length - 1][x - 1] == Collision.Solid) {
                             list.push({ pattern: [[~Collision.Solid, ~Collision.Solid], [~Collision.Solid, ~Collision.Solid]], offsetX: x - 1 });
@@ -406,7 +406,7 @@ namespace Field {
         console.log(graph2);
         const entranceId1 = new Array(fieldWidth).fill("  ");
         const entranceId2 = new Array(fieldWidth).fill("  ");
-        componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (Player.canEnter({ x, y: terrain2.length - 1 }, tempTerrain, false)) entranceId1[x] = i < 10 ? " " + i : "" + i; }));
+        componentsWithoutEntrance.forEach((a, i) => a.forEach(x => { entranceId2[x] = i < 10 ? " " + i : "" + i; if (Player.canEnter({ x, y: terrain2.length - 1 }, tempTerrain, 0)) entranceId1[x] = i < 10 ? " " + i : "" + i; }));
         console.log("entrance↓");
         //console.log(entranceList);
         console.log(" " + entranceId1.join(""));
@@ -414,7 +414,7 @@ namespace Field {
 
         const exitId1 = new Array(fieldWidth).fill("  ");
         const exitId2 = new Array(fieldWidth).fill("  ");
-        componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (Player.canEnter({ x, y: terrain2.length - 1 }, tempTerrain, false)) exitId1[x] = i < 10 ? " " + i : "" + i; }));
+        componentsWithoutExit.forEach((a, i) => a.forEach(x => { exitId2[x] = i < 10 ? " " + i : "" + i; if (Player.canEnter({ x, y: terrain2.length - 1 }, tempTerrain, 0)) exitId1[x] = i < 10 ? " " + i : "" + i; }));
         console.log("exit↑");
         //console.log(exitList);
         console.log(" " + exitId1.join(""));
