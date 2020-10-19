@@ -441,96 +441,59 @@ function createNeko() {
         animationTimestamp: 0,
     };
 }
-function canNekoEnter(coord, terrain) {
-    return !(Field.getCollision(terrain, coord) === Field.Collision.Solid);
+function canNekoEnter(coord, terrain, player) {
+    return !equalsCoord(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
 }
-function canNekoStand(coord, terrain) {
-    return canNekoEnter(coord, terrain) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid;
+function canNekoStand(coord, terrain, player) {
+    return canNekoEnter(coord, terrain, player) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid;
 }
 function dropNeko(neko, terrain) {
-    if (canNekoStand(neko.coord, terrain))
+    if (Field.getCollision(terrain, downCoord(neko.coord)) === Field.Collision.Solid)
         return neko;
     return dropNeko(Object.assign(Object.assign({}, neko), { coord: downCoord(neko.coord) }), terrain);
 }
 function controlNeko(neko, field, player) {
     // 近づいたら
     if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 3) {
+        //移動後の猫の状態の候補を列挙
         let candiate = [];
-        if (!equalsCoord(upCoord(neko.coord), player.coord) &&
-            !equalsCoord(leftCoord(upCoord(neko.coord)), player.coord) &&
-            canNekoStand(leftCoord(upCoord(neko.coord)), field.terrain))
+        //左上、右上のブロックに乗る案
+        if (canNekoEnter(upCoord(neko.coord), field.terrain, player) &&
+            canNekoStand(leftCoord(upCoord(neko.coord)), field.terrain, player))
             candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(neko.coord)) }));
-        if (!equalsCoord(upCoord(neko.coord), player.coord) &&
-            !equalsCoord(rightCoord(upCoord(neko.coord)), player.coord) &&
-            canNekoStand(rightCoord(upCoord(neko.coord)), field.terrain))
+        if (!canNekoEnter(upCoord(neko.coord), field.terrain, player) &&
+            canNekoStand(rightCoord(upCoord(neko.coord)), field.terrain, player))
             candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(neko.coord)) }));
-        let coord = upCoord(neko.coord);
-        while (!equalsCoord(coord, player.coord) &&
-            Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
-            if (!equalsCoord(upCoord(coord), player.coord) &&
-                !equalsCoord(leftCoord(upCoord(coord)), player.coord) &&
-                canNekoStand(leftCoord(upCoord(coord)), field.terrain))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
-            if (!equalsCoord(upCoord(coord), player.coord) &&
-                !equalsCoord(rightCoord(upCoord(coord)), player.coord) &&
-                canNekoStand(rightCoord(upCoord(coord)), field.terrain))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
-            coord = upCoord(coord);
-        }
-        coord = leftCoord(upCoord(neko.coord));
-        while (!equalsCoord(coord, player.coord) &&
-            Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
-            if (!equalsCoord(upCoord(coord), player.coord) &&
-                !equalsCoord(leftCoord(upCoord(coord)), player.coord) &&
-                canNekoStand(leftCoord(upCoord(coord)), field.terrain))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
-            if (!equalsCoord(upCoord(coord), player.coord) &&
-                !equalsCoord(rightCoord(upCoord(coord)), player.coord) &&
-                canNekoStand(rightCoord(upCoord(coord)), field.terrain))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
-            coord = upCoord(coord);
-        }
-        coord = rightCoord(upCoord(neko.coord));
-        while (!equalsCoord(coord, player.coord) &&
-            Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
-            if (!equalsCoord(upCoord(coord), player.coord) &&
-                !equalsCoord(leftCoord(upCoord(coord)), player.coord) &&
-                canNekoStand(leftCoord(upCoord(coord)), field.terrain))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
-            if (!equalsCoord(upCoord(coord), player.coord) &&
-                !equalsCoord(rightCoord(upCoord(coord)), player.coord) &&
-                canNekoStand(rightCoord(upCoord(coord)), field.terrain))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
-            coord = upCoord(coord);
-        }
+        // 真上または左右の梯子を駆け上がって左上、右上のブロックに乗る案
+        [upCoord(neko.coord), leftCoord(neko.coord), rightCoord(neko.coord)].forEach(coord => {
+            while (!equalsCoord(coord, player.coord) &&
+                Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
+                if (canNekoEnter(upCoord(coord), field.terrain, player) &&
+                    canNekoStand(leftCoord(upCoord(coord)), field.terrain, player))
+                    candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
+                if (canNekoEnter(upCoord(coord), field.terrain, player) &&
+                    canNekoStand(rightCoord(upCoord(coord)), field.terrain, player))
+                    candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
+                coord = upCoord(coord);
+            }
+        });
+        //左右に飛び出して落ちる案
         candiate.push(...[
             leftCoord(neko.coord),
             rightCoord(neko.coord)
         ]
-            .filter(coord => !equalsCoord(coord, player.coord) && canNekoEnter(coord, field.terrain))
+            .filter(coord => canNekoEnter(coord, field.terrain, player))
             .map(coord => (dropNeko(Object.assign(Object.assign({}, neko), { coord }), field.terrain))));
-        let candiate2 = candiate.map(neko2 => ({
-            neko: neko2,
-            score: Math.abs(neko2.coord.x - player.coord.x)
-                + Math.abs(neko2.coord.y - player.coord.y)
-                + neko2.coord.y - neko.coord.y
-                + 3 * Math.random()
-        }));
-        // 配列をシャッフルした配列を返す
-        function shuffle(array) {
-            const array2 = [...array];
-            for (let i = 0; i < array2.length; i++) {
-                const j = i + Math.floor(Math.random() * (array2.length - i));
-                const t = array2[i];
-                array2[i] = array2[j];
-                array2[j] = t;
-            }
-            return array2;
-        }
-        //降順ソート
-        candiate2 = shuffle(candiate2).sort((a, b) => b.score - a.score);
-        if (0 < candiate2.length) {
-            return candiate2[0].neko;
+        // 一つ以上案が出たらその中から選ぶ（可能な移動がなければ移動なし）
+        if (0 < candiate.length) {
+            //スコアを計算して一番スコアの高い案を採用、
+            return candiate.map(neko2 => ({
+                neko: neko2,
+                score: Math.abs(neko2.coord.x - player.coord.x)
+                    + Math.abs(neko2.coord.y - player.coord.y) // プレイヤーからのマンハッタン距離
+                    + neko2.coord.y - neko.coord.y //高いところが好き
+                    + 3 * Math.random() // ランダム性を与える
+            })).sort((a, b) => b.score - a.score)[0].neko;
         }
     }
     return dropNeko(neko, field.terrain);
