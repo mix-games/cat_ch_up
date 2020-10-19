@@ -40,7 +40,7 @@ namespace Field {
             ],
             trafficGraph: new Array(fieldWidth).fill(0).map(_ => []),
             textures: [],
-            entities: [createNeko()],
+            entities: [Neko.create()],
             backgroundTexture: resources.background_texture,
         }, 12);
     }

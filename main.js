@@ -430,77 +430,82 @@ var Graph;
     }
     Graph.strongComponents = strongComponents;
 })(Graph || (Graph = {}));
+var Neko;
+(function (Neko) {
+    function create() {
+        return {
+            type: "neko",
+            coord: createCoord(0, 10),
+            texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
+            animationTimestamp: 0,
+        };
+    }
+    Neko.create = create;
+    function canEnter(coord, terrain, player) {
+        return !equalsCoord(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
+    }
+    function canStand(coord, terrain, player) {
+        return canEnter(coord, terrain, player) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid;
+    }
+    function drop(neko, terrain) {
+        if (Field.getCollision(terrain, downCoord(neko.coord)) === Field.Collision.Solid)
+            return neko;
+        return drop(Object.assign(Object.assign({}, neko), { coord: downCoord(neko.coord) }), terrain);
+    }
+    function control(neko, field, player) {
+        // 近づいたら
+        if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 3) {
+            //移動後の猫の状態の候補を列挙
+            let candiate = [];
+            //左上、右上のブロックに乗る案
+            if (canEnter(upCoord(neko.coord), field.terrain, player) &&
+                canStand(leftCoord(upCoord(neko.coord)), field.terrain, player))
+                candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(neko.coord)) }));
+            if (!canEnter(upCoord(neko.coord), field.terrain, player) &&
+                canStand(rightCoord(upCoord(neko.coord)), field.terrain, player))
+                candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(neko.coord)) }));
+            // 真上または左右の梯子を駆け上がって左上、右上のブロックに乗る案
+            [upCoord(neko.coord), leftCoord(neko.coord), rightCoord(neko.coord)].forEach(coord => {
+                while (!equalsCoord(coord, player.coord) &&
+                    Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
+                    if (canEnter(upCoord(coord), field.terrain, player) &&
+                        canStand(leftCoord(upCoord(coord)), field.terrain, player))
+                        candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
+                    if (canEnter(upCoord(coord), field.terrain, player) &&
+                        canStand(rightCoord(upCoord(coord)), field.terrain, player))
+                        candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
+                    coord = upCoord(coord);
+                }
+            });
+            //左右に飛び出して落ちる案
+            candiate.push(...[
+                leftCoord(neko.coord),
+                rightCoord(neko.coord)
+            ]
+                .filter(coord => canEnter(coord, field.terrain, player))
+                .map(coord => (drop(Object.assign(Object.assign({}, neko), { coord }), field.terrain))));
+            // 一つ以上案が出たらその中から選ぶ（可能な移動がなければ移動なし）
+            if (0 < candiate.length) {
+                //スコアを計算して一番スコアの高い案を採用、
+                return candiate.map(neko2 => ({
+                    neko: neko2,
+                    score: Math.abs(neko2.coord.x - player.coord.x)
+                        + Math.abs(neko2.coord.y - player.coord.y) // プレイヤーからのマンハッタン距離
+                        + neko2.coord.y - neko.coord.y //高いところが好き
+                        + 3 * Math.random() // ランダム性を与える
+                })).sort((a, b) => b.score - a.score)[0].neko;
+            }
+        }
+        return drop(neko, field.terrain);
+    }
+    Neko.control = control;
+})(Neko || (Neko = {}));
 /// <reference path="./resources.ts" />
 /// <reference path="./gameobject.ts" />
 /// <reference path="./field.ts" />
-function createNeko() {
-    return {
-        type: "neko",
-        coord: createCoord(0, 10),
-        texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
-        animationTimestamp: 0,
-    };
-}
-function canNekoEnter(coord, terrain, player) {
-    return !equalsCoord(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
-}
-function canNekoStand(coord, terrain, player) {
-    return canNekoEnter(coord, terrain, player) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid;
-}
-function dropNeko(neko, terrain) {
-    if (Field.getCollision(terrain, downCoord(neko.coord)) === Field.Collision.Solid)
-        return neko;
-    return dropNeko(Object.assign(Object.assign({}, neko), { coord: downCoord(neko.coord) }), terrain);
-}
-function controlNeko(neko, field, player) {
-    // 近づいたら
-    if (Math.abs(player.coord.x - neko.coord.x) + Math.abs(player.coord.y - neko.coord.y) < 3) {
-        //移動後の猫の状態の候補を列挙
-        let candiate = [];
-        //左上、右上のブロックに乗る案
-        if (canNekoEnter(upCoord(neko.coord), field.terrain, player) &&
-            canNekoStand(leftCoord(upCoord(neko.coord)), field.terrain, player))
-            candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(neko.coord)) }));
-        if (!canNekoEnter(upCoord(neko.coord), field.terrain, player) &&
-            canNekoStand(rightCoord(upCoord(neko.coord)), field.terrain, player))
-            candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(neko.coord)) }));
-        // 真上または左右の梯子を駆け上がって左上、右上のブロックに乗る案
-        [upCoord(neko.coord), leftCoord(neko.coord), rightCoord(neko.coord)].forEach(coord => {
-            while (!equalsCoord(coord, player.coord) &&
-                Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
-                if (canNekoEnter(upCoord(coord), field.terrain, player) &&
-                    canNekoStand(leftCoord(upCoord(coord)), field.terrain, player))
-                    candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
-                if (canNekoEnter(upCoord(coord), field.terrain, player) &&
-                    canNekoStand(rightCoord(upCoord(coord)), field.terrain, player))
-                    candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
-                coord = upCoord(coord);
-            }
-        });
-        //左右に飛び出して落ちる案
-        candiate.push(...[
-            leftCoord(neko.coord),
-            rightCoord(neko.coord)
-        ]
-            .filter(coord => canNekoEnter(coord, field.terrain, player))
-            .map(coord => (dropNeko(Object.assign(Object.assign({}, neko), { coord }), field.terrain))));
-        // 一つ以上案が出たらその中から選ぶ（可能な移動がなければ移動なし）
-        if (0 < candiate.length) {
-            //スコアを計算して一番スコアの高い案を採用、
-            return candiate.map(neko2 => ({
-                neko: neko2,
-                score: Math.abs(neko2.coord.x - player.coord.x)
-                    + Math.abs(neko2.coord.y - player.coord.y) // プレイヤーからのマンハッタン距離
-                    + neko2.coord.y - neko.coord.y //高いところが好き
-                    + 3 * Math.random() // ランダム性を与える
-            })).sort((a, b) => b.score - a.score)[0].neko;
-        }
-    }
-    return dropNeko(neko, field.terrain);
-}
 function controlEntity(entity, field, player) {
     if (entity.type === "neko") {
-        return controlNeko(entity, field, player);
+        return Neko.control(entity, field, player);
     }
     // 網羅チェック
     return entity.type;
@@ -527,7 +532,7 @@ var Field;
             ],
             trafficGraph: new Array(fieldWidth).fill(0).map(_ => []),
             textures: [],
-            entities: [createNeko()],
+            entities: [Neko.create()],
             backgroundTexture: resources.background_texture,
         }, 12);
     }
