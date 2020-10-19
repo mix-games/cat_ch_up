@@ -48,10 +48,10 @@ window.onload = () => {
         // リピート（長押し時に繰り返し発火する）は無視
         if (event.repeat) return;
 
-        if (event.code === "KeyA") player = { ...player, coord: leftCoord(player.coord) };
-        if (event.code === "KeyD") player = { ...player, coord: rightCoord(player.coord) };
-        if (event.code === "KeyW") player = { ...player, coord: upCoord(player.coord) };
-        if (event.code === "KeyS") player = { ...player, coord: downCoord(player.coord) };
+        if (event.code === "KeyA") player = { ...player, coord: Coord.left(player.coord) };
+        if (event.code === "KeyD") player = { ...player, coord: Coord.right(player.coord) };
+        if (event.code === "KeyW") player = { ...player, coord: Coord.up(player.coord) };
+        if (event.code === "KeyS") player = { ...player, coord: Coord.down(player.coord) };
 
         switch (event.code) {
             case "KeyZ": {

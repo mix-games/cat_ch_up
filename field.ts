@@ -108,7 +108,7 @@ namespace Field {
         for (var x = x1; x <= x2; x++) {
             for (var y = y1; y <= y2; y++) {
                 if (field.terrain.length <= y) continue;
-                const coord = createCoord(x, y);
+                const coord = Coord.create(x, y);
                 drawTexture(
                     getBlockTexture(field, coord).texture0,
                     camera.offsetX + coord.x * blockSize,
@@ -122,7 +122,7 @@ namespace Field {
         for (var x = x1; x <= x2; x++) {
             for (var y = y1; y <= y2; y++) {
                 if (field.terrain.length <= y) continue;
-                const coord = createCoord(x, y);
+                const coord = Coord.create(x, y);
                 drawTexture(
                     getBlockTexture(field, coord).texture1,
                     camera.offsetX + coord.x * blockSize,
@@ -138,7 +138,7 @@ namespace Field {
         for (var x = x1; x <= x2; x++) {
             for (var y = y1; y <= y2; y++) {
                 if (field.terrain.length <= y) continue;
-                const coord = createCoord(x, y);
+                const coord = Coord.create(x, y);
                 drawTexture(
                     createRectTexture("red", 1, 1),
                     camera.offsetX + coord.x * blockSize,

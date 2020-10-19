@@ -1,22 +1,39 @@
 "use strict";
-function createCoord(x, y) {
-    return { x, y };
-}
-function upCoord(coord) {
-    return createCoord(coord.x, coord.y + 1);
-}
-function downCoord(coord) {
-    return createCoord(coord.x, coord.y - 1);
-}
-function leftCoord(coord) {
-    return createCoord(coord.x - 1, coord.y);
-}
-function rightCoord(coord) {
-    return createCoord(coord.x + 1, coord.y);
-}
-function equalsCoord(a, b) {
-    return a.x == b.x && a.y == b.y;
-}
+var Coord;
+(function (Coord) {
+    function create(x, y) {
+        return { x, y };
+    }
+    Coord.create = create;
+    function up(coord) {
+        return create(coord.x, coord.y + 1);
+    }
+    Coord.up = up;
+    function down(coord) {
+        return create(coord.x, coord.y - 1);
+    }
+    Coord.down = down;
+    function left(coord) {
+        return create(coord.x - 1, coord.y);
+    }
+    Coord.left = left;
+    function right(coord) {
+        return create(coord.x + 1, coord.y);
+    }
+    Coord.right = right;
+    function rightUp(coord) {
+        return right(up(coord));
+    }
+    Coord.rightUp = rightUp;
+    function leftUp(coord) {
+        return left(up(coord));
+    }
+    Coord.leftUp = leftUp;
+    function equals(a, b) {
+        return a.x == b.x && a.y == b.y;
+    }
+    Coord.equals = equals;
+})(Coord || (Coord = {}));
 const blockSize = 24;
 var Renderer;
 (function (Renderer) {
@@ -435,22 +452,22 @@ var Neko;
     function create() {
         return {
             type: "neko",
-            coord: createCoord(0, 10),
+            coord: Coord.create(0, 10),
             texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
             animationTimestamp: 0,
         };
     }
     Neko.create = create;
     function canEnter(coord, terrain, player) {
-        return !equalsCoord(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
+        return !Coord.equals(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
     }
     function canStand(coord, terrain, player) {
-        return canEnter(coord, terrain, player) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid;
+        return canEnter(coord, terrain, player) && Field.getCollision(terrain, Coord.down(coord)) === Field.Collision.Solid;
     }
     function drop(neko, terrain) {
-        if (Field.getCollision(terrain, downCoord(neko.coord)) === Field.Collision.Solid)
+        if (Field.getCollision(terrain, Coord.down(neko.coord)) === Field.Collision.Solid)
             return neko;
-        return drop(Object.assign(Object.assign({}, neko), { coord: downCoord(neko.coord) }), terrain);
+        return drop(Object.assign(Object.assign({}, neko), { coord: Coord.down(neko.coord) }), terrain);
     }
     function control(neko, field, player) {
         // 近づいたら
@@ -458,29 +475,29 @@ var Neko;
             //移動後の猫の状態の候補を列挙
             let candiate = [];
             //左上、右上のブロックに乗る案
-            if (canEnter(upCoord(neko.coord), field.terrain, player) &&
-                canStand(leftCoord(upCoord(neko.coord)), field.terrain, player))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(neko.coord)) }));
-            if (!canEnter(upCoord(neko.coord), field.terrain, player) &&
-                canStand(rightCoord(upCoord(neko.coord)), field.terrain, player))
-                candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(neko.coord)) }));
+            if (canEnter(Coord.up(neko.coord), field.terrain, player) &&
+                canStand(Coord.leftUp(neko.coord), field.terrain, player))
+                candiate.push(Object.assign(Object.assign({}, neko), { coord: Coord.leftUp(neko.coord) }));
+            if (!canEnter(Coord.up(neko.coord), field.terrain, player) &&
+                canStand(Coord.rightUp(neko.coord), field.terrain, player))
+                candiate.push(Object.assign(Object.assign({}, neko), { coord: Coord.rightUp(neko.coord) }));
             // 真上または左右の梯子を駆け上がって左上、右上のブロックに乗る案
-            [upCoord(neko.coord), leftCoord(neko.coord), rightCoord(neko.coord)].forEach(coord => {
-                while (!equalsCoord(coord, player.coord) &&
+            [Coord.up(neko.coord), Coord.left(neko.coord), Coord.right(neko.coord)].forEach(coord => {
+                while (!Coord.equals(coord, player.coord) &&
                     Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
-                    if (canEnter(upCoord(coord), field.terrain, player) &&
-                        canStand(leftCoord(upCoord(coord)), field.terrain, player))
-                        candiate.push(Object.assign(Object.assign({}, neko), { coord: leftCoord(upCoord(coord)) }));
-                    if (canEnter(upCoord(coord), field.terrain, player) &&
-                        canStand(rightCoord(upCoord(coord)), field.terrain, player))
-                        candiate.push(Object.assign(Object.assign({}, neko), { coord: rightCoord(upCoord(coord)) }));
-                    coord = upCoord(coord);
+                    if (canEnter(Coord.up(coord), field.terrain, player) &&
+                        canStand(Coord.leftUp(coord), field.terrain, player))
+                        candiate.push(Object.assign(Object.assign({}, neko), { coord: Coord.leftUp(coord) }));
+                    if (canEnter(Coord.up(coord), field.terrain, player) &&
+                        canStand(Coord.rightUp(coord), field.terrain, player))
+                        candiate.push(Object.assign(Object.assign({}, neko), { coord: Coord.rightUp(coord) }));
+                    coord = Coord.up(coord);
                 }
             });
             //左右に飛び出して落ちる案
             candiate.push(...[
-                leftCoord(neko.coord),
-                rightCoord(neko.coord)
+                Coord.left(neko.coord),
+                Coord.right(neko.coord)
             ]
                 .filter(coord => canEnter(coord, field.terrain, player))
                 .map(coord => (drop(Object.assign(Object.assign({}, neko), { coord }), field.terrain))));
@@ -590,7 +607,7 @@ var Field;
             for (var y = y1; y <= y2; y++) {
                 if (field.terrain.length <= y)
                     continue;
-                const coord = createCoord(x, y);
+                const coord = Coord.create(x, y);
                 drawTexture(getBlockTexture(field, coord).texture0, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
             }
         }
@@ -598,7 +615,7 @@ var Field;
             for (var y = y1; y <= y2; y++) {
                 if (field.terrain.length <= y)
                     continue;
-                const coord = createCoord(x, y);
+                const coord = Coord.create(x, y);
                 drawTexture(getBlockTexture(field, coord).texture1, camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
             }
         }
@@ -608,7 +625,7 @@ var Field;
             for (var y = y1; y <= y2; y++) {
                 if (field.terrain.length <= y)
                     continue;
-                const coord = createCoord(x, y);
+                const coord = Coord.create(x, y);
                 drawTexture(createRectTexture("red", 1, 1), camera.offsetX + coord.x * blockSize, camera.offsetY - coord.y * blockSize, tick, renderer);
             }
         } //*/
@@ -890,7 +907,7 @@ var Player;
     function create() {
         return {
             state: "stand",
-            coord: createCoord(0, 0),
+            coord: Coord.create(0, 0),
             facingDirection: "facing_right",
             smallCount: 0,
             animationTimestamp: 0,
@@ -902,7 +919,7 @@ var Player;
     // その場所でプレイヤーがどのようにあるべきか
     function checkState(coord, terrain, isSmall) {
         if (isSmall) {
-            const ground = Field.getCollision(terrain, downCoord(coord));
+            const ground = Field.getCollision(terrain, Coord.down(coord));
             const body = Field.getCollision(terrain, coord);
             if (body === Field.Collision.Solid)
                 return null;
@@ -913,9 +930,9 @@ var Player;
             return "drop";
         }
         else {
-            const ground = Field.getCollision(terrain, downCoord(coord));
+            const ground = Field.getCollision(terrain, Coord.down(coord));
             const foot = Field.getCollision(terrain, coord);
-            const head = Field.getCollision(terrain, upCoord(coord));
+            const head = Field.getCollision(terrain, Coord.up(coord));
             if (head === Field.Collision.Solid || foot === Field.Collision.Solid)
                 return null;
             if (ground === Field.Collision.Solid)
@@ -939,9 +956,9 @@ var Player;
     Player.canStay = canStay;
     //checkState(coord)が"drop"かnullであることを確認してから呼ぶ
     function drop(coord, terrain, isSmall, jumpoffState, direction, distance = 1) {
-        const state = checkState(downCoord(coord), terrain, isSmall);
+        const state = checkState(Coord.down(coord), terrain, isSmall);
         if (state === "drop" || state === null)
-            return (drop(downCoord(coord), terrain, isSmall, jumpoffState, direction, distance + 1));
+            return (drop(Coord.down(coord), terrain, isSmall, jumpoffState, direction, distance + 1));
         const jumpOff = {
             left: {
                 "stand": {
@@ -985,7 +1002,7 @@ var Player;
             },
         }[state];
         return {
-            coord: downCoord(coord),
+            coord: Coord.down(coord),
             state: state,
             transition: {
                 normal: generateDropAnimation(jumpOff.normal, resources.player_drop_left_texture, landing.normal, distance),
@@ -1007,14 +1024,14 @@ var Player;
         const currentState = checkState(coord, terrain, isSmall);
         if (currentState == "drop" || currentState == null)
             return null;
-        const leftState = checkState(leftCoord(coord), terrain, isSmall);
+        const leftState = checkState(Coord.left(coord), terrain, isSmall);
         switch (leftState) {
             //左に立てるなら
             case "stand":
                 switch (currentState) {
                     //いま立っているなら歩き
                     case "stand": return {
-                        coord: leftCoord(coord),
+                        coord: Coord.left(coord),
                         state: leftState,
                         transition: {
                             small: resources.player_small_walk_left_texture,
@@ -1023,7 +1040,7 @@ var Player;
                     };
                     //いま梯子なら降りる
                     case "ladder": return {
-                        coord: leftCoord(coord),
+                        coord: Coord.left(coord),
                         state: leftState,
                         transition: {
                             small: resources.player_small_walk_left_texture,
@@ -1037,7 +1054,7 @@ var Player;
                 switch (currentState) {
                     // いま立っているなら掴まる
                     case "stand": return {
-                        coord: leftCoord(coord),
+                        coord: Coord.left(coord),
                         state: leftState,
                         transition: {
                             small: resources.player_small_walk_left_texture,
@@ -1046,7 +1063,7 @@ var Player;
                     };
                     // いま梯子なら梯子上移動
                     case "ladder": return {
-                        coord: leftCoord(coord),
+                        coord: Coord.left(coord),
                         state: leftState,
                         transition: {
                             small: resources.player_small_walk_left_texture,
@@ -1058,7 +1075,7 @@ var Player;
             //左が空いてるなら飛び降りる
             case "drop":
                 {
-                    return drop(leftCoord(coord), terrain, isSmall, currentState, "left");
+                    return drop(Coord.left(coord), terrain, isSmall, currentState, "left");
                 }
                 break;
         }
@@ -1068,11 +1085,11 @@ var Player;
     //左がふさがっていたらよじ登りを試す
     function checkLeftUp(coord, terrain, isSmall) {
         if (canStay(coord, terrain, isSmall)
-            && checkState(leftCoord(coord), terrain, isSmall) === null
-            && checkState(upCoord(coord), terrain, isSmall) !== null
-            && checkState(leftCoord(upCoord(coord)), terrain, isSmall) === "stand")
+            && checkState(Coord.left(coord), terrain, isSmall) === null
+            && checkState(Coord.up(coord), terrain, isSmall) !== null
+            && checkState(Coord.leftUp((coord)), terrain, isSmall) === "stand")
             return {
-                coord: leftCoord(upCoord(coord)),
+                coord: Coord.leftUp((coord)),
                 state: "stand",
                 transition: {
                     small: resources.player_small_climb_left_texture,
@@ -1086,14 +1103,14 @@ var Player;
         const currentState = checkState(coord, terrain, isSmall);
         if (currentState == "drop" || currentState == null)
             return null;
-        const rightState = checkState(rightCoord(coord), terrain, isSmall);
+        const rightState = checkState(Coord.right(coord), terrain, isSmall);
         switch (rightState) {
             //右に立てるなら
             case "stand":
                 switch (currentState) {
                     //いま立っているなら歩き
                     case "stand": return {
-                        coord: rightCoord(coord),
+                        coord: Coord.right(coord),
                         state: rightState,
                         transition: {
                             small: resources.player_small_walk_right_texture,
@@ -1102,7 +1119,7 @@ var Player;
                     };
                     //いま梯子なら降りる
                     case "ladder": return {
-                        coord: rightCoord(coord),
+                        coord: Coord.right(coord),
                         state: rightState,
                         transition: {
                             small: resources.player_small_walk_right_texture,
@@ -1116,7 +1133,7 @@ var Player;
                 switch (currentState) {
                     // いま立っているなら掴まる
                     case "stand": return {
-                        coord: rightCoord(coord),
+                        coord: Coord.right(coord),
                         state: rightState,
                         transition: {
                             small: resources.player_small_walk_right_texture,
@@ -1125,7 +1142,7 @@ var Player;
                     };
                     // いま梯子なら梯子上移動
                     case "ladder": return {
-                        coord: rightCoord(coord),
+                        coord: Coord.right(coord),
                         state: rightState,
                         transition: {
                             small: resources.player_small_walk_right_texture,
@@ -1137,15 +1154,15 @@ var Player;
             //右が空いてるなら飛び降りる
             case "drop":
                 {
-                    return drop(rightCoord(coord), terrain, isSmall, currentState, "right");
+                    return drop(Coord.right(coord), terrain, isSmall, currentState, "right");
                 }
                 break;
             //右がふさがっていたらよじ登りを試す
             case null: if (currentState === "stand"
-                && checkState(upCoord(coord), terrain, isSmall) !== null
-                && checkState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+                && checkState(Coord.up(coord), terrain, isSmall) !== null
+                && checkState(Coord.rightUp(coord), terrain, isSmall) === "stand")
                 return {
-                    coord: rightCoord(upCoord(coord)),
+                    coord: Coord.rightUp(coord),
                     state: "stand",
                     transition: {
                         small: resources.player_small_climb_right_texture,
@@ -1158,11 +1175,11 @@ var Player;
     Player.checkRight = checkRight;
     function checkRightUp(coord, terrain, isSmall) {
         if (canStay(coord, terrain, isSmall)
-            && checkState(rightCoord(coord), terrain, isSmall) === null
-            && checkState(upCoord(coord), terrain, isSmall) !== null
-            && checkState(rightCoord(upCoord(coord)), terrain, isSmall) === "stand")
+            && checkState(Coord.right(coord), terrain, isSmall) === null
+            && checkState(Coord.up(coord), terrain, isSmall) !== null
+            && checkState(Coord.rightUp(coord), terrain, isSmall) === "stand")
             return {
-                coord: rightCoord(upCoord(coord)),
+                coord: Coord.rightUp(coord),
                 state: "stand",
                 transition: {
                     small: resources.player_small_climb_right_texture,
@@ -1175,7 +1192,7 @@ var Player;
     function checkUp(coord, terrain, isSmall) {
         //真上移動は梯子に登るときのみ？
         const currentState = checkState(coord, terrain, isSmall);
-        const upState = checkState(upCoord(coord), terrain, isSmall);
+        const upState = checkState(Coord.up(coord), terrain, isSmall);
         if (currentState == "drop" || currentState == null)
             return null;
         switch (upState) {
@@ -1184,9 +1201,9 @@ var Player;
                     //小さい時は頭の上の梯子にも掴まれる（そうしないと不便なので）
                     //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
                     case "stand":
-                        if (isSmall || Field.getCollision(terrain, upCoord(coord)) === Field.Collision.Ladder) {
+                        if (isSmall || Field.getCollision(terrain, Coord.up(coord)) === Field.Collision.Ladder) {
                             return {
-                                coord: upCoord(coord),
+                                coord: Coord.up(coord),
                                 state: "ladder",
                                 transition: {
                                     small: resources.player_small_climb_up_texture,
@@ -1197,7 +1214,7 @@ var Player;
                         break;
                     //いま梯子なら登る
                     case "ladder": return {
-                        coord: upCoord(coord),
+                        coord: Coord.up(coord),
                         state: "ladder",
                         transition: {
                             small: resources.player_small_climb_up_texture,
@@ -1217,13 +1234,13 @@ var Player;
             return null;
         if (currentState !== "ladder")
             return null;
-        const downState = checkState(downCoord(coord), terrain, isSmall);
+        const downState = checkState(Coord.down(coord), terrain, isSmall);
         switch (downState) {
             //下に立てるなら降りる
             case "stand":
                 {
                     return {
-                        coord: downCoord(coord),
+                        coord: Coord.down(coord),
                         state: "stand",
                         transition: {
                             small: resources.player_small_climb_down_texture,
@@ -1236,7 +1253,7 @@ var Player;
             case "ladder":
                 {
                     return {
-                        coord: downCoord(coord),
+                        coord: Coord.down(coord),
                         state: "stand",
                         transition: {
                             small: resources.player_small_climb_down_texture,
@@ -1248,7 +1265,7 @@ var Player;
             //下が空いているなら飛び降りる
             case "drop":
                 {
-                    return drop(downCoord(coord), terrain, isSmall, currentState, "down");
+                    return drop(Coord.down(coord), terrain, isSmall, currentState, "down");
                 }
                 break;
         }
@@ -1386,7 +1403,7 @@ var Camera;
     function create() {
         return {
             // カメラ中心の移動目標マス
-            coord: createCoord(clearanceX, clearanceY),
+            coord: Coord.create(clearanceX, clearanceY),
             // カメラ中心のスクリーン座標(移動アニメーション折り込み)
             centerX: clearanceX * blockSize,
             centerY: -initialY * blockSize,
@@ -1400,7 +1417,7 @@ var Camera;
     }
     Camera.create = create;
     function update(camera, player, field, renderer) {
-        const coord = createCoord(Math.max(player.coord.x - clearanceX, Math.min(player.coord.x + clearanceX, camera.coord.x)), Math.max(initialY, Math.max(player.coord.y - clearanceY, Math.min(player.coord.y + clearanceY, camera.coord.y))));
+        const coord = Coord.create(Math.max(player.coord.x - clearanceX, Math.min(player.coord.x + clearanceX, camera.coord.x)), Math.max(initialY, Math.max(player.coord.y - clearanceY, Math.min(player.coord.y + clearanceY, camera.coord.y))));
         const targetX = coord.x * blockSize;
         const targetY = -coord.y * blockSize;
         const velocityX = Math.max(camera.velocityX * smooth - accel, Math.min(camera.velocityX * smooth + accel, // 減衰後の速度から±accellの範囲にのみ速度を更新できる
@@ -1464,13 +1481,13 @@ window.onload = () => {
         if (event.repeat)
             return;
         if (event.code === "KeyA")
-            player = Object.assign(Object.assign({}, player), { coord: leftCoord(player.coord) });
+            player = Object.assign(Object.assign({}, player), { coord: Coord.left(player.coord) });
         if (event.code === "KeyD")
-            player = Object.assign(Object.assign({}, player), { coord: rightCoord(player.coord) });
+            player = Object.assign(Object.assign({}, player), { coord: Coord.right(player.coord) });
         if (event.code === "KeyW")
-            player = Object.assign(Object.assign({}, player), { coord: upCoord(player.coord) });
+            player = Object.assign(Object.assign({}, player), { coord: Coord.up(player.coord) });
         if (event.code === "KeyS")
-            player = Object.assign(Object.assign({}, player), { coord: downCoord(player.coord) });
+            player = Object.assign(Object.assign({}, player), { coord: Coord.down(player.coord) });
         switch (event.code) {
             case "KeyZ":
                 {

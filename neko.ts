@@ -7,22 +7,22 @@ namespace Neko {
     export function create(): Neko {
         return {
             type: "neko",
-            coord: createCoord(0, 10),
+            coord: Coord.create(0, 10),
             texture: createOffsetTexture(createRectTexture("blue", blockSize - 4, blockSize - 2), blockSize / 2 - 2, -2),
             animationTimestamp: 0,
         };
     }
 
     function canEnter(coord: Coord, terrain: Field.Terrain, player: Player): boolean {
-        return !equalsCoord(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
+        return !Coord.equals(coord, player.coord) && Field.getCollision(terrain, coord) !== Field.Collision.Solid;
     }
     function canStand(coord: Coord, terrain: Field.Terrain, player: Player): boolean {
-        return canEnter(coord, terrain, player) && Field.getCollision(terrain, downCoord(coord)) === Field.Collision.Solid;
+        return canEnter(coord, terrain, player) && Field.getCollision(terrain, Coord.down(coord)) === Field.Collision.Solid;
     }
 
     function drop(neko: Neko, terrain: Field.Terrain): Neko {
-        if (Field.getCollision(terrain, downCoord(neko.coord)) === Field.Collision.Solid) return neko;
-        return drop({ ...neko, coord: downCoord(neko.coord) }, terrain);
+        if (Field.getCollision(terrain, Coord.down(neko.coord)) === Field.Collision.Solid) return neko;
+        return drop({ ...neko, coord: Coord.down(neko.coord) }, terrain);
     }
 
     export function control(neko: Neko, field: Field, player: Player): Neko {
@@ -32,31 +32,31 @@ namespace Neko {
             let candiate: Neko[] = [];
 
             //左上、右上のブロックに乗る案
-            if (canEnter(upCoord(neko.coord), field.terrain, player) &&
-                canStand(leftCoord(upCoord(neko.coord)), field.terrain, player))
-                candiate.push({ ...neko, coord: leftCoord(upCoord(neko.coord)) });
-            if (!canEnter(upCoord(neko.coord), field.terrain, player) &&
-                canStand(rightCoord(upCoord(neko.coord)), field.terrain, player))
-                candiate.push({ ...neko, coord: rightCoord(upCoord(neko.coord)) });
+            if (canEnter(Coord.up(neko.coord), field.terrain, player) &&
+                canStand(Coord.leftUp(neko.coord), field.terrain, player))
+                candiate.push({ ...neko, coord: Coord.leftUp(neko.coord) });
+            if (!canEnter(Coord.up(neko.coord), field.terrain, player) &&
+                canStand(Coord.rightUp(neko.coord), field.terrain, player))
+                candiate.push({ ...neko, coord: Coord.rightUp(neko.coord) });
 
             // 真上または左右の梯子を駆け上がって左上、右上のブロックに乗る案
-            [upCoord(neko.coord), leftCoord(neko.coord), rightCoord(neko.coord)].forEach(coord => {
-                while (!equalsCoord(coord, player.coord) &&
+            [Coord.up(neko.coord), Coord.left(neko.coord), Coord.right(neko.coord)].forEach(coord => {
+                while (!Coord.equals(coord, player.coord) &&
                     Field.getCollision(field.terrain, coord) === Field.Collision.Ladder) {
-                    if (canEnter(upCoord(coord), field.terrain, player) &&
-                        canStand(leftCoord(upCoord(coord)), field.terrain, player))
-                        candiate.push({ ...neko, coord: leftCoord(upCoord(coord)) });
-                    if (canEnter(upCoord(coord), field.terrain, player) &&
-                        canStand(rightCoord(upCoord(coord)), field.terrain, player))
-                        candiate.push({ ...neko, coord: rightCoord(upCoord(coord)) });
-                    coord = upCoord(coord);
+                    if (canEnter(Coord.up(coord), field.terrain, player) &&
+                        canStand(Coord.leftUp(coord), field.terrain, player))
+                        candiate.push({ ...neko, coord: Coord.leftUp(coord) });
+                    if (canEnter(Coord.up(coord), field.terrain, player) &&
+                        canStand(Coord.rightUp(coord), field.terrain, player))
+                        candiate.push({ ...neko, coord: Coord.rightUp(coord) });
+                    coord = Coord.up(coord);
                 }
             });
 
             //左右に飛び出して落ちる案
             candiate.push(...[
-                leftCoord(neko.coord),
-                rightCoord(neko.coord)]
+                Coord.left(neko.coord),
+                Coord.right(neko.coord)]
                 .filter(coord => canEnter(coord, field.terrain, player))
                 .map(coord => (drop({ ...neko, coord }, field.terrain))));
 

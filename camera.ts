@@ -30,7 +30,7 @@ namespace Camera {
     export function create(): Camera {
         return {
             // カメラ中心の移動目標マス
-            coord: createCoord(clearanceX, clearanceY),
+            coord: Coord.create(clearanceX, clearanceY),
 
             // カメラ中心のスクリーン座標(移動アニメーション折り込み)
             centerX: clearanceX * blockSize,
@@ -47,7 +47,7 @@ namespace Camera {
     }
 
     export function update(camera: Camera, player: Player, field: Field, renderer: Renderer): Camera {
-        const coord = createCoord(
+        const coord = Coord.create(
             Math.max(player.coord.x - clearanceX,
                 Math.min(player.coord.x + clearanceX,
                     camera.coord.x)),
