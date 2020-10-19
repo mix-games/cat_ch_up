@@ -1087,9 +1087,9 @@ var Player;
         if (canStay(coord, terrain, isSmall)
             && checkState(Coord.left(coord), terrain, isSmall) === null
             && checkState(Coord.up(coord), terrain, isSmall) !== null
-            && checkState(Coord.leftUp((coord)), terrain, isSmall) === "stand")
+            && checkState(Coord.leftUp(coord), terrain, isSmall) === "stand")
             return {
-                coord: Coord.leftUp((coord)),
+                coord: Coord.leftUp(coord),
                 state: "stand",
                 transition: {
                     small: resources.player_small_climb_left_texture,
@@ -1157,18 +1157,6 @@ var Player;
                     return drop(Coord.right(coord), terrain, isSmall, currentState, "right");
                 }
                 break;
-            //右がふさがっていたらよじ登りを試す
-            case null: if (currentState === "stand"
-                && checkState(Coord.up(coord), terrain, isSmall) !== null
-                && checkState(Coord.rightUp(coord), terrain, isSmall) === "stand")
-                return {
-                    coord: Coord.rightUp(coord),
-                    state: "stand",
-                    transition: {
-                        small: resources.player_small_climb_right_texture,
-                        normal: resources.player_climb_right_texture,
-                    },
-                };
         }
         return null;
     }
