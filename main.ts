@@ -1,5 +1,5 @@
 let tick = 0;
-let field: Field = Field.createField();
+let field: Field = Field.create();
 let player: Player = Player.create();
 let camera: Camera = Camera.create();
 let renderer; //デバッグ用に外に出した
