@@ -380,7 +380,8 @@ namespace Player {
         }
     }
 
-    //与えられたPlayer | nullに従ってプレイヤーを動かす
+    // 入力された方向に応じてPlayerを動かし、更新後のPlayerと更新後のFieldを返す。
+    // 移動出来ない場合はそのままのPlayerをFieldを返す
     export function move(player: Player, field: Field, direction: InputDirection): [Player, Field] {
         function inputLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
             return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);

@@ -1249,7 +1249,8 @@ var Player;
                 break;
         }
     }
-    //与えられたPlayer | nullに従ってプレイヤーを動かす
+    // 入力された方向に応じてPlayerを動かし、更新後のPlayerと更新後のFieldを返す。
+    // 移動出来ない場合はそのままのPlayerをFieldを返す
     function move(player, field, direction) {
         function inputLeft(coord, terrain, smallCount) {
             return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);
