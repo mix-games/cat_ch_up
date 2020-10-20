@@ -954,15 +954,22 @@ var Player;
     }
     Player.canStay = canStay;
     // 各種情報から移動後のプレイヤーを生成する
-    function generateMovedPlayer(coord, facingDirection, smallCount, normalTexture, smallTexture) {
+    function generateMovedPlayer(coord, facingDirection, smallCount, texture) {
         return {
             coord,
             smallCount,
-            texture: selectTexture(smallCount, normalTexture, smallTexture),
+            texture,
             facingDirection,
             animationTimestamp: tick,
             acceptInput: false,
         };
+    }
+    // smallCountに応じてでテクスチャを選び分ける
+    function selectTexture(smallCount, normalTexture, smallTexture) {
+        if (smallCount === 1) {
+            return createFlashTexture(smallTexture, normalTexture);
+        }
+        return 0 < smallCount ? smallTexture : normalTexture;
     }
     // 足が付くところまで移動させ、その間のアニメーションテクスチャを適用したPlayerを返す
     // checkState(coord)が"falling"かnullであることを確認してから呼ぶ
@@ -1012,7 +1019,7 @@ var Player;
                 small: resources.player_small_climb_down_texture,
             },
         }[state];
-        return generateMovedPlayer(Coord.down(coord), direction === "left" ? "facing_left" : "facing_right", smallCount, generateDropAnimation(jumpOff.normal, resources.player_drop_left_texture, landing.normal, distance), generateDropAnimation(jumpOff.small, resources.player_small_drop_left_texture, landing.normal, distance));
+        return generateMovedPlayer(Coord.down(coord), direction === "left" ? "facing_left" : "facing_right", smallCount, selectTexture(smallCount, generateDropAnimation(jumpOff.normal, resources.player_drop_left_texture, landing.normal, distance), generateDropAnimation(jumpOff.small, resources.player_small_drop_left_texture, landing.normal, distance)));
         function generateDropAnimation(jumpOffTexture, fallingTexture, landingTexture, distance) {
             const Textures = [];
             Textures.push(createOffsetTexture(jumpOffTexture, 0, distance * blockSize));
@@ -1038,10 +1045,10 @@ var Player;
                 switch (currentState) {
                     //いま立っているなら歩き
                     case "stand":
-                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture);
+                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, selectTexture(smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture));
                     //いま梯子なら降りる
                     case "ladder":
-                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture);
+                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, selectTexture(smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture));
                 }
                 break;
             //左に梯子があるなら
@@ -1049,10 +1056,10 @@ var Player;
                 switch (currentState) {
                     // いま立っているなら掴まる
                     case "stand":
-                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture);
+                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, selectTexture(smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture));
                     // いま梯子なら梯子上移動
                     case "ladder":
-                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture);
+                        return generateMovedPlayer(Coord.left(coord), "facing_left", smallCount, selectTexture(smallCount, resources.player_walk_left_texture, resources.player_small_walk_left_texture));
                 }
                 break;
             //左が空いてるなら飛び降りる
@@ -1072,7 +1079,7 @@ var Player;
             && checkState(Coord.left(coord), terrain, smallCount) === null
             && checkState(Coord.up(coord), terrain, smallCount) !== null
             && checkState(Coord.leftUp(coord), terrain, smallCount) === "stand")
-            return generateMovedPlayer(Coord.leftUp(coord), "facing_left", smallCount, resources.player_climb_left_texture, resources.player_small_climb_left_texture);
+            return generateMovedPlayer(Coord.leftUp(coord), "facing_left", smallCount, selectTexture(smallCount, resources.player_climb_left_texture, resources.player_small_climb_left_texture));
         return null;
     }
     Player.goLeftUp = goLeftUp;
@@ -1090,10 +1097,10 @@ var Player;
                 switch (currentState) {
                     //いま立っているなら歩き
                     case "stand":
-                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture);
+                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture));
                     //いま梯子なら降りる
                     case "ladder":
-                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture);
+                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture));
                 }
                 break;
             //右に梯子があるなら
@@ -1101,10 +1108,10 @@ var Player;
                 switch (currentState) {
                     // いま立っているなら掴まる
                     case "stand":
-                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture);
+                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture));
                     // いま梯子なら梯子上移動
                     case "ladder":
-                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture);
+                        return generateMovedPlayer(Coord.right(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_walk_right_texture, resources.player_small_walk_right_texture));
                 }
                 break;
             //右が空いてるなら飛び降りる
@@ -1124,7 +1131,7 @@ var Player;
             && checkState(Coord.right(coord), terrain, smallCount) === null
             && checkState(Coord.up(coord), terrain, smallCount) !== null
             && checkState(Coord.rightUp(coord), terrain, smallCount) === "stand")
-            return generateMovedPlayer(Coord.rightUp(coord), "facing_right", smallCount, resources.player_climb_right_texture, resources.player_small_climb_right_texture);
+            return generateMovedPlayer(Coord.rightUp(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_climb_right_texture, resources.player_small_climb_right_texture));
         return null;
     }
     Player.goRightUp = goRightUp;
@@ -1142,12 +1149,12 @@ var Player;
                     //いま立ちなら、上半身（の後ろ）に梯子があるなら登る
                     case "stand":
                         if (0 < smallCount || Field.getCollision(terrain, Coord.up(coord)) === Field.Collision.Ladder) {
-                            return generateMovedPlayer(Coord.up(coord), "facing_right", smallCount, resources.player_climb_up_texture, resources.player_small_climb_up_texture);
+                            return generateMovedPlayer(Coord.up(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_climb_up_texture, resources.player_small_climb_up_texture));
                         }
                         break;
                     //いま梯子なら登る
                     case "ladder":
-                        return generateMovedPlayer(Coord.up(coord), "facing_right", smallCount, resources.player_climb_up_texture, resources.player_small_climb_up_texture);
+                        return generateMovedPlayer(Coord.up(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_climb_up_texture, resources.player_small_climb_up_texture));
                 }
                 break;
         }
@@ -1167,13 +1174,13 @@ var Player;
             //下に立てるなら降りる
             case "stand":
                 {
-                    return generateMovedPlayer(Coord.down(coord), "facing_right", smallCount, resources.player_climb_down_texture, resources.player_small_climb_down_texture);
+                    return generateMovedPlayer(Coord.down(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_climb_down_texture, resources.player_small_climb_down_texture));
                 }
                 break;
             // 下でも梯子なら移動
             case "ladder":
                 {
-                    return generateMovedPlayer(Coord.down(coord), "facing_right", smallCount, resources.player_climb_down_texture, resources.player_small_climb_down_texture);
+                    return generateMovedPlayer(Coord.down(coord), "facing_right", smallCount, selectTexture(smallCount, resources.player_climb_down_texture, resources.player_small_climb_down_texture));
                 }
                 break;
             //下が空いているなら飛び降りる
@@ -1186,17 +1193,11 @@ var Player;
         return null;
     }
     Player.goDown = goDown;
+    // Playerを5ターンだけ小さくなるようセットして返す
     function shrink(player, field) {
         return transitionEnd(Object.assign(Object.assign({}, player), { smallCount: 5 }), field);
     }
     Player.shrink = shrink;
-    ;
-    function selectTexture(smallCount, normalTexture, smallTexture) {
-        if (smallCount === 1) {
-            return createFlashTexture(smallTexture, normalTexture);
-        }
-        return 0 < smallCount ? smallTexture : normalTexture;
-    }
     // 遷移アニメーション再生後にプレイヤーのstateを見てsmallCountとテクスチャを更新する。
     function transitionEnd(player, field) {
         const smallCount = Math.max(0, player.smallCount - 1);
@@ -1204,11 +1205,10 @@ var Player;
         const currentState = checkState(player.coord, field.terrain, smallCount);
         //埋まってなければテクスチャを更新するだけ
         if (currentState === "stand" || currentState === "ladder") {
-            const textureSet = getStateTexture(currentState, player.facingDirection);
             return {
                 coord: player.coord,
                 smallCount: smallCount,
-                texture: selectTexture(smallCount, textureSet.normal, textureSet.small),
+                texture: getWaitingTexture(currentState, player.facingDirection, smallCount),
                 facingDirection: player.facingDirection,
                 animationTimestamp: tick,
                 acceptInput: true,
@@ -1220,32 +1220,20 @@ var Player;
         }
     }
     Player.transitionEnd = transitionEnd;
-    function getStateTexture(state, facingDirection) {
+    // 待機状態のテクスチャを返す
+    function getWaitingTexture(state, facingDirection, smallCount) {
         switch (state) {
             case "stand":
                 {
                     switch (facingDirection) {
-                        case "facing_left":
-                            return {
-                                small: resources.player_small_stand_left_texture,
-                                normal: resources.player_stand_left_texture,
-                            };
-                            break;
-                        case "facing_right":
-                            return {
-                                small: resources.player_small_stand_right_texture,
-                                normal: resources.player_stand_right_texture,
-                            };
-                            break;
+                        case "facing_left": return selectTexture(smallCount, resources.player_stand_left_texture, resources.player_small_stand_left_texture);
+                        case "facing_right": return selectTexture(smallCount, resources.player_stand_right_texture, resources.player_small_stand_right_texture);
                         default: return facingDirection;
                     }
                 }
                 break;
             case "ladder":
-                return {
-                    small: resources.player_small_hold_texture,
-                    normal: resources.player_hold_texture,
-                };
+                return selectTexture(smallCount, resources.player_hold_texture, resources.player_small_hold_texture);
                 break;
         }
     }
@@ -1322,7 +1310,7 @@ var Camera;
     Camera.update = update;
 })(Camera || (Camera = {}));
 let tick = 0;
-let field = Field.createField();
+let field = Field.create();
 let player = Player.create();
 let camera = Camera.create();
 let renderer; //デバッグ用に外に出した
