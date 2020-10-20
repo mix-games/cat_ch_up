@@ -28,7 +28,7 @@ namespace Field {
     export type Terrain = readonly (readonly Collision[])[];
 
 
-    export function createField(): Field {
+    export function create(): Field {
         const x = Math.floor(Math.random() * fieldWidth);
         return generate({
             terrain: [
@@ -46,28 +46,6 @@ namespace Field {
     }
 
     const fieldWidth = 10;
-
-    function assignTexture(row: readonly Collision[]): BlockTexture[] {
-        return row.map((collision: Collision): BlockTexture => {
-            switch (collision) {
-                case Collision.Ladder:
-                    return {
-                        texture0: resources.terrain_wall_texture,
-                        texture1: resources.terrain_ladder_texture,
-                    };
-                case Collision.Solid:
-                    return {
-                        texture0: resources.terrain_wall_texture,
-                        texture1: resources.terrain_condenser_texture,
-                    };
-                case Collision.Air:
-                    return {
-                        texture0: resources.terrain_wall_texture,
-                        texture1: createEmptyTexture()
-                    };
-            }
-        });
-    }
 
     export function getCollision(terrain: Terrain, coord: Coord): Collision {
         if (terrain.length <= coord.y)
@@ -173,6 +151,28 @@ namespace Field {
         return array2;
     }
 
+    function assignTexture(row: readonly Collision[]): BlockTexture[] {
+        return row.map((collision: Collision): BlockTexture => {
+            switch (collision) {
+                case Collision.Ladder:
+                    return {
+                        texture0: resources.terrain_wall_texture,
+                        texture1: resources.terrain_ladder_texture,
+                    };
+                case Collision.Solid:
+                    return {
+                        texture0: resources.terrain_wall_texture,
+                        texture1: resources.terrain_condenser_texture,
+                    };
+                case Collision.Air:
+                    return {
+                        texture0: resources.terrain_wall_texture,
+                        texture1: createEmptyTexture()
+                    };
+            }
+        });
+    }
+
     function generate(field: Field, targetHeight: number): Field {
         if (targetHeight <= field.textures.length) return field;
 
@@ -273,20 +273,20 @@ namespace Field {
         const tempTerrain = [...terrain2, ...pendingTerrain2.map(row => row.map(x => (x & Collision.Solid) ? Collision.Solid : (x & Collision.Air) ? Collision.Air : Collision.Ladder))];
         // 上下移動を繋ぐ
         for (let x = 0; x < fieldWidth; x++) {
-            if (Player.checkUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
+            if (Player.goUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
                 graph2[x + fieldWidth][x] = true;
-            if (Player.checkDown({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null
-                || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, 0) === "drop")
+            if (Player.goDown({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null
+                || Player.checkState({ x, y: terrain2.length - 1 }, tempTerrain, 0) === "falling")
                 graph2[x][x + fieldWidth] = true;
 
-            if (Player.checkRight({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null)
+            if (Player.goRight({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null)
                 graph2[x][x + 1] = true;
-            if (Player.checkLeft({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null)
+            if (Player.goLeft({ x, y: terrain2.length - 1 }, tempTerrain, 0) !== null)
                 graph2[x][x - 1] = true;
 
-            if (Player.checkRightUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
+            if (Player.goRightUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
                 graph2[x + fieldWidth][x + 1] = true;
-            if (Player.checkLeftUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
+            if (Player.goLeftUp({ x, y: terrain2.length - 2 }, tempTerrain, 0) !== null)
                 graph2[x + fieldWidth][x - 1] = true;
         }
 
@@ -434,7 +434,7 @@ namespace Field {
 
         if (exitId1.join("").trim() == "" || entranceId1.join("").trim() == "") throw new Error("no Exit or Entrance");
 
-        
+
         const field2 = {
             ...field,
             textures: terrain2.map(row => assignTexture(row)),

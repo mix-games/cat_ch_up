@@ -24,7 +24,7 @@ namespace Player {
     }
 
     // その場所でプレイヤーがどのようにあるべきか
-    export function checkState(coord: Coord, terrain: Field.Terrain, smallCount: number): "stand" | "ladder" | "drop" | null {
+    export function checkState(coord: Coord, terrain: Field.Terrain, smallCount: number): "stand" | "ladder" | "falling" | null {
         if (0 < smallCount) {
             const ground = Field.getCollision(terrain, Coord.down(coord));
             const body = Field.getCollision(terrain, coord);
@@ -33,7 +33,7 @@ namespace Player {
             if (ground === Field.Collision.Solid) return "stand";
             if (body === Field.Collision.Ladder) return "ladder";
 
-            return "drop";
+            return "falling";
         }
         else {
             const ground = Field.getCollision(terrain, Coord.down(coord));
@@ -44,7 +44,7 @@ namespace Player {
             if (ground === Field.Collision.Solid) return "stand";
             if (foot === Field.Collision.Ladder || head === Field.Collision.Ladder) return "ladder";
 
-            return "drop";
+            return "falling";
         }
     }
 
@@ -55,7 +55,7 @@ namespace Player {
     //その場に立てるか判定。上半身か下半身がはしごならtrue、足の下が空中だとfalse。スペースが無くてもfalse
     export function canStay(coord: Coord, terrain: Field.Terrain, smallCount: number): boolean {
         const state = checkState(coord, terrain, smallCount);
-        return state !== null && state !== "drop";
+        return state !== null && state !== "falling";
     }
 
     // 各種情報から移動後のプレイヤーを生成する
@@ -70,10 +70,10 @@ namespace Player {
         };
     }
 
-    //checkState(coord)が"drop"かnullであることを確認してから呼ぶ
+    //checkState(coord)が"falling"かnullであることを確認してから呼ぶ
     export function drop(coord: Coord, terrain: Field.Terrain, smallCount: number, jumpoffState: "stand" | "ladder", direction: "left" | "right" | "down", distance: number = 1): Player {
         const state = checkState(Coord.down(coord), terrain, smallCount);
-        if (state === "drop" || state === null)
+        if (state === "falling" || state === null)
             return (drop(Coord.down(coord), terrain, smallCount, jumpoffState, direction, distance + 1));
 
         const jumpOff = {
@@ -146,9 +146,9 @@ namespace Player {
         }
     }
 
-    export function checkLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+    export function goLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         const currentState = checkState(coord, terrain, smallCount);
-        if (currentState == "drop" || currentState == null) return null;
+        if (currentState == "falling" || currentState == null) return null;
 
         const leftState = checkState(Coord.left(coord), terrain, smallCount);
         switch (leftState) {
@@ -179,7 +179,7 @@ namespace Player {
                         resources.player_small_walk_left_texture);
             } break;
             //左が空いてるなら飛び降りる
-            case "drop": {
+            case "falling": {
                 return drop(Coord.left(coord), terrain, smallCount, currentState, "left");
             } break;
         }
@@ -187,7 +187,7 @@ namespace Player {
     }
 
     //左がふさがっていたらよじ登りを試す
-    export function checkLeftUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+    export function goLeftUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         if (canStay(coord, terrain, smallCount)
             && checkState(Coord.left(coord), terrain, smallCount) === null
             && checkState(Coord.up(coord), terrain, smallCount) !== null
@@ -199,9 +199,9 @@ namespace Player {
         return null;
     }
 
-    export function checkRight(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+    export function goRight(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         const currentState = checkState(coord, terrain, smallCount);
-        if (currentState == "drop" || currentState == null) return null;
+        if (currentState == "falling" || currentState == null) return null;
         const rightState = checkState(Coord.right(coord), terrain, smallCount);
         switch (rightState) {
             //右に立てるなら
@@ -231,14 +231,14 @@ namespace Player {
                         resources.player_small_walk_right_texture);
             } break;
             //右が空いてるなら飛び降りる
-            case "drop": {
+            case "falling": {
                 return drop(Coord.right(coord), terrain, smallCount, currentState, "right");
             } break;
         }
         return null;
     }
 
-    export function checkRightUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+    export function goRightUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         if (canStay(coord, terrain, smallCount)
             && checkState(Coord.right(coord), terrain, smallCount) === null
             && checkState(Coord.up(coord), terrain, smallCount) !== null
@@ -250,12 +250,12 @@ namespace Player {
         return null;
     }
 
-    export function checkUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+    export function goUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         //真上移動は梯子に登るときのみ？
         const currentState = checkState(coord, terrain, smallCount);
         const upState = checkState(Coord.up(coord), terrain, smallCount);
 
-        if (currentState == "drop" || currentState == null) return null;
+        if (currentState == "falling" || currentState == null) return null;
         switch (upState) {
             case "ladder": switch (currentState) {
                 //小さい時は頭の上の梯子にも掴まれる（そうしないと不便なので）
@@ -275,10 +275,10 @@ namespace Player {
         return null;
     }
 
-    export function checkDown(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+    export function goDown(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         //下移動は梯子につかまってる時のみ
         const currentState = checkState(coord, terrain, smallCount);
-        if (currentState == "drop" || currentState == null) return null;
+        if (currentState == "falling" || currentState == null) return null;
 
         if (currentState !== "ladder") return null;
         const downState = checkState(Coord.down(coord), terrain, smallCount);
@@ -296,7 +296,7 @@ namespace Player {
                     resources.player_small_climb_down_texture);
             } break;
             //下が空いているなら飛び降りる
-            case "drop": {
+            case "falling": {
                 return drop(Coord.down(coord), terrain, smallCount, currentState, "down");
             } break;
         }
@@ -304,11 +304,11 @@ namespace Player {
     }
 
     export function inputLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
-        return checkLeft(coord, terrain, smallCount) || checkLeftUp(coord, terrain, smallCount);
+        return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);
     }
 
     export function inputRight(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
-        return checkRight(coord, terrain, smallCount) || checkRightUp(coord, terrain, smallCount);
+        return goRight(coord, terrain, smallCount) || goRightUp(coord, terrain, smallCount);
     }
 
     export function shrink(player: Player, field: Field): Player {
@@ -381,8 +381,8 @@ namespace Player {
         const result = {
             input_left: inputLeft,
             input_right: inputRight,
-            input_up: checkUp,
-            input_down: checkDown,
+            input_up: goUp,
+            input_down: goDown,
         }[direction](player.coord, field.terrain, player.smallCount);
 
         if (result === null) return [player, field];
