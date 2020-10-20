@@ -23,7 +23,7 @@ namespace Player {
         };
     }
 
-    // その場所でプレイヤーがどのようにあるべきか
+    // その場所でプレイヤーがどのようにあるべきか判定
     export function checkState(coord: Coord, terrain: Field.Terrain, smallCount: number): "stand" | "ladder" | "falling" | null {
         if (0 < smallCount) {
             const ground = Field.getCollision(terrain, Coord.down(coord));
@@ -70,7 +70,8 @@ namespace Player {
         };
     }
 
-    //checkState(coord)が"falling"かnullであることを確認してから呼ぶ
+    // 足が付くところまで移動させ、その間のアニメーションテクスチャを適用したPlayerを返す
+    // checkState(coord)が"falling"かnullであることを確認してから呼ぶ
     export function drop(coord: Coord, terrain: Field.Terrain, smallCount: number, jumpoffState: "stand" | "ladder", direction: "left" | "right" | "down", distance: number = 1): Player {
         const state = checkState(Coord.down(coord), terrain, smallCount);
         if (state === "falling" || state === null)
@@ -146,6 +147,9 @@ namespace Player {
         }
     }
 
+    // 左へ移動した後のプレイヤーを返す。進めない場合はnullを返す。
+    // 左が空いてるが立てないときは左下に落ちる。左に進めないとき左上によじ登ろうとはしない。
+    // テクスチャは移動中のアニメーションを適用する
     export function goLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         const currentState = checkState(coord, terrain, smallCount);
         if (currentState == "falling" || currentState == null) return null;
@@ -186,7 +190,8 @@ namespace Player {
         return null;
     }
 
-    //左がふさがっていたらよじ登りを試す
+    // 左がふさがっていてよじ登り出来るとき、よじ登った後のPlayerを返す。
+    // 左に普通に進めるときや、よじ登れないときはnullを返す。
     export function goLeftUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         if (canStay(coord, terrain, smallCount)
             && checkState(Coord.left(coord), terrain, smallCount) === null
@@ -199,6 +204,9 @@ namespace Player {
         return null;
     }
 
+    // 右へ移動した後のプレイヤーを返す。進めない場合はnullを返す。
+    // 右が空いてるが立てないときは左下に落ちる。右に進めないとき右上によじ登ろうとはしない。
+    // テクスチャは移動中のアニメーションを適用する
     export function goRight(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         const currentState = checkState(coord, terrain, smallCount);
         if (currentState == "falling" || currentState == null) return null;
@@ -238,6 +246,8 @@ namespace Player {
         return null;
     }
 
+    // 右がふさがっていてよじ登り出来るとき、よじ登った後のPlayerを返す。
+    // 右に普通に進めるときや、よじ登れないときはnullを返す。
     export function goRightUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         if (canStay(coord, terrain, smallCount)
             && checkState(Coord.right(coord), terrain, smallCount) === null
@@ -250,6 +260,7 @@ namespace Player {
         return null;
     }
 
+    // 上に移動した後のプレイヤーを返す。進めないときはnullを返す。
     export function goUp(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         //真上移動は梯子に登るときのみ？
         const currentState = checkState(coord, terrain, smallCount);
@@ -275,6 +286,7 @@ namespace Player {
         return null;
     }
 
+    // 下に移動した後のプレイヤーを返す。進めないときはnullを返す。
     export function goDown(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
         //下移動は梯子につかまってる時のみ
         const currentState = checkState(coord, terrain, smallCount);
@@ -301,14 +313,6 @@ namespace Player {
             } break;
         }
         return null;
-    }
-
-    export function inputLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
-        return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);
-    }
-
-    export function inputRight(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
-        return goRight(coord, terrain, smallCount) || goRightUp(coord, terrain, smallCount);
     }
 
     export function shrink(player: Player, field: Field): Player {
@@ -378,6 +382,13 @@ namespace Player {
 
     //与えられたPlayer | nullに従ってプレイヤーを動かす
     export function move(player: Player, field: Field, direction: InputDirection): [Player, Field] {
+        function inputLeft(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+            return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);
+        }
+
+        function inputRight(coord: Coord, terrain: Field.Terrain, smallCount: number): Player | null {
+            return goRight(coord, terrain, smallCount) || goRightUp(coord, terrain, smallCount);
+        }
         const result = {
             input_left: inputLeft,
             input_right: inputRight,

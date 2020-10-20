@@ -915,7 +915,7 @@ var Player;
         };
     }
     Player.create = create;
-    // その場所でプレイヤーがどのようにあるべきか
+    // その場所でプレイヤーがどのようにあるべきか判定
     function checkState(coord, terrain, smallCount) {
         if (0 < smallCount) {
             const ground = Field.getCollision(terrain, Coord.down(coord));
@@ -964,7 +964,8 @@ var Player;
             acceptInput: false,
         };
     }
-    //checkState(coord)が"falling"かnullであることを確認してから呼ぶ
+    // 足が付くところまで移動させ、その間のアニメーションテクスチャを適用したPlayerを返す
+    // checkState(coord)が"falling"かnullであることを確認してから呼ぶ
     function drop(coord, terrain, smallCount, jumpoffState, direction, distance = 1) {
         const state = checkState(Coord.down(coord), terrain, smallCount);
         if (state === "falling" || state === null)
@@ -1023,6 +1024,9 @@ var Player;
         }
     }
     Player.drop = drop;
+    // 左へ移動した後のプレイヤーを返す。進めない場合はnullを返す。
+    // 左が空いてるが立てないときは左下に落ちる。左に進めないとき左上によじ登ろうとはしない。
+    // テクスチャは移動中のアニメーションを適用する
     function goLeft(coord, terrain, smallCount) {
         const currentState = checkState(coord, terrain, smallCount);
         if (currentState == "falling" || currentState == null)
@@ -1061,7 +1065,8 @@ var Player;
         return null;
     }
     Player.goLeft = goLeft;
-    //左がふさがっていたらよじ登りを試す
+    // 左がふさがっていてよじ登り出来るとき、よじ登った後のPlayerを返す。
+    // 左に普通に進めるときや、よじ登れないときはnullを返す。
     function goLeftUp(coord, terrain, smallCount) {
         if (canStay(coord, terrain, smallCount)
             && checkState(Coord.left(coord), terrain, smallCount) === null
@@ -1071,6 +1076,9 @@ var Player;
         return null;
     }
     Player.goLeftUp = goLeftUp;
+    // 右へ移動した後のプレイヤーを返す。進めない場合はnullを返す。
+    // 右が空いてるが立てないときは左下に落ちる。右に進めないとき右上によじ登ろうとはしない。
+    // テクスチャは移動中のアニメーションを適用する
     function goRight(coord, terrain, smallCount) {
         const currentState = checkState(coord, terrain, smallCount);
         if (currentState == "falling" || currentState == null)
@@ -1109,6 +1117,8 @@ var Player;
         return null;
     }
     Player.goRight = goRight;
+    // 右がふさがっていてよじ登り出来るとき、よじ登った後のPlayerを返す。
+    // 右に普通に進めるときや、よじ登れないときはnullを返す。
     function goRightUp(coord, terrain, smallCount) {
         if (canStay(coord, terrain, smallCount)
             && checkState(Coord.right(coord), terrain, smallCount) === null
@@ -1118,6 +1128,7 @@ var Player;
         return null;
     }
     Player.goRightUp = goRightUp;
+    // 上に移動した後のプレイヤーを返す。進めないときはnullを返す。
     function goUp(coord, terrain, smallCount) {
         //真上移動は梯子に登るときのみ？
         const currentState = checkState(coord, terrain, smallCount);
@@ -1143,6 +1154,7 @@ var Player;
         return null;
     }
     Player.goUp = goUp;
+    // 下に移動した後のプレイヤーを返す。進めないときはnullを返す。
     function goDown(coord, terrain, smallCount) {
         //下移動は梯子につかまってる時のみ
         const currentState = checkState(coord, terrain, smallCount);
@@ -1174,14 +1186,6 @@ var Player;
         return null;
     }
     Player.goDown = goDown;
-    function inputLeft(coord, terrain, smallCount) {
-        return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);
-    }
-    Player.inputLeft = inputLeft;
-    function inputRight(coord, terrain, smallCount) {
-        return goRight(coord, terrain, smallCount) || goRightUp(coord, terrain, smallCount);
-    }
-    Player.inputRight = inputRight;
     function shrink(player, field) {
         return transitionEnd(Object.assign(Object.assign({}, player), { smallCount: 5 }), field);
     }
@@ -1247,6 +1251,12 @@ var Player;
     }
     //与えられたPlayer | nullに従ってプレイヤーを動かす
     function move(player, field, direction) {
+        function inputLeft(coord, terrain, smallCount) {
+            return goLeft(coord, terrain, smallCount) || goLeftUp(coord, terrain, smallCount);
+        }
+        function inputRight(coord, terrain, smallCount) {
+            return goRight(coord, terrain, smallCount) || goRightUp(coord, terrain, smallCount);
+        }
         const result = {
             input_left: inputLeft,
             input_right: inputRight,
