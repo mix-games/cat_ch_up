@@ -347,7 +347,9 @@ namespace Player {
     }
 
 
-    // 遷移アニメーション再生後にプレイヤーのstateを見てsmallCountとテクスチャを更新する。
+    // 遷移アニメーション再生後に呼び出され、待機状態に変更したプレイヤーを返す
+    // smallCountを更新し、プレイヤーの待機状態のテクスチャを更新する
+    // 埋まったとき（頭上にブロックがある状態で小型化解除された）にはさらにdropを適用する
     export function transitionEnd(player: Player, field: Field): Player {
         const smallCount = Math.max(0, player.smallCount - 1);
         console.log(smallCount);
